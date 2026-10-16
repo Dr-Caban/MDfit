@@ -1,0 +1,30 @@
+# Smoke-tests the live Railway API from GitHub (which can reach it).
+name: Production API smoke test
+on:
+  workflow_dispatch:
+    inputs:
+      api:
+        description: Live API base URL
+        default: https://api-production-7e5f.up.railway.app
+        required: true
+      email:
+        description: Admin email
+        required: true
+      password:
+        description: Admin password
+        required: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/prod-smoke.js
+        env:
+          API: ${{ inputs.api }}
+          ADMIN_EMAIL: ${{ inputs.email }}
+          ADMIN_PASSWORD: ${{ inputs.password }}
+          ORIGIN: https://beta-six-39.vercel.app
