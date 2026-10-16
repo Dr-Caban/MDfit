@@ -14,6 +14,25 @@ const SITE = {
   // Leave "" until the backend is deployed.
   apiUrl: "",
 
+  // "Build the Studio" fundraiser.
+  donate: {
+    goal: 0,      // TODO: studio goal in dollars, e.g. 25000. 0 hides the progress bar.
+    raised: 0,    // update this as donations come in
+    // Paste your donation links. A button with url "" is hidden.
+    links: [
+      { name: "PayPal",           url: "" },  // e.g. https://paypal.me/yourname
+      { name: "Cash App",         url: "" },  // e.g. https://cash.app/$yourtag
+      { name: "Card (Stripe)",    url: "" },  // Stripe Payment Link
+      { name: "GoFundMe",         url: "" }   // campaign link
+    ],
+    builds: [
+      "Soundproofing & acoustic treatment",
+      "Pro microphones & audio interface",
+      "Cameras & lighting for Reels / TikTok / Shorts",
+      "Guest seating & a Bahamian-branded set"
+    ]
+  },
+
   // Short-form clips shown on the homepage. Paste links to TikTok, YouTube Shorts,
   // Instagram Reels or Facebook Reels, e.g.
   //   "https://www.tiktok.com/@lonesoulja/video/7400000000000000000"

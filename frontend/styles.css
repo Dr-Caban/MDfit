@@ -99,6 +99,23 @@ p { margin: 0 0 1em; }
 .btn--outline { border-color: var(--black); color: var(--black); background: transparent; }
 .btn--outline:hover { background: var(--black); color: var(--gold); }
 
+/* Support / donate */
+.support { display: grid; grid-template-columns: 1.3fr 1fr; gap: 48px; align-items: center; }
+.support p { font-size: 1.05rem; }
+.goal { margin: 24px 0; }
+.goal__bar { height: 22px; background: rgba(11,11,11,.15); border: 2px solid var(--black); border-radius: 999px; overflow: hidden; }
+.goal__bar span { display: block; height: 100%; width: 0; background: repeating-linear-gradient(-45deg, var(--aqua-dark) 0 12px, var(--aqua) 12px 24px); transition: width 1s ease; }
+.goal__text { margin: 8px 0 0; font-size: .95rem; }
+.donate { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0 16px; }
+.support .small { font-size: .9rem; }
+.support a:not(.btn) { color: var(--black); font-weight: 700; }
+.builds { background: var(--black); color: var(--white); border-radius: var(--radius); padding: 28px; border-top: 6px solid var(--aqua); }
+.builds h3 { font-size: 2rem; color: var(--gold); }
+.builds ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.builds li { padding-left: 30px; position: relative; }
+.builds li::before { content: "✓"; position: absolute; left: 0; color: var(--aqua); font-weight: 700; }
+.nav__links .nav__cta { color: var(--gold); font-weight: 700; }
+
 /* Clips (9:16) */
 .clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 .clip { position: relative; aspect-ratio: 9 / 16; border-radius: var(--radius); overflow: hidden; background: var(--black); border: 2px solid #262626; }
@@ -173,7 +190,7 @@ p { margin: 0 0 1em; }
   .nav__links a { padding: 16px; border-top: 1px solid #222; text-align: center; }
   .latest { grid-template-columns: 1fr; padding: 24px; }
   .latest__num { max-width: 160px; font-size: 6rem; }
-  .about, .contact { grid-template-columns: 1fr; gap: 32px; }
+  .about, .contact, .support { grid-template-columns: 1fr; gap: 32px; }
   .about__art img { max-width: 200px; }
   .section { padding: 64px 0; }
   .search { min-width: 0; width: 100%; }

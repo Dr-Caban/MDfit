@@ -101,6 +101,27 @@
     }
   });
 
+  // ---- Donate / Build the Studio
+  function renderDonate() {
+    const d = SITE.donate || {};
+    const money = (n) => "$" + Number(n || 0).toLocaleString("en-US");
+    if (d.goal > 0) {
+      const pct = Math.max(0, Math.min(100, (d.raised / d.goal) * 100));
+      $("#goal").hidden = false;
+      $("#goal-raised").textContent = money(d.raised);
+      $("#goal-target").textContent = money(d.goal);
+      $("#goal-bar").setAttribute("aria-valuemax", "100");
+      $("#goal-bar").setAttribute("aria-valuenow", String(Math.round(pct)));
+      requestAnimationFrame(() => ($("#goal-fill").style.width = pct + "%"));
+    }
+    const links = (d.links || []).filter((l) => l.url);
+    $("#donate-links").innerHTML = links.length
+      ? links.map((l, i) => `<a class="btn ${i === 0 ? "btn--dark" : "btn--outline"}" href="${esc(l.url)}" target="_blank" rel="noopener">Donate via ${esc(l.name)}</a>`).join("")
+      : `<a class="btn btn--dark" href="mailto:${esc(SITE.email)}?subject=${encodeURIComponent("Donating to the Lone Soulja Studio")}">Email to Donate</a>`;
+    $("#builds").innerHTML = (d.builds || []).map((b) => `<li>${esc(b)}</li>`).join("");
+    $("#sponsor-email").href = "mailto:" + SITE.email + "?subject=" + encodeURIComponent("Sponsoring the Lone Soulja Studio");
+  }
+
   // ---- Clips: TikTok / YouTube Shorts / Instagram Reels / Facebook embeds
   function embedUrl(url) {
     let m;
@@ -172,4 +193,5 @@
   renderList();
   renderLinks();
   renderClips();
+  renderDonate();
 })();

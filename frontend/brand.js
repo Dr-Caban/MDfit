@@ -353,8 +353,45 @@ const Brand = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }
 
-  const toBlob = (canvas, type = "image/png") => new Promise((res, rej) =>
-    canvas.toBlob((b) => (b ? res(b) : rej(new Error("Could not create image"))), type));
+  const toBlob = (canvas, type = "image/png", q) => new Promise((res, rej) =>
+    canvas.toBlob((b) => (b ? res(b) : rej(new Error("Could not create image"))), type, q));
 
-  return { C, THEMES, FONTS, FORMATS, censor, loadFonts, drawLogo, drawQuoteCard, parseTranscript, drawVideoFrame, shareOrDownload, download, toBlob };
+  /*
+   * PDF from canvases: one page per canvas, page sized to the image (1080px = 7.5in).
+   * Minimal PDF writer (JPEG pages), no libraries needed.
+   */
+  async function toPdf(canvases) {
+    const enc = new TextEncoder();
+    const chunks = [], offsets = [];
+    let len = 0;
+    const put = (d) => { const b = typeof d === "string" ? enc.encode(d) : d; chunks.push(b); len += b.length; };
+    const obj = (n, body) => { offsets[n] = len; put(`${n} 0 obj\n`); body(); put("\nendobj\n"); };
+
+    put("%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n");
+    const n = canvases.length;
+    const kids = canvases.map((_, i) => `${3 + i * 3} 0 R`).join(" ");
+    obj(1, () => put("<< /Type /Catalog /Pages 2 0 R >>"));
+    obj(2, () => put(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>`));
+
+    for (let i = 0; i < n; i++) {
+      const c = canvases[i], p = 3 + i * 3;
+      const pw = +(c.width * 0.5).toFixed(2), ph = +(c.height * 0.5).toFixed(2);
+      const jpg = new Uint8Array(await (await toBlob(c, "image/jpeg", 0.92)).arrayBuffer());
+      const content = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
+      obj(p, () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`));
+      obj(p + 1, () => {
+        put(`<< /Type /XObject /Subtype /Image /Width ${c.width} /Height ${c.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`);
+        put(jpg); put("\nendstream");
+      });
+      obj(p + 2, () => put(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`));
+    }
+
+    const total = 3 + n * 3, xref = len;
+    put(`xref\n0 ${total}\n0000000000 65535 f \n`);
+    for (let k = 1; k < total; k++) put(String(offsets[k]).padStart(10, "0") + " 00000 n \n");
+    put(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    return new Blob(chunks, { type: "application/pdf" });
+  }
+
+  return { C, THEMES, FONTS, FORMATS, censor, loadFonts, drawLogo, drawQuoteCard, parseTranscript, drawVideoFrame, shareOrDownload, download, toBlob, toPdf };
 })();

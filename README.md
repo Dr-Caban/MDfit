@@ -14,6 +14,7 @@ Private page (not linked, hidden from Google) for making branded content:
 - **Video clips:** upload a clip, then add the branded header, headline, progress bar and captions. Paste a transcript as **SRT/VTT** (exact timing) or **plain text** (auto-timed). Caption styles: **Pop** (3 words, current word highlighted), **Line**, **Boxed**. Captions can sit at the top, middle or bottom.
   - Export runs in the browser in real time (a 60s clip takes about 60s).
   - Recent Chrome or Safari saves **MP4** (best for TikTok/Reels). Other browsers save WebM.
+- **PDF export:** the current card, all 3 sizes in one PDF, or a **Quote Book** (every saved quote, one per page). Works in any browser with no extra software.
 - **Censor profanity** is on by default (f***, a**). It applies to cards, captions and the post caption.
 - **Share / Download:** on a phone this opens the share sheet (Facebook, Instagram, TikTok…). On a computer it downloads the file.
 - **Post to Facebook:** posts the card or video straight to the show's **Facebook Page**. You need the admin key to use it.
@@ -22,6 +23,12 @@ Private page (not linked, hidden from Google) for making branded content:
 
 ## Edit content
 Everything is in **`frontend/episodes.js`**: episodes, quotes, clips (TikTok/Shorts/Reels links), platform links, email, handle, and `apiUrl`.
+
+### Donations: "Help Build the Studio"
+In `episodes.js` → `donate`:
+- `goal` / `raised`: dollar amounts. Update `raised` as money comes in. A `goal` of `0` hides the progress bar.
+- `links`: paste your PayPal.me, Cash App, Stripe Payment Link and/or GoFundMe URLs. Empty links are hidden. With no links, visitors see an "Email to Donate" button.
+- `builds`: the "What your support builds" list.
 
 ## Deploy
 

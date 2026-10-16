@@ -55,6 +55,23 @@
     }
   });
 
+  // ---- PDF exports
+  async function pdfFrom(list, name) {
+    const msg = $("pdf-msg");
+    msg.textContent = "Building PDF…";
+    try {
+      const canvases = list.map((opts) => Brand.drawQuoteCard(document.createElement("canvas"), opts));
+      Brand.download(await Brand.toPdf(canvases), name);
+      msg.textContent = `PDF ready: ${canvases.length} ${canvases.length === 1 ? "page" : "pages"}.`;
+    } catch (e) { msg.textContent = "PDF failed: " + e.message; }
+  }
+  $("pdf-one").addEventListener("click", () => pdfFrom([quoteOpts()], `lone-soulja-quote-${$("format").value}.pdf`));
+  $("pdf-sizes").addEventListener("click", () => pdfFrom(Object.keys(Brand.FORMATS).map((f) => quoteOpts(f)), "lone-soulja-quote-all-sizes.pdf"));
+  $("pdf-book").addEventListener("click", () => {
+    if (!quotes.length) { $("pdf-msg").textContent = "No saved quotes in episodes.js."; return; }
+    pdfFrom(quotes.map((q) => ({ ...quoteOpts(), quote: q })), "lone-soulja-quote-book.pdf");
+  });
+
   // ---- Video
   const video = $("video");
   let cues = [], audio = null, rafId = 0, recorder = null, exported = null, exporting = false;
