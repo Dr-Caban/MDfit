@@ -21,7 +21,7 @@ const SITE = {
     // Paste your donation links. A button with url "" is hidden.
     links: [
       { name: "PayPal",           url: "" },  // e.g. https://paypal.me/yourname
-      { name: "Cash App",         url: "" },  // e.g. https://cash.app/$yourtag
+      { name: "Cash App",         url: "https://cash.app/$genocollie" },
       { name: "Card (Stripe)",    url: "" },  // Stripe Payment Link
       { name: "GoFundMe",         url: "" }   // campaign link
     ],
