@@ -36,3 +36,30 @@ tr:hover td { background: #1b1b1b; }
 a.tab { text-decoration: none; }
 
 @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+
+/* v2: tabs, publish, settings */
+.subtabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.stack[hidden] { display: none !important; }
+.copyrow { display: flex; gap: 8px; }
+.copyrow input { flex: 1; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checklist li { padding-left: 26px; position: relative; }
+.checklist li.todo::before { content: "•"; position: absolute; left: 8px; color: var(--gold); font-weight: 800; }
+.checklist li.done::before { content: "✓"; position: absolute; left: 4px; color: #7EE0A5; font-weight: 800; }
+.checklist li.todo { color: #FFD98A; }
+.dirs { display: flex; flex-wrap: wrap; gap: 8px; }
+.dirs a { text-decoration: none; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
+.row > label { flex: 1 1 180px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.pill { display: inline-block; font-size: .78rem; padding: 2px 8px; border-radius: 99px; border: 1px solid #444; color: #ccc; font-weight: 700; }
+.pill.on { border-color: #2f7a52; color: #7EE0A5; }
+.mini { background: #222; border: 1px solid #444; color: #fff; border-radius: 6px; padding: 4px 10px; cursor: pointer; font: 700 .8rem Inter, sans-serif; }
+.results p { margin: 0 0 8px; }
+.results .err { color: #FF8A80; font-weight: 700; }
+.results .ok { color: #7EE0A5; font-weight: 700; }
+code { background: #0f0f0f; border: 1px solid #333; padding: 2px 6px; border-radius: 6px; font-size: .8rem; word-break: break-all; }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50; background: #1f1f1f; border: 1px solid #444; padding: 10px 16px; border-radius: 10px; font-weight: 700; max-width: calc(100% - 32px); }
+.toast.ok { border-color: #2f7a52; } .toast.bad { border-color: #8a2b2b; color: #FF8A80; }
+.tag.login { color: #ccc; } .tag.settings_update { color: var(--gold); } .tag.episode_published { color: #7EE0A5; } .tag.episode_updated { color: #8AB4FF; } .tag.episode_unpublished { color: #FF8A80; }

@@ -3,7 +3,8 @@
 
   const $ = (id) => document.getElementById(id);
   const canvas = $("canvas");
-  const API = String(SITE.apiUrl || "").replace(/\/+$/, "");
+  const API = SiteAPI.API;
+  let handle = "";
   let tab = "quote";
 
   // ---- Fill selects
@@ -27,7 +28,7 @@
     return {
       ...look(), format: format || $("format").value,
       quote: $("quote-text").value, label: $("quote-label").value,
-      author: $("quote-author").value, tags: $("quote-tags").value, handle: SITE.handle || ""
+      author: $("quote-author").value, tags: $("quote-tags").value, handle
     };
   }
   const renderQuote = () => Brand.drawQuoteCard(canvas, quoteOpts());
@@ -71,7 +72,7 @@
   $("pdf-one").addEventListener("click", () => pdfFrom([quoteOpts()], `lone-soulja-quote-${$("format").value}.pdf`));
   $("pdf-sizes").addEventListener("click", () => pdfFrom(Object.keys(Brand.FORMATS).map((f) => quoteOpts(f)), "lone-soulja-quote-all-sizes.pdf"));
   $("pdf-book").addEventListener("click", () => {
-    if (!quotes.length) { $("pdf-msg").textContent = "No saved quotes yet. Add them in the admin portal or episodes.js."; return; }
+    if (!quotes.length) { $("pdf-msg").textContent = "No saved quotes yet. Add them in the admin portal (Settings → Quotes)."; return; }
     pdfFrom(quotes.map((q) => ({ ...quoteOpts(), quote: q })), "lone-soulja-quote-book.pdf");
   });
 
@@ -90,7 +91,7 @@
     return {
       ...look(), video, cues: $("cap-style").value === "none" ? [] : cues,
       time: video.currentTime || 0, duration: video.duration || 0,
-      title: $("video-title").value, handle: SITE.handle || "",
+      title: $("video-title").value, handle,
       capStyle: $("cap-style").value, capPos: $("cap-pos").value,
       fit: $("video-fit").value, progress: $("video-progress").checked
     };
@@ -261,40 +262,48 @@
     $("fb-post").textContent = tab === "quote" ? "Post this quote card to Facebook" : exported ? "Post exported video to Facebook" : "Export a video first";
   }
 
-  try { $("admin-key").value = sessionStorage.getItem("ls-admin-key") || ""; } catch (e) {}
-  $("admin-key").addEventListener("input", () => { try { sessionStorage.setItem("ls-admin-key", $("admin-key").value); } catch (e) {} });
-
+  // Posting needs the admin login (shared with /admin)
   async function checkFb() {
-    if (!API) { $("fb-status").textContent = "Backend not connected yet. Set apiUrl in episodes.js to your Railway URL. Share/Download still works."; return; }
-    try {
-      const r = await fetch(API + "/api/facebook/status");
-      const s = await r.json();
-      fbReady = s.configured && s.adminKeySet;
-      $("fb-status").textContent = fbReady ? "✅ Connected to your Facebook Page."
-        : "Backend is up, but the Facebook Page or ADMIN_KEY isn't set on Railway yet.";
-    } catch (e) {
-      $("fb-status").textContent = "Can't reach the backend. Check apiUrl and that Railway is running.";
-    }
+    const status = $("fb-status");
+    fbReady = false;
+    if (!API) { status.textContent = "Backend not connected yet. Set apiUrl in config.js. Share/Download still works."; return updateFbButton(); }
+    let configured = false;
+    try { configured = (await (await fetch(API + "/api/facebook/status")).json()).configured; }
+    catch (e) { status.textContent = "Can't reach the backend. Check apiUrl and that Railway is running."; return updateFbButton(); }
+    const loggedIn = !!SiteAPI.session.get();
+    $("fb-login").hidden = loggedIn;
+    if (!configured) status.textContent = "The Facebook Page isn't connected on Railway yet (FB_PAGE_ID, FB_PAGE_ACCESS_TOKEN).";
+    else if (!loggedIn) status.textContent = "Log in to post to the Facebook Page.";
+    else { status.textContent = "✅ Connected to your Facebook Page."; fbReady = true; }
     updateFbButton();
   }
 
+  $("fb-login").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("fb-msg");
+    msg.textContent = "Logging in…";
+    try {
+      await SiteAPI.login($("fb-email").value.trim(), $("fb-password").value);
+      $("fb-password").value = ""; msg.textContent = "";
+    } catch (err) { msg.textContent = "❌ " + err.message; }
+    checkFb();
+  });
+
   $("fb-post").addEventListener("click", async () => {
     const msg = $("fb-msg");
-    const key = $("admin-key").value.trim();
-    if (!key) { msg.textContent = "Enter the admin key."; return; }
     $("fb-post").disabled = true; msg.textContent = "Posting…";
     try {
       let blob;
       if (tab === "quote") { renderQuote(); blob = await Brand.toBlob(canvas); } else blob = exported;
       if (!blob) { msg.textContent = "Nothing to post yet."; return; }
       if (blob.size > 100 * 1048576) { msg.textContent = "File is over 100 MB. Use 720p or a shorter clip."; return; }
-      const r = await fetch(`${API}/api/facebook/post?caption=${encodeURIComponent($("fb-caption").value)}`, {
-        method: "POST", headers: { "Content-Type": blob.type, "X-Admin-Key": key }, body: blob
+      await SiteAPI.admin(`/api/facebook/post?caption=${encodeURIComponent($("fb-caption").value)}`, {
+        method: "POST", headers: { "Content-Type": blob.type }, body: blob
       });
-      const d = await r.json().catch(() => ({}));
-      msg.textContent = r.ok ? "✅ Posted to Facebook!" : "❌ " + (d.error || `Error ${r.status}`);
+      msg.textContent = "✅ Posted to Facebook!";
     } catch (e) {
-      msg.textContent = "❌ Could not reach the backend.";
+      msg.textContent = "❌ " + e.message;
+      if (e.status === 401) checkFb();
     } finally { updateFbButton(); }
   });
 
@@ -302,14 +311,15 @@
   Brand.loadFonts().then(() => (tab === "quote" ? renderQuote() : renderVideo()));
   renderQuote(); syncCaption(); updateFbButton(); checkFb();
 
-  // Quotes managed in the admin portal replace the episodes.js defaults
-  if (API) {
-    fetch(API + "/api/content").then((r) => (r.ok ? r.json() : {})).then((c) => {
-      if (!Array.isArray(c.quotes) || !c.quotes.length) return;
-      quotes.splice(0, quotes.length, ...c.quotes);
+  // Live quotes + social handle from the admin portal
+  SiteAPI.getSite().then((data) => {
+    if (!data) return;
+    handle = data.settings.show.handle || "";
+    if (data.settings.quotes && data.settings.quotes.length) {
+      quotes.splice(0, quotes.length, ...data.settings.quotes);
       fillQuotes();
-      if (tab === "quote") renderQuote();
-      syncCaption();
-    }).catch(() => {});
-  }
+    }
+    tab === "quote" ? renderQuote() : renderVideo();
+    syncCaption();
+  });
 })();

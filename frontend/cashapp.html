@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Support Lone Soulja</title>
+  <meta property="og:title" content="Support the Lone Soulja Studio">
+  <meta property="og:description" content="Chip in on Cash App to help build a real studio in The Bahamas.">
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <style>
+    :root { --gold: #FFC72C; --black: #0B0B0B; --aqua: #00A3AD; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--black); color: #fff; font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; text-align: center; padding: 16px; box-sizing: border-box; }
+    img { width: 96px; height: 96px; }
+    h1 { font-size: 1.4rem; margin: 16px 0 6px; }
+    p { color: #b9c4c5; margin: 0 0 18px; }
+    a.btn { display: inline-block; background: var(--gold); color: var(--black); font-weight: 800; text-decoration: none; padding: 12px 22px; border-radius: 999px; }
+    a.home { display: block; margin-top: 18px; color: var(--aqua); }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/assets/logo.svg" alt="Lone Soulja">
+    <h1 id="title">Opening Cash App…</h1>
+    <p id="sub">Thanks for supporting the Lone Soulja Studio 🇧🇸</p>
+    <a class="btn" id="go" href="https://cash.app/$genocollie">Open Cash App</a>
+    <a class="home" href="/">Back to the site</a>
+  </main>
+  <script src="/config.js"></script>
+  <script src="/site-api.js"></script>
+  <script>
+    // Short link for socials: /cashapp, /cashapp/5 or /cashapp?amount=5
+    (async function () {
+      var parts = location.pathname.split("/").filter(Boolean);
+      var raw = new URLSearchParams(location.search).get("amount") || (parts[0] && parts[0].indexOf("cashapp") === 0 ? parts[1] : "") || "";
+      var amount = raw ? SiteAPI.parseAmount(raw) : null;
+      var data = await SiteAPI.getSite(2500);
+      var tag = (data && data.settings.donate.cashtag) || SITE.cashtag;
+      var url = SiteAPI.cashAppUrl(tag, amount);
+      var go = document.getElementById("go");
+      if (!url) {
+        document.getElementById("title").textContent = "Cash App isn't set up yet";
+        document.getElementById("sub").textContent = "Check back soon.";
+        go.hidden = true;
+        return;
+      }
+      go.href = url;
+      if (raw && !amount) document.getElementById("sub").textContent = "That amount isn't valid (Cash App's minimum is $1), so you can pick one in the app.";
+      else if (amount) go.textContent = "Give $" + SiteAPI.amountText(amount) + " on Cash App";
+      location.replace(url);
+    })();
+  </script>
+</body>
+</html>

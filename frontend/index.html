@@ -37,7 +37,7 @@
         <span></span><span></span><span></span>
       </button>
       <nav id="nav-links" class="nav__links">
-        <a href="#clips">Clips</a>
+        <a href="#clips" id="nav-clips" hidden>Clips</a>
         <a href="#episodes">Episodes</a>
         <a href="#about">About</a>
         <a href="#support" class="nav__cta">Support</a>
@@ -57,7 +57,7 @@
         <h1>Lone <span>Soulja</span></h1>
         <p class="hero__tag">Savage but blessed. Unfiltered thoughts from the 242 with <strong>Geno “Smurf” Collie</strong>. I said what I said.</p>
         <div class="hero__cta">
-          <a href="#latest" class="btn btn--gold">▶ Play Latest Episode</a>
+          <a href="#latest" class="btn btn--gold" id="hero-play" hidden>▶ Play Latest Episode</a>
           <a href="#listen" class="btn btn--ghost">Subscribe</a>
           <a href="#support" class="btn btn--aqua">Help Build the Studio</a>
         </div>
@@ -66,7 +66,7 @@
     </section>
 
     <!-- LATEST -->
-    <section id="latest" class="section section--dark">
+    <section id="latest" class="section section--dark" hidden>
       <div class="wrap">
         <h2 class="section__title">Latest Episode</h2>
         <article class="latest" id="latest-card"></article>
@@ -89,7 +89,7 @@
     </section>
 
     <!-- CLIPS -->
-    <section id="clips" class="section section--dark">
+    <section id="clips" class="section section--dark" hidden>
       <div class="wrap">
         <div class="section__head">
           <h2 class="section__title">Clips</h2>
@@ -104,8 +104,9 @@
       <div class="wrap">
         <div class="section__head">
           <h2 class="section__title">All Episodes</h2>
-          <input id="search" class="search" type="search" placeholder="Search episodes…" aria-label="Search episodes">
+          <input id="search" class="search" type="search" placeholder="Search episodes…" aria-label="Search episodes" hidden>
         </div>
+        <p id="ep-status" class="muted">Loading episodes…</p>
         <div id="episode-list" class="grid"></div>
         <p id="no-results" class="muted" hidden>No episodes match that search.</p>
       </div>
@@ -143,12 +144,28 @@
             <div class="goal__bar" role="progressbar" aria-label="Studio fundraising progress" aria-valuemin="0" id="goal-bar"><span id="goal-fill"></span></div>
             <p class="goal__text"><strong id="goal-raised"></strong> raised of <strong id="goal-target"></strong> goal</p>
           </div>
+          <div class="give" id="give">
+            <p class="give__label">Quick give with Cash App <strong id="cashtag-label"></strong></p>
+            <div class="give__amounts" id="give-amounts"></div>
+            <form class="give__custom" id="give-custom" novalidate>
+              <label class="sr" for="give-amount">Custom amount in dollars</label>
+              <span class="give__dollar" aria-hidden="true">$</span>
+              <input id="give-amount" type="number" min="1" max="10000" step="0.01" inputmode="decimal" placeholder="Custom">
+              <button class="btn btn--dark" type="submit">Give</button>
+            </form>
+            <p class="small give__msg" id="give-msg" role="alert"></p>
+          </div>
           <div class="donate" id="donate-links"></div>
-          <p class="small">Want to sponsor the build or donate gear? <a id="sponsor-email" href="#">Email us</a>.</p>
+          <p class="small" id="sponsor" hidden>Want to sponsor the build or donate gear? <a id="sponsor-email" href="#">Email us</a>.</p>
         </div>
         <div class="builds">
           <h3>What your support builds</h3>
-          <ul id="builds"></ul>
+          <ul>
+            <li>Soundproofing &amp; acoustic treatment</li>
+            <li>Pro microphones &amp; audio interface</li>
+            <li>Cameras &amp; lighting for Reels / TikTok / Shorts</li>
+            <li>Guest seating &amp; a Bahamian-branded set</li>
+          </ul>
         </div>
       </div>
     </section>
@@ -159,6 +176,7 @@
         <h2 class="section__title">Listen Everywhere</h2>
         <p class="muted">Subscribe on your favourite platform so you never miss an episode.</p>
         <div class="platforms" id="platforms"></div>
+        <p class="muted" id="platforms-empty">Coming soon to Spotify, Apple Podcasts, YouTube and Amazon Music.</p>
       </div>
     </section>
 
@@ -178,7 +196,7 @@
         <div>
           <h2 class="section__title">Be a Guest / Book Us</h2>
           <p>Got a story the islands need to hear? Want to sponsor the show?</p>
-          <a class="btn btn--aqua" id="contact-email" href="#">Email the Show</a>
+          <a class="btn btn--aqua" id="contact-email" href="#" hidden>Email the Show</a>
           <div class="socials" id="socials"></div>
         </div>
       </div>
@@ -205,7 +223,8 @@
     </div>
   </div>
 
-  <script src="episodes.js"></script>
+  <script src="config.js"></script>
+  <script src="site-api.js"></script>
   <script src="brand.js"></script>
   <script src="script.js"></script>
 </body>

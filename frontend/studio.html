@@ -115,7 +115,11 @@
         <legend>Post to Facebook Page</legend>
         <p class="hint" id="fb-status">Checking connection…</p>
         <label>Post caption <textarea id="fb-caption" rows="3"></textarea></label>
-        <label>Admin key <input id="admin-key" type="password" autocomplete="off" placeholder="Set on Railway as ADMIN_KEY"></label>
+        <form id="fb-login" class="mini-login" hidden>
+          <label>Admin email <input id="fb-email" type="email" autocomplete="username" required></label>
+          <label>Password <input id="fb-password" type="password" autocomplete="current-password" required></label>
+          <button class="btn" type="submit">Log in</button>
+        </form>
         <button class="btn fbtn" id="fb-post" disabled>Post current card to Facebook</button>
         <p class="hint" id="fb-msg" role="status" aria-live="polite"></p>
       </fieldset>
@@ -127,7 +131,8 @@
     </section>
   </main>
 
-  <script src="episodes.js"></script>
+  <script src="config.js"></script>
+  <script src="site-api.js"></script>
   <script src="brand.js"></script>
   <script src="studio.js"></script>
 </body>

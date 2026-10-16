@@ -7,12 +7,16 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test --test-concurrency=1 test/*.test.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "hash-password": "node scripts/hash-password.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "fast-xml-parser": "^5.11.2"
   }
 }

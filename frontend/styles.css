@@ -116,13 +116,25 @@ p { margin: 0 0 1em; }
 .builds li::before { content: "✓"; position: absolute; left: 0; color: var(--aqua); font-weight: 700; }
 .nav__links .nav__cta { color: var(--gold); font-weight: 700; }
 
+/* Quick give (Cash App) */
+.give { margin: 22px 0 8px; }
+.give__label { font-weight: 700; margin-bottom: 10px; }
+.give__amounts { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.give__amounts a { min-width: 76px; justify-content: center; }
+.give__custom { display: flex; align-items: center; gap: 8px; max-width: 320px; background: rgba(11,11,11,.08); border: 2px solid var(--black); border-radius: 999px; padding: 4px 4px 4px 16px; }
+.give__dollar { font-weight: 800; font-size: 1.1rem; }
+.give__custom input { flex: 1; min-width: 0; border: 0; background: transparent; font: 700 1.05rem var(--body); color: var(--black); padding: 8px 0; }
+.give__custom input:focus { outline: none; }
+.give__custom:focus-within { outline: 3px solid var(--black); outline-offset: 2px; }
+.give__msg { min-height: 1.2em; margin: 8px 0 0; color: #7A1010; font-weight: 700; }
+.ep-badge { display: inline-block; font-size: .7rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: var(--black); color: var(--white); margin-left: 6px; vertical-align: middle; }
+.card:target, .latest:target { outline: 4px solid var(--gold); outline-offset: 4px; }
+
 /* Clips (9:16) */
 .clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
 .clip { position: relative; aspect-ratio: 9 / 16; border-radius: var(--radius); overflow: hidden; background: var(--black); border: 2px solid #262626; }
 .clip iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-.clip--empty { display: grid; place-items: center; text-align: center; padding: 20px;
-  background: linear-gradient(to bottom, rgba(0,163,173,.25), rgba(255,199,44,.12)), var(--black); color: var(--muted); border-style: dashed; }
-.clip--empty strong { display: block; font-family: var(--display); font-size: 2rem; color: var(--white); font-weight: 400; letter-spacing: .04em; }
+
 
 /* Latest */
 .latest { display: grid; grid-template-columns: 200px 1fr; gap: 32px; align-items: center;
@@ -207,3 +219,6 @@ p { margin: 0 0 1em; }
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
+
+[hidden] { display: none !important; }
+.latest .ep-badge { background: var(--gold); color: var(--black); }

@@ -17,17 +17,17 @@
     <a href="index.html" class="brand"><img src="assets/logo.svg" alt="" width="34" height="34"> LONE SOULJA <span>Admin</span></a>
     <nav class="tabs" id="admin-nav" hidden>
       <a class="tab" href="studio.html">Studio</a>
-      <button class="tab" id="refresh" type="button">↻ Refresh</button>
       <button class="tab" id="logout" type="button">Log out</button>
     </nav>
   </header>
 
   <!-- Login -->
   <main id="login-view" class="login">
-    <form id="login-form" class="card">
+    <form id="login-form" class="card" autocomplete="on">
       <h1>Admin Portal</h1>
       <p class="hint" id="api-info"></p>
-      <label>Admin key <input id="login-key" type="password" autocomplete="current-password" required></label>
+      <label>Email <input id="login-email" type="email" autocomplete="username" required></label>
+      <label>Password <input id="login-password" type="password" autocomplete="current-password" required></label>
       <button class="btn gold" type="submit">Log in</button>
       <p class="hint err" id="login-msg" role="alert"></p>
     </form>
@@ -37,63 +37,194 @@
   <main id="dash" class="dash" hidden>
     <div class="banner" id="seed-banner" hidden></div>
 
-    <section class="stats">
-      <div class="stat"><span>Subscribers</span><strong id="st-subs">–</strong></div>
-      <div class="stat"><span>New this week</span><strong id="st-week">–</strong></div>
-      <div class="stat"><span>Facebook posts</span><strong id="st-fb">–</strong><small id="st-fb-last"></small></div>
-      <div class="stat"><span>Studio fund</span><strong id="st-fund">–</strong>
-        <div class="bar"><i id="st-fund-bar"></i></div></div>
-    </section>
+    <nav class="subtabs" role="tablist">
+      <button class="tab active" data-view="overview">Dashboard</button>
+      <button class="tab" data-view="publish">Publish</button>
+      <button class="tab" data-view="episodes">Episodes</button>
+      <button class="tab" data-view="settings">Settings</button>
+      <button class="tab" data-view="subscribers">Subscribers</button>
+      <button class="tab" data-view="activity">Activity</button>
+    </nav>
 
-    <div class="cols">
-      <section class="card">
-        <h2>Studio Fund</h2>
-        <form id="donate-form" class="row">
-          <label>Goal ($) <input id="goal" type="number" min="0" step="1" required></label>
-          <label>Raised so far ($) <input id="raised" type="number" min="0" step="1" required></label>
-          <button class="btn gold" type="submit">Save</button>
-        </form>
-        <p class="hint" id="donate-msg" role="status"></p>
-      </section>
-
-      <section class="card">
-        <h2>Quotes <small id="quote-count"></small></h2>
-        <p class="hint">One quote per line. These show on the site's "Thought of the Day" and in the Studio.</p>
-        <textarea id="quotes" rows="8"></textarea>
-        <div class="actions"><button class="btn gold" id="save-quotes" type="button">Save Quotes</button></div>
-        <p class="hint" id="quotes-msg" role="status"></p>
-      </section>
-    </div>
-
-    <section class="card">
-      <div class="head">
-        <h2>Subscribers</h2>
-        <div class="actions">
-          <input id="sub-search" type="search" placeholder="Search emails…" aria-label="Search subscribers">
-          <button class="btn aqua" id="csv" type="button">Download CSV</button>
+    <!-- OVERVIEW -->
+    <section data-view-panel="overview" class="stack">
+      <div class="stats">
+        <div class="stat"><span>Subscribers</span><strong id="st-subs">–</strong><small id="st-week"></small></div>
+        <div class="stat"><span>Episodes</span><strong id="st-eps">–</strong></div>
+        <div class="stat"><span>Facebook posts</span><strong id="st-fb">–</strong><small id="st-fb-last"></small></div>
+        <div class="stat"><span>Studio fund</span><strong id="st-fund">–</strong><div class="bar"><i id="st-fund-bar"></i></div></div>
+      </div>
+      <div class="card">
+        <h2>Podcast Feed</h2>
+        <p class="hint">Spotify, Apple Podcasts, Amazon Music and YouTube Music all read this RSS feed. Submit it to each one <strong>once</strong>. After that, every episode you publish to "Podcast apps" shows up there automatically, usually within a few hours.</p>
+        <div class="copyrow"><input id="feed-url" readonly aria-label="RSS feed URL"><button class="btn aqua" id="copy-feed" type="button">Copy</button></div>
+        <ul class="checklist" id="feed-issues"></ul>
+        <div class="dirs">
+          <a class="btn" href="https://creators.spotify.com/" target="_blank" rel="noopener">Spotify for Creators ↗</a>
+          <a class="btn" href="https://podcastsconnect.apple.com/" target="_blank" rel="noopener">Apple Podcasts Connect ↗</a>
+          <a class="btn" href="https://podcasters.amazon.com/" target="_blank" rel="noopener">Amazon Music ↗</a>
+          <a class="btn" href="https://studio.youtube.com/" target="_blank" rel="noopener">YouTube Studio (RSS) ↗</a>
         </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Email</th><th>Signed up</th><th></th></tr></thead>
-          <tbody id="subs"></tbody>
-        </table>
-      </div>
-      <p class="hint" id="subs-msg"></p>
     </section>
 
-    <section class="card">
-      <h2>Activity</h2>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>When</th><th>Event</th><th>Details</th></tr></thead>
-          <tbody id="activity"></tbody>
-        </table>
+    <!-- PUBLISH -->
+    <section data-view-panel="publish" class="stack" hidden>
+      <form class="card" id="ep-form" novalidate>
+        <h2 id="ep-form-title">Publish an Episode</h2>
+        <label>Title <input id="ep-title" maxlength="200" required></label>
+        <label>Description <textarea id="ep-desc" rows="4" maxlength="4000" required></textarea></label>
+        <label>Audio file link (direct link to the .mp3)
+          <input id="ep-audio" type="url" placeholder="https://…/episode-1.mp3" required>
+        </label>
+        <p class="hint">Upload the MP3 to any host that gives a direct link (for example archive.org, Cloudflare R2 or Amazon S3). The server checks the link is real audio before publishing.</p>
+        <div class="row">
+          <label>Duration <input id="ep-duration" placeholder="45:30"></label>
+          <label>Episode # <input id="ep-number" type="number" min="1" placeholder="auto"></label>
+          <label>Season <input id="ep-season" type="number" min="1" placeholder="optional"></label>
+        </div>
+        <label>Episode artwork link (optional, square image) <input id="ep-image" type="url" placeholder="https://…/art.jpg"></label>
+        <label class="check"><input type="checkbox" id="ep-explicit" checked> Explicit language</label>
+
+        <fieldset class="platforms" id="ep-platforms">
+          <legend>Publish to</legend>
+          <label class="check"><input type="checkbox" value="website" checked> Website</label>
+          <label class="check"><input type="checkbox" value="podcast" checked> Podcast apps: <span id="dir-status"></span></label>
+          <label class="check" id="fb-option"><input type="checkbox" value="facebook"> Facebook Page announcement <small class="hint" id="fb-note"></small></label>
+          <label id="fb-msg-wrap" hidden>Facebook message (optional) <textarea id="ep-fb-msg" rows="3" maxlength="5000" placeholder="Defaults to the title + description"></textarea></label>
+        </fieldset>
+
+        <div class="actions">
+          <button class="btn gold" type="submit" id="ep-submit">Publish</button>
+          <button class="btn" type="button" id="ep-cancel" hidden>Cancel edit</button>
+        </div>
+        <div class="results" id="ep-results" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <!-- EPISODES -->
+    <section data-view-panel="episodes" class="stack" hidden>
+      <div class="card">
+        <h2>Episodes</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Title</th><th>Published</th><th>On</th><th></th></tr></thead>
+            <tbody id="ep-rows"></tbody>
+          </table>
+        </div>
+        <p class="hint" id="ep-empty">No episodes yet. Use Publish to add the first one.</p>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section data-view-panel="settings" class="stack" hidden>
+      <form class="card" data-section="show">
+        <h2>Show</h2>
+        <div class="row">
+          <label>Show title <input name="title" maxlength="120"></label>
+          <label>Host name <input name="author" maxlength="120"></label>
+        </div>
+        <label>Show description (used by Spotify / Apple) <textarea name="description" rows="3" maxlength="4000"></textarea></label>
+        <div class="row">
+          <label>Contact email (public; podcast apps send verification here) <input name="email" type="email"></label>
+          <label>Social handle <input name="handle" placeholder="@lonesoulja"></label>
+        </div>
+        <div class="row">
+          <label>Category <select name="category" id="category"></select></label>
+          <label>Cover art link (optional) <input name="coverUrl" type="url" placeholder="Defaults to the site's 3000×3000 cover"></label>
+        </div>
+        <label class="check"><input type="checkbox" name="explicit"> Show contains explicit language</label>
+        <div class="actions"><button class="btn gold" type="submit">Save show</button><span class="hint msg"></span></div>
+      </form>
+
+      <form class="card" data-section="links">
+        <h2>Platform &amp; Social Links</h2>
+        <p class="hint">Paste each link once your show is live there. Empty links are hidden on the site.</p>
+        <div class="grid2">
+          <label>Spotify <input name="spotify" type="url" placeholder="https://open.spotify.com/show/…"></label>
+          <label>Apple Podcasts <input name="apple" type="url" placeholder="https://podcasts.apple.com/…"></label>
+          <label>YouTube <input name="youtube" type="url"></label>
+          <label>Amazon Music <input name="amazon" type="url"></label>
+          <label>TikTok <input name="tiktok" type="url"></label>
+          <label>Instagram <input name="instagram" type="url"></label>
+          <label>Facebook <input name="facebook" type="url"></label>
+          <label>X <input name="x" type="url"></label>
+        </div>
+        <div class="actions"><button class="btn gold" type="submit">Save links</button><span class="hint msg"></span></div>
+      </form>
+
+      <form class="card" data-section="donate">
+        <h2>Studio Fund &amp; Donations</h2>
+        <div class="row">
+          <label>Goal ($) <input name="goal" type="number" min="0" step="1"></label>
+          <label>Raised so far ($) <input name="raised" type="number" min="0" step="1"></label>
+        </div>
+        <div class="row">
+          <label>Cash App $cashtag <input name="cashtag" placeholder="genocollie"></label>
+          <label>Quick-give amounts ($, comma separated, min 1) <input name="amounts" placeholder="1, 5, 10"></label>
+        </div>
+        <p class="hint">Share link: <code id="cash-link"></code></p>
+        <div class="grid2">
+          <label>PayPal link <input name="paypal" type="url" placeholder="https://paypal.me/…"></label>
+          <label>Card / Stripe link <input name="stripe" type="url"></label>
+          <label>GoFundMe link <input name="gofundme" type="url"></label>
+        </div>
+        <div class="actions"><button class="btn gold" type="submit">Save donations</button><span class="hint msg"></span></div>
+      </form>
+
+      <form class="card" data-section="quotes">
+        <h2>Quotes <small id="quote-count"></small></h2>
+        <p class="hint">One per line. Used by "Thought of the Day" and the Studio.</p>
+        <textarea name="quotes" rows="8"></textarea>
+        <div class="actions"><button class="btn gold" type="submit">Save quotes</button><span class="hint msg"></span></div>
+      </form>
+
+      <form class="card" data-section="clips">
+        <h2>Clips</h2>
+        <p class="hint">One TikTok, YouTube Shorts, Instagram Reel or Facebook video link per line. They show in the site's Clips section.</p>
+        <textarea name="clips" rows="5"></textarea>
+        <div class="actions"><button class="btn gold" type="submit">Save clips</button><span class="hint msg"></span></div>
+      </form>
+    </section>
+
+    <!-- SUBSCRIBERS -->
+    <section data-view-panel="subscribers" class="stack" hidden>
+      <div class="card">
+        <div class="head">
+          <h2>Subscribers</h2>
+          <div class="actions">
+            <input id="sub-search" type="search" placeholder="Search emails…" aria-label="Search subscribers">
+            <button class="btn aqua" id="csv" type="button">Download CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Email</th><th>Signed up</th><th></th></tr></thead>
+            <tbody id="subs"></tbody>
+          </table>
+        </div>
+        <p class="hint" id="subs-msg"></p>
+      </div>
+    </section>
+
+    <!-- ACTIVITY -->
+    <section data-view-panel="activity" class="stack" hidden>
+      <div class="card">
+        <div class="head"><h2>Activity</h2><button class="btn" id="refresh" type="button">↻ Refresh</button></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>When</th><th>Event</th><th>Details</th></tr></thead>
+            <tbody id="activity"></tbody>
+          </table>
+        </div>
       </div>
     </section>
   </main>
 
-  <script src="episodes.js"></script>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="site-api.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>

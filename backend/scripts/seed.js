@@ -61,15 +61,16 @@ function buildSeed(now = Date.now()) {
       ? { time: t, type: "facebook_post", kind: rand() < 0.6 ? "image" : "video", id: `seed_${100 + i}`, bytes: Math.floor(rand() * 9e6) + 4e5 }
       : { time: t, type: "facebook_post_failed", kind: "video", error: "(#100) Video upload timed out" });
   }
-  activity.push({ time: new Date(now - 20 * 864e5).toISOString(), type: "content_update", fields: "donate,quotes" });
+  activity.push({ time: new Date(now - 20 * 864e5).toISOString(), type: "settings_update", fields: "donate,quotes" });
   activity.sort((a, b) => (a.time < b.time ? 1 : -1));
 
-  const content = {
-    donate: { goal: 25000, raised: 6250 },
+  // No episodes are seeded: publishing needs a real, reachable audio file.
+  const settings = {
+    donate: { goal: 25000, raised: 6250, cashtag: "genocollie", amounts: [1, 5, 10] },
     quotes,
     meta: { seeded: true, seededAt: new Date(now).toISOString() }
   };
-  return { subscribers, activity, content };
+  return { subscribers, activity, settings };
 }
 
 function run(argv = process.argv.slice(2), env = process.env) {
@@ -80,7 +81,7 @@ function run(argv = process.argv.slice(2), env = process.env) {
   }
   const dir = (env.DATA_DIR || "").trim() || path.join(__dirname, "..", "data");
   const store = createStore(dir);
-  if (argv.includes("--reset")) for (const n of ["subscribers", "activity", "content"]) fs.rmSync(path.join(dir, n + ".json"), { force: true });
+  if (argv.includes("--reset")) for (const n of ["subscribers", "activity", "settings", "episodes"]) fs.rmSync(path.join(dir, n + ".json"), { force: true });
   const existing = store.read("subscribers", []);
   if (existing.length && !argv.includes("--reset")) {
     console.error(`${dir} already has data. Run with --reset to replace it.`);
@@ -89,8 +90,8 @@ function run(argv = process.argv.slice(2), env = process.env) {
   const seed = buildSeed();
   store.write("subscribers", seed.subscribers);
   store.write("activity", seed.activity);
-  store.write("content", seed.content);
-  console.log(`Seeded ${seed.subscribers.length} subscribers, ${seed.activity.length} activity entries, ${seed.content.quotes.length} quotes into ${dir}`);
+  store.write("settings", seed.settings);
+  console.log(`Seeded ${seed.subscribers.length} subscribers, ${seed.activity.length} activity entries, ${seed.settings.quotes.length} quotes into ${dir}`);
   return 0;
 }
 
