@@ -1,6 +1,6 @@
 # Lone Soulja Podcast Website
 
-Static site with Bahamian branding (aquamarine, gold, black). It has no build step.
+Podcast site for Lone Soulja, hosted by Geno "Smurf" Collie. Static site with Bahamian branding (aquamarine, gold, black). It has no build step.
 
 ## Run locally
 Open `index.html` in a browser, or run `python3 -m http.server` and visit http://localhost:8000.
@@ -10,6 +10,7 @@ Edit **`episodes.js`**:
 - `EPISODES`: add new episodes at the top. Set `audio` to an `.mp3` path or URL. If it's empty, the episode shows "Coming soon".
 - `SITE.platforms` / `SITE.socials`: paste your real show links. If a `url` is empty, that button is hidden.
 - `SITE.email`: the booking/contact email.
+- `SITE.quotes`: "Random Thought of the Day" lines (keep profanity censored).
 
 ## Files
 - `index.html`: page structure

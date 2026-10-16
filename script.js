@@ -116,6 +116,18 @@
     e.target.reset();
   });
 
+  // ---- Thought of the Day
+  const quotes = SITE.quotes || [];
+  let qi = quotes.length ? Math.floor(Math.random() * quotes.length) : -1;
+  const showQuote = () => { if (qi >= 0) $("#quote-text").textContent = "“" + quotes[qi] + "”"; };
+  if (qi < 0) $("#thoughts").hidden = true;
+  $("#quote-next").addEventListener("click", () => {
+    if (quotes.length < 2) return;
+    let n; do { n = Math.floor(Math.random() * quotes.length); } while (n === qi);
+    qi = n; showQuote();
+  });
+  showQuote();
+
   $("#search").addEventListener("input", (e) => renderList(e.target.value));
   $("#year").textContent = new Date().getFullYear();
 

@@ -18,6 +18,18 @@ const SITE = {
     { name: "RSS",             url: "" }
   ],
 
+  // "Random Thought of the Day" lines from Geno (keep them censored).
+  quotes: [
+    "Leggings with no a** are technically just long-sleeve panties. I said what I said, and I will NOT be taking questions at this time!",
+    "You can't build an empire while arguing with people who still need instructions on shampoo bottles.",
+    "Stay humble, stay blessed, and keep your middle finger spiritually available!",
+    "Jesus loves you, but even He had to flip a few tables when people started acting stupid. 🙏🏾",
+    "I've decided to be the bigger person today, but my inner a**hole has already filed an appeal, the judge is drunk, and the jury is fresh out of f***s to give!",
+    "Just because somebody smiles at you doesn't mean they like you.",
+    "It's Friday, which means we're officially one bad decision away from another story we won't be able to tell at Thanksgiving!",
+    "Have a blessed Friday, and try not to become the reason somebody needs a drink tonight!"
+  ],
+
   socials: [
     { name: "Instagram", url: "https://instagram.com/" },
     { name: "TikTok",    url: "https://tiktok.com/" },
@@ -33,26 +45,26 @@ const SITE = {
 const EPISODES = [
   {
     number: 3,
-    title: "Standing On My Own",
+    title: "Savage But Blessed",
     date: "2026-10-10",
     duration: "52 min",
-    description: "What it really takes to go solo in the 242 — the lonely nights, the come-up, and staying true to yourself.",
+    description: "Stay humble, stay blessed, and keep your middle finger spiritually available. Geno on faith, hustle and flipping tables.",
     audio: ""
   },
   {
     number: 2,
-    title: "Junkanoo In The Blood",
+    title: "Protect Your Peace",
     date: "2026-09-26",
     duration: "47 min",
-    description: "Cowbells, goatskin drums and Boxing Day mornings. We break down why Junkanoo is more than a parade.",
+    description: "You can't build an empire while arguing with people who need instructions on shampoo bottles. Chasing money and cutting off the noise.",
     audio: ""
   },
   {
     number: 1,
-    title: "Welcome To The Front Line",
+    title: "I Said What I Said",
     date: "2026-09-12",
     duration: "38 min",
-    description: "The first episode. Who is Lone Soulja, why this podcast, and what's coming next for the show.",
+    description: "The first episode. Geno \"Smurf\" Collie introduces Lone Soulja: random thoughts, zero filter, and no questions at this time.",
     audio: ""
   }
 ];
