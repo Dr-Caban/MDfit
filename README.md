@@ -5,7 +5,7 @@ Podcast site for **Lone Soulja** with Geno "Smurf" Collie, in Bahamian colours (
 | Folder | What it is | Host (free) |
 |---|---|---|
 | `frontend/` | Website + **Studio** (plain HTML/CSS/JS, no build) | Vercel |
-| `backend/` | Small API: newsletter sign-ups + posting to Facebook | Railway |
+| `backend/` | API: newsletter, admin portal data, posting to Facebook | Railway |
 
 ## The Studio (`/studio`)
 Private page (not linked, hidden from Google) for making branded content:
@@ -40,6 +40,7 @@ In `episodes.js` → `donate`:
    - `ALLOWED_ORIGINS`: your Vercel URL, e.g. `https://lone-soulja.vercel.app`
    - `FB_PAGE_ID`, `FB_PAGE_ACCESS_TOKEN`: see *Facebook setup* below
    - `DATA_DIR`: `/data`
+   - `NODE_ENV`: `production` (blocks test and seed scripts from ever running there)
 4. **Add a Volume** mounted at `/data` so newsletter emails survive redeploys.
 5. **Settings → Networking → Generate Domain.** Copy the URL.
 
@@ -57,12 +58,41 @@ Railway's free plan includes about $1/month of usage, which is enough for this s
 4. Make it long-lived with the Access Token Debugger → "Extend Access Token". Then get the Page token from `GET /me/accounts`; it won't expire.
 5. Put the Page ID and Page token into Railway's Variables.
 
-## Admin extras
-- Download subscribers: `GET <railway-url>/api/subscribers.csv` with header `X-Admin-Key: <ADMIN_KEY>`.
+## Admin portal (`/admin`)
+Log in with your `ADMIN_KEY`. It's hidden from Google and not linked from the site.
+- **Dashboard:** subscriber count, new sign-ups this week, Facebook posts, studio fund progress.
+- **Studio Fund:** update the goal and the amount raised. The site's progress bar updates right away.
+- **Quotes:** edit the "Thought of the Day" quotes (one per line). The site and Studio use these instead of the `episodes.js` defaults.
+- **Subscribers:** search, remove, and download a CSV.
+- **Activity:** sign-ups, removals, Facebook posts (and failures), content changes.
+
+Security: wrong keys are rejected, and 10 wrong attempts lock that IP out for 15 minutes. Your login lasts only until the browser tab closes.
+
+## Logging
+The API writes one JSON line per event, viewable in **Railway → Deployments → Logs**:
+- every request: method, path, status, time in ms (query strings are never logged)
+- activity: sign-ups (emails masked, e.g. `f**@example.com`), Facebook posts, content changes
+- warnings: failed admin logins, a missing or short `ADMIN_KEY`
+- errors: server errors. If sample data is ever found in production, it logs an error at startup.
+
+`LOG_LEVEL` = `debug` | `info` (default) | `warn` | `error`.
+
+## Testing (never in production)
+```
+cd backend
+npm install
+npm test                      # 49 tests: every endpoint, auth, logging, seeding
+npm run seed                  # sample data for the admin portal (local only)
+npm run seed -- --reset       # replace existing local data
+```
+- Tests use temporary folders and a fake Facebook server, so they never touch real data or post to Facebook.
+- Tests and the seed script **refuse to run** when `NODE_ENV=production`, in Railway's production environment, or with `DATA_DIR=/data`.
+- Sample emails only use the reserved `example.com/.net/.org` domains, so they can never reach a real person. The admin portal shows a banner whenever sample data is loaded.
+- **GitHub Actions** runs the tests on every push (`.github/workflows/backend-tests.yml`). Railway only runs `npm start`.
 
 ## Local dev
 ```
-cd backend && npm install && ADMIN_KEY=test npm start   # API on :3000
+cd backend && npm install && npm run seed && ADMIN_KEY=local-dev-key-123456 npm start   # API on :3000
 cd frontend && python3 -m http.server 8080             # site on :8080
 cd backend && npm test                                 # API tests
 ```

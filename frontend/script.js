@@ -163,9 +163,9 @@
   });
 
   // ---- Thought of the Day
-  const quotes = SITE.quotes || [];
+  const quotes = (SITE.quotes || []).slice();
   let qi = quotes.length ? Math.floor(Math.random() * quotes.length) : -1;
-  const showQuote = () => { if (qi >= 0) $("#quote-text").textContent = "“" + quotes[qi] + "”"; };
+  const showQuote = () => { if (qi >= 0) $("#quote-text").textContent = "“" + Brand.censor(quotes[qi]) + "”"; };
   if (qi < 0) $("#thoughts").hidden = true;
   $("#quote-next").addEventListener("click", () => {
     if (quotes.length < 2) return;
@@ -194,4 +194,17 @@
   renderLinks();
   renderClips();
   renderDonate();
+
+  // ---- Live content from the admin portal (falls back to episodes.js if the API is down)
+  if (API) {
+    fetch(API + "/api/content").then((r) => (r.ok ? r.json() : {})).then((c) => {
+      if (c.donate) { SITE.donate = { ...(SITE.donate || {}), goal: c.donate.goal, raised: c.donate.raised }; renderDonate(); }
+      if (Array.isArray(c.quotes) && c.quotes.length) {
+        quotes.splice(0, quotes.length, ...c.quotes);
+        qi = Math.floor(Math.random() * quotes.length);
+        $("#thoughts").hidden = false;
+        showQuote();
+      }
+    }).catch(() => {});
+  }
 })();

@@ -12,10 +12,13 @@
   fill($("theme"), Brand.THEMES);
   fill($("font"), Brand.FONTS);
 
-  const quotes = SITE.quotes || [];
-  $("quote-pick").innerHTML = `<option value="">— Write your own —</option>` +
-    quotes.map((q, i) => `<option value="${i}">${Brand.censor(q).slice(0, 60).replace(/</g, "&lt;")}${q.length > 60 ? "…" : ""}</option>`).join("");
-  if (quotes.length) { $("quote-pick").value = "0"; $("quote-text").value = quotes[0]; }
+  const quotes = (SITE.quotes || []).slice();
+  function fillQuotes() {
+    $("quote-pick").innerHTML = `<option value="">— Write your own —</option>` +
+      quotes.map((q, i) => `<option value="${i}">${Brand.censor(q).slice(0, 60).replace(/&/g, "&amp;").replace(/</g, "&lt;")}${q.length > 60 ? "…" : ""}</option>`).join("");
+    if (quotes.length) { $("quote-pick").value = "0"; $("quote-text").value = quotes[0]; }
+  }
+  fillQuotes();
 
   const look = () => ({ format: $("format").value, theme: $("theme").value, font: $("font").value, censor: $("censor").checked });
 
@@ -68,7 +71,7 @@
   $("pdf-one").addEventListener("click", () => pdfFrom([quoteOpts()], `lone-soulja-quote-${$("format").value}.pdf`));
   $("pdf-sizes").addEventListener("click", () => pdfFrom(Object.keys(Brand.FORMATS).map((f) => quoteOpts(f)), "lone-soulja-quote-all-sizes.pdf"));
   $("pdf-book").addEventListener("click", () => {
-    if (!quotes.length) { $("pdf-msg").textContent = "No saved quotes in episodes.js."; return; }
+    if (!quotes.length) { $("pdf-msg").textContent = "No saved quotes yet. Add them in the admin portal or episodes.js."; return; }
     pdfFrom(quotes.map((q) => ({ ...quoteOpts(), quote: q })), "lone-soulja-quote-book.pdf");
   });
 
@@ -298,4 +301,15 @@
   // ---- Start
   Brand.loadFonts().then(() => (tab === "quote" ? renderQuote() : renderVideo()));
   renderQuote(); syncCaption(); updateFbButton(); checkFb();
+
+  // Quotes managed in the admin portal replace the episodes.js defaults
+  if (API) {
+    fetch(API + "/api/content").then((r) => (r.ok ? r.json() : {})).then((c) => {
+      if (!Array.isArray(c.quotes) || !c.quotes.length) return;
+      quotes.splice(0, quotes.length, ...c.quotes);
+      fillQuotes();
+      if (tab === "quote") renderQuote();
+      syncCaption();
+    }).catch(() => {});
+  }
 })();
