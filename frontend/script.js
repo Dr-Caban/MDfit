@@ -101,19 +101,44 @@
     }
   });
 
-  // ---- Newsletter (front-end only; connect to Mailchimp/ConvertKit/Formspree later)
-  $("#newsletter").addEventListener("submit", (e) => {
+  // ---- Clips: TikTok / YouTube Shorts / Instagram Reels / Facebook embeds
+  function embedUrl(url) {
+    let m;
+    if ((m = url.match(/tiktok\.com\/.*\/video\/(\d+)/))) return `https://www.tiktok.com/embed/v2/${m[1]}`;
+    if ((m = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/))) return `https://www.youtube.com/embed/${m[1]}`;
+    if ((m = url.match(/instagram\.com\/(?:reel|reels|p)\/([\w-]+)/))) return `https://www.instagram.com/reel/${m[1]}/embed`;
+    if (/facebook\.com|fb\.watch/.test(url)) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false`;
+    return "";
+  }
+  function renderClips() {
+    const urls = (SITE.clips || []).map(embedUrl).filter(Boolean);
+    $("#clip-list").innerHTML = urls.length
+      ? urls.map((u) => `<div class="clip"><iframe src="${esc(u)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen title="Lone Soulja clip"></iframe></div>`).join("")
+      : ["TikTok", "Reels", "Shorts"].map((p) => `<div class="clip clip--empty"><div><strong>${p}</strong>Clips dropping soon</div></div>`).join("");
+  }
+
+  // ---- Newsletter -> Railway backend
+  const API = String(SITE.apiUrl || "").replace(/\/+$/, "");
+  $("#newsletter").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("#email");
     const msg = $("#form-msg");
-    if (!email.checkValidity() || !email.value) {
-      msg.textContent = "Please enter a valid email.";
-      msg.className = "form__msg err";
-      return;
-    }
-    msg.textContent = "You're locked in! 🇧🇸";
-    msg.className = "form__msg ok";
-    e.target.reset();
+    const say = (t, ok) => { msg.textContent = t; msg.className = "form__msg " + (ok ? "ok" : "err"); };
+    if (!email.checkValidity() || !email.value) return say("Please enter a valid email.", false);
+    if (!API) return say("Sign-ups open soon!", false);
+    const btn = e.target.querySelector("button");
+    btn.disabled = true;
+    try {
+      const r = await fetch(API + "/api/subscribe", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.value })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) return say(d.error || "Something went wrong. Try again.", false);
+      say("You're locked in! 🇧🇸", true);
+      e.target.reset();
+    } catch (err) {
+      say("Couldn't connect. Try again in a minute.", false);
+    } finally { btn.disabled = false; }
   });
 
   // ---- Thought of the Day
@@ -128,10 +153,23 @@
   });
   showQuote();
 
+  $("#quote-share").addEventListener("click", async () => {
+    if (qi < 0) return;
+    const c = document.createElement("canvas");
+    await Brand.loadFonts();
+    Brand.drawQuoteCard(c, {
+      quote: quotes[qi], label: "Random Thought of the Day", author: "Geno “Smurf” Collie",
+      tags: "#SavageButBlessed #ISaidWhatISaid #LoneSoulja", handle: SITE.handle || "",
+      theme: "midnight", font: "bebas", format: "story", censor: true
+    });
+    await Brand.shareOrDownload(await Brand.toBlob(c), "lone-soulja-quote.png", Brand.censor(quotes[qi]));
+  });
+
   $("#search").addEventListener("input", (e) => renderList(e.target.value));
   $("#year").textContent = new Date().getFullYear();
 
   renderLatest();
   renderList();
   renderLinks();
+  renderClips();
 })();

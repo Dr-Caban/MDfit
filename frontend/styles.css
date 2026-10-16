@@ -95,6 +95,17 @@ p { margin: 0 0 1em; }
 .quote { margin: 0 auto 28px; max-width: 820px; }
 .quote p { font-family: var(--display); font-size: clamp(1.9rem, 4.5vw, 3rem); line-height: 1.1; margin-bottom: .5em; min-height: 2.2em; }
 .quote footer { font-weight: 700; }
+.quote__actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn--outline { border-color: var(--black); color: var(--black); background: transparent; }
+.btn--outline:hover { background: var(--black); color: var(--gold); }
+
+/* Clips (9:16) */
+.clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+.clip { position: relative; aspect-ratio: 9 / 16; border-radius: var(--radius); overflow: hidden; background: var(--black); border: 2px solid #262626; }
+.clip iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.clip--empty { display: grid; place-items: center; text-align: center; padding: 20px;
+  background: linear-gradient(to bottom, rgba(0,163,173,.25), rgba(255,199,44,.12)), var(--black); color: var(--muted); border-style: dashed; }
+.clip--empty strong { display: block; font-family: var(--display); font-size: 2rem; color: var(--white); font-weight: 400; letter-spacing: .04em; }
 
 /* Latest */
 .latest { display: grid; grid-template-columns: 200px 1fr; gap: 32px; align-items: center;

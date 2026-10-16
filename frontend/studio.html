@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Lone Soulja Studio</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:wght@400;500;700;800&family=Montserrat:wght@900&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="studio.css">
+</head>
+<body>
+  <header class="top">
+    <a href="index.html" class="brand"><img src="assets/logo.svg" alt="" width="34" height="34"> LONE SOULJA <span>Studio</span></a>
+    <nav class="tabs" role="tablist">
+      <button role="tab" class="tab active" data-tab="quote" aria-selected="true">Quote Cards</button>
+      <button role="tab" class="tab" data-tab="video" aria-selected="false">Video Clips</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="controls">
+      <!-- Shared brand settings -->
+      <fieldset>
+        <legend>Look</legend>
+        <label>Format <select id="format"></select></label>
+        <label>Theme <select id="theme"></select></label>
+        <label>Typography <select id="font"></select></label>
+        <label class="check"><input type="checkbox" id="censor" checked> Censor profanity (f***, a**)</label>
+      </fieldset>
+
+      <!-- Quote tab -->
+      <div data-panel="quote">
+        <fieldset>
+          <legend>Quote</legend>
+          <label>Pick a saved quote <select id="quote-pick"></select></label>
+          <label>Quote text <textarea id="quote-text" rows="5"></textarea></label>
+          <label>Label <input id="quote-label" value="Random Thought of the Day"></label>
+          <label>Author <input id="quote-author" value="Geno “Smurf” Collie"></label>
+          <label>Hashtags <input id="quote-tags" value="#SavageButBlessed #ISaidWhatISaid #LoneSoulja"></label>
+        </fieldset>
+        <div class="actions">
+          <button class="btn gold" id="quote-share">Share / Download PNG</button>
+          <button class="btn" id="quote-download">Download PNG</button>
+          <button class="btn aqua" id="quote-all">Download All 3 Sizes</button>
+        </div>
+      </div>
+
+      <!-- Video tab -->
+      <div data-panel="video" hidden>
+        <fieldset>
+          <legend>Clip</legend>
+          <label>Video file <input type="file" id="video-file" accept="video/*"></label>
+          <label>Headline (optional) <input id="video-title" placeholder="e.g. Leggings with no a**…"></label>
+          <label>Video fit
+            <select id="video-fit">
+              <option value="fill">Fill frame (crop)</option>
+              <option value="fit">Fit whole video (blurred background)</option>
+            </select>
+          </label>
+          <label>Quality
+            <select id="video-quality">
+              <option value="1080">1080p (best)</option>
+              <option value="720">720p (faster, older phones)</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="video-progress" checked> Show progress bar</label>
+        </fieldset>
+        <fieldset>
+          <legend>Captions / Transcript</legend>
+          <label>Caption style
+            <select id="cap-style">
+              <option value="pop">Pop: 3 words at a time, word highlight</option>
+              <option value="line">Line: full sentence, outlined</option>
+              <option value="boxed">Boxed: black bar behind text</option>
+              <option value="none">No captions</option>
+            </select>
+          </label>
+          <label>Caption position
+            <select id="cap-pos">
+              <option value="bottom">Lower (above app buttons)</option>
+              <option value="middle">Middle</option>
+              <option value="top">Upper</option>
+            </select>
+          </label>
+          <label>Transcript
+            <textarea id="transcript" rows="7" placeholder="Paste an SRT / VTT caption file for exact timing, or plain text to auto-time it across the clip."></textarea>
+          </label>
+          <label class="file-inline">or load .srt / .vtt <input type="file" id="transcript-file" accept=".srt,.vtt,text/plain"></label>
+          <p class="hint" id="cue-info"></p>
+        </fieldset>
+        <div class="actions">
+          <button class="btn" id="video-preview" disabled>▶ Preview</button>
+          <button class="btn gold" id="video-export" disabled>Export Video</button>
+          <button class="btn" id="video-cancel" hidden>Cancel</button>
+        </div>
+        <p class="hint" id="video-status">Load a video to start. The export plays the clip once in real time, so keep this tab open.</p>
+        <div class="actions" id="video-done" hidden>
+          <button class="btn gold" id="video-share">Share / Download</button>
+          <button class="btn" id="video-download">Download</button>
+        </div>
+        <video id="video" playsinline preload="auto" hidden></video>
+      </div>
+
+      <!-- Facebook -->
+      <fieldset class="fb">
+        <legend>Post to Facebook Page</legend>
+        <p class="hint" id="fb-status">Checking connection…</p>
+        <label>Post caption <textarea id="fb-caption" rows="3"></textarea></label>
+        <label>Admin key <input id="admin-key" type="password" autocomplete="off" placeholder="Set on Railway as ADMIN_KEY"></label>
+        <button class="btn fbtn" id="fb-post" disabled>Post current card to Facebook</button>
+        <p class="hint" id="fb-msg" role="status" aria-live="polite"></p>
+      </fieldset>
+    </section>
+
+    <section class="preview">
+      <canvas id="canvas" width="1080" height="1920" aria-label="Preview"></canvas>
+      <p class="hint center" id="safe-note">The 9:16 layout keeps text clear of TikTok, Reels and Shorts buttons.</p>
+    </section>
+  </main>
+
+  <script src="episodes.js"></script>
+  <script src="brand.js"></script>
+  <script src="studio.js"></script>
+</body>
+</html>

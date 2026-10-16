@@ -7,12 +7,21 @@
   <meta name="description" content="Lone Soulja with Geno &quot;Smurf&quot; Collie — savage but blessed. Unfiltered talk straight out of The Bahamas.">
   <meta property="og:title" content="Lone Soulja Podcast">
   <meta property="og:description" content="Savage but blessed. Unfiltered talk from the 242 with Geno &quot;Smurf&quot; Collie.">
-  <meta property="og:image" content="assets/logo.svg">
+  <meta property="og:type" content="website">
+  <!-- After deploying, change to the full URL, e.g. https://your-site.vercel.app/assets/og-image.png (Facebook needs an absolute link) -->
+  <meta property="og:image" content="assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="apple-touch-icon" href="assets/icon-512.png">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"PodcastSeries","name":"Lone Soulja","description":"Savage but blessed. Unfiltered talk from The Bahamas with Geno \"Smurf\" Collie.","author":{"@type":"Person","name":"Geno Collie"},"inLanguage":"en"}
+  </script>
   <meta name="theme-color" content="#0B0B0B">
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:wght@400;500;700;800&family=Montserrat:wght@900&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -28,6 +37,7 @@
         <span></span><span></span><span></span>
       </button>
       <nav id="nav-links" class="nav__links">
+        <a href="#clips">Clips</a>
         <a href="#episodes">Episodes</a>
         <a href="#about">About</a>
         <a href="#listen">Listen</a>
@@ -69,7 +79,21 @@
           <p id="quote-text"></p>
           <footer>— Geno “Smurf” Collie</footer>
         </blockquote>
-        <button class="btn btn--dark" id="quote-next" type="button">Another One 🔁</button>
+        <div class="quote__actions">
+          <button class="btn btn--dark" id="quote-next" type="button">Another One 🔁</button>
+          <button class="btn btn--outline" id="quote-share" type="button">Share This Card 📲</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLIPS -->
+    <section id="clips" class="section section--dark">
+      <div class="wrap">
+        <div class="section__head">
+          <h2 class="section__title">Clips</h2>
+          <p class="muted">Short cuts for Reels, TikTok and Shorts</p>
+        </div>
+        <div id="clip-list" class="clips"></div>
       </div>
     </section>
 
@@ -159,6 +183,7 @@
   </div>
 
   <script src="episodes.js"></script>
+  <script src="brand.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

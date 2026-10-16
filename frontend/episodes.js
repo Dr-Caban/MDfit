@@ -8,6 +8,18 @@
 
 const SITE = {
   email: "booking@lonesoulja.com", // TODO: replace with real email
+  handle: "@lonesoulja",           // TODO: your social handle (shown on quote cards & videos)
+
+  // Your Railway backend URL, no trailing slash, e.g. "https://lone-soulja-api.up.railway.app"
+  // Leave "" until the backend is deployed.
+  apiUrl: "",
+
+  // Short-form clips shown on the homepage. Paste links to TikTok, YouTube Shorts,
+  // Instagram Reels or Facebook Reels, e.g.
+  //   "https://www.tiktok.com/@lonesoulja/video/7400000000000000000"
+  //   "https://youtube.com/shorts/abc123XYZ"
+  //   "https://www.instagram.com/reel/C0abcDEF/"
+  clips: [],
 
   // Leave a url as "" to hide that button.
   platforms: [
@@ -15,6 +27,7 @@ const SITE = {
     { name: "Apple Podcasts",  url: "https://podcasts.apple.com/" },
     { name: "YouTube",         url: "https://youtube.com/" },
     { name: "Amazon Music",    url: "https://music.amazon.com/podcasts" },
+    { name: "TikTok",          url: "https://tiktok.com/" },
     { name: "RSS",             url: "" }
   ],
 

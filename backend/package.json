@@ -1,0 +1,17 @@
+{
+  "name": "lone-soulja-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lone Soulja Podcast API (Railway)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
