@@ -63,3 +63,5 @@ code { background: #0f0f0f; border: 1px solid #333; padding: 2px 6px; border-rad
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50; background: #1f1f1f; border: 1px solid #444; padding: 10px 16px; border-radius: 10px; font-weight: 700; max-width: calc(100% - 32px); }
 .toast.ok { border-color: #2f7a52; } .toast.bad { border-color: #8a2b2b; color: #FF8A80; }
 .tag.login { color: #ccc; } .tag.settings_update { color: var(--gold); } .tag.episode_published { color: #7EE0A5; } .tag.episode_updated { color: #8AB4FF; } .tag.episode_unpublished { color: #FF8A80; }
+
+.icn { width: 1em; height: 1em; vertical-align: -0.15em; fill: currentColor; display: inline-block; }

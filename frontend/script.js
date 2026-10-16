@@ -34,12 +34,12 @@
 
     const ep0 = episodes[0];
     $("#latest-card").innerHTML = `
-      <div class="latest__num">${esc(ep0.number || "▶")}</div>
+      <div class="latest__num">${esc(ep0.number || "")}</div>
       <div class="latest__body">
         <p class="eyebrow">${esc(meta(ep0))}</p>
         <h3>${esc(ep0.title)}${badge(ep0)}</h3>
         <p>${esc(ep0.description)}</p>
-        <button class="btn btn--gold" data-play="0">▶ Play</button>
+        <button class="btn btn--gold" data-play="0"><svg class="icn" aria-hidden="true"><use href="assets/icons.svg#i-play"/></svg> Play</button>
       </div>`;
 
     const q = filter.trim().toLowerCase();
@@ -50,7 +50,7 @@
         <p class="eyebrow">${esc(meta(ep))}</p>
         <h3>${esc(ep.title)}${badge(ep)}</h3>
         <p>${esc(ep.description)}</p>
-        <button class="btn btn--aqua btn--sm" data-play="${i}">▶ Play</button>
+        <button class="btn btn--aqua btn--sm" data-play="${i}"><svg class="icn" aria-hidden="true"><use href="assets/icons.svg#i-play"/></svg> Play</button>
       </article>`).join("");
     $("#no-results").hidden = items.length > 0;
   }
@@ -207,7 +207,7 @@
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) return say(d.error || "Something went wrong. Try again.", false);
-      say("You're locked in! 🇧🇸", true);
+      say("You're locked in!", true);
       e.target.reset();
     } catch (err) {
       say("Couldn't connect. Try again in a minute.", false);

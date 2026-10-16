@@ -222,3 +222,8 @@ p { margin: 0 0 1em; }
 
 [hidden] { display: none !important; }
 .latest .ep-badge { background: var(--gold); color: var(--black); }
+
+/* SVG icons */
+.icn { width: 1em; height: 1em; vertical-align: -0.15em; fill: currentColor; display: inline-block; }
+.icn-flag { width: 1.4em; height: 0.93em; vertical-align: -0.2em; display: inline-block; margin-left: 4px; }
+.pillars svg.icn { color: var(--gold); margin-right: 6px; width: 1.2em; height: 1.2em; vertical-align: -0.25em; }

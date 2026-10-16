@@ -72,7 +72,7 @@
   $("pdf-one").addEventListener("click", () => pdfFrom([quoteOpts()], `lone-soulja-quote-${$("format").value}.pdf`));
   $("pdf-sizes").addEventListener("click", () => pdfFrom(Object.keys(Brand.FORMATS).map((f) => quoteOpts(f)), "lone-soulja-quote-all-sizes.pdf"));
   $("pdf-book").addEventListener("click", () => {
-    if (!quotes.length) { $("pdf-msg").textContent = "No saved quotes yet. Add them in the admin portal (Settings → Quotes)."; return; }
+    if (!quotes.length) { $("pdf-msg").textContent = "No saved quotes yet. Add them in the admin portal (Settings > Quotes)."; return; }
     pdfFrom(quotes.map((q) => ({ ...quoteOpts(), quote: q })), "lone-soulja-quote-book.pdf");
   });
 
@@ -150,14 +150,14 @@
 
   $("video-preview").addEventListener("click", async () => {
     if (exporting) return;
-    if (!video.paused) { video.pause(); stopLoop(); $("video-preview").textContent = "▶ Preview"; return; }
+    if (!video.paused) { video.pause(); stopLoop(); $("video-preview").textContent = "Preview"; return; }
     const a = ensureAudio(); await a.ctx.resume();
     if (video.ended) video.currentTime = 0;
     await video.play();
-    $("video-preview").textContent = "❚❚ Pause";
+    $("video-preview").textContent = "Pause";
     loop();
   });
-  video.addEventListener("ended", () => { if (!exporting) { stopLoop(); $("video-preview").textContent = "▶ Preview"; } });
+  video.addEventListener("ended", () => { if (!exporting) { stopLoop(); $("video-preview").textContent = "Preview"; } });
 
   // Prefer H.264 MP4 (what TikTok / Reels / Shorts want). Plain "video/mp4" is only trusted
   // when WebM recording isn't available (older Safari), since Chromium can put VP9 inside MP4.
@@ -217,7 +217,7 @@
     } finally {
       exporting = false; recorder = null;
       $("video-export").disabled = false; $("video-preview").disabled = false; $("video-cancel").hidden = true;
-      $("video-preview").textContent = "▶ Preview";
+      $("video-preview").textContent = "Preview";
       updateFbButton();
     }
   });
@@ -252,7 +252,7 @@
     const clean = (s) => ($("censor").checked ? Brand.censor(s) : s);
     $("fb-caption").value = tab === "quote"
       ? clean(`${$("quote-text").value}\n\n${$("quote-tags").value}`).trim()
-      : clean(`${$("video-title").value || "New clip from Lone Soulja 🇧🇸"}\n\n#LoneSoulja #SavageButBlessed`).trim();
+      : clean(`${$("video-title").value || "New clip from Lone Soulja "}\n\n#LoneSoulja #SavageButBlessed`).trim();
   }
   $("fb-caption").addEventListener("input", () => (captionEdited = true));
 
@@ -274,7 +274,7 @@
     $("fb-login").hidden = loggedIn;
     if (!configured) status.textContent = "The Facebook Page isn't connected on Railway yet (FB_PAGE_ID, FB_PAGE_ACCESS_TOKEN).";
     else if (!loggedIn) status.textContent = "Log in to post to the Facebook Page.";
-    else { status.textContent = "✅ Connected to your Facebook Page."; fbReady = true; }
+    else { status.textContent = "Connected to your Facebook Page."; fbReady = true; }
     updateFbButton();
   }
 
@@ -285,7 +285,7 @@
     try {
       await SiteAPI.login($("fb-email").value.trim(), $("fb-password").value);
       $("fb-password").value = ""; msg.textContent = "";
-    } catch (err) { msg.textContent = "❌ " + err.message; }
+    } catch (err) { msg.textContent = "✖ " + err.message; }
     checkFb();
   });
 
@@ -300,9 +300,9 @@
       await SiteAPI.admin(`/api/facebook/post?caption=${encodeURIComponent($("fb-caption").value)}`, {
         method: "POST", headers: { "Content-Type": blob.type }, body: blob
       });
-      msg.textContent = "✅ Posted to Facebook!";
+      msg.textContent = "Posted to Facebook!";
     } catch (e) {
-      msg.textContent = "❌ " + e.message;
+      msg.textContent = "✖ " + e.message;
       if (e.status === 401) checkFb();
     } finally { updateFbButton(); }
   });

@@ -28,8 +28,8 @@
   // Every failed call goes through here: 401 logs out, anything else is shown
   function handle(err, where) {
     if (err.status === 401) return logout("Your session expired. Please log in again.");
-    if (where) { where.textContent = "❌ " + err.message; where.className = "hint err msg"; }
-    else toast("❌ " + err.message, false);
+    if (where) { where.textContent = "✖ " + err.message; where.className = "hint err msg"; }
+    else toast("✖ " + err.message, false);
   }
 
   // ---- Login / logout
@@ -93,7 +93,7 @@
     b.hidden = !stats.seeded;
     b.className = "banner" + (prod ? " danger" : "");
     b.textContent = prod
-      ? "⚠️ SAMPLE (SEED) DATA IS IN PRODUCTION. Clear the Railway volume's data files now."
+      ? "WARNING: Sample (seed) data is in production. Clear the Railway volume's data files now."
       : "Sample data loaded for local testing. This is not real subscriber data.";
 
     const fbOpt = $("fb-option").querySelector("input");
@@ -174,7 +174,7 @@
     try {
       settings = await sendJSON("/api/admin/settings", "PUT", collect(form.dataset.section, form));
       fillSettings();
-      msg.textContent = "✅ Saved. Live on the site now."; msg.className = "hint ok msg";
+      msg.textContent = "Saved. Live on the site now."; msg.className = "hint ok msg";
       loadStats().catch(() => {}); loadActivity().catch(() => {});
     } catch (err) { handle(err, msg); }
     finally { btn.disabled = false; }
@@ -230,7 +230,7 @@
     try {
       if (editingId) {
         await sendJSON(`/api/admin/episodes/${encodeURIComponent(editingId)}`, "PUT", body);
-        out.replaceChildren(el("p", { className: "ok", textContent: "✅ Saved. The site and feed are updated." }));
+        out.replaceChildren(el("p", { className: "ok", textContent: "Saved. The site and feed are updated." }));
         resetForm();
       } else {
         const { episode, results } = await sendJSON("/api/admin/episodes", "POST", body);
@@ -238,14 +238,14 @@
         if (results.website) rows.push(["Website", true, "Live on the site now."]);
         if (results.podcast) rows.push(["Podcast apps", true, "Added to your RSS feed. Spotify, Apple, Amazon and YouTube pick it up automatically (usually within a few hours)."]);
         if (results.facebook) rows.push(["Facebook Page", results.facebook.ok, results.facebook.ok ? "Announcement posted." : results.facebook.error]);
-        out.replaceChildren(el("p", { className: "ok", textContent: `✅ Published Episode ${episode.number}: ${episode.title}` }),
+        out.replaceChildren(el("p", { className: "ok", textContent: `Published Episode ${episode.number}: ${episode.title}` }),
           el("ul", { className: "checklist" }, ...rows.map(([n, ok, t]) => el("li", { className: ok ? "done" : "todo", textContent: `${n}: ${t}` }))));
         resetForm();
       }
       await Promise.all([loadEpisodes(), loadStats(), loadActivity()]);
     } catch (err) {
       if (err.status === 401) return handle(err);
-      out.replaceChildren(el("p", { className: "err", textContent: "❌ " + err.message }));
+      out.replaceChildren(el("p", { className: "err", textContent: "✖ " + err.message }));
     } finally { btn.disabled = false; }
   });
 
@@ -338,6 +338,6 @@
   $("refresh").addEventListener("click", () => loadActivity().catch(handle));
 
   // ---- Start
-  $("api-info").textContent = API ? "Backend: " + API : "⚠️ Backend not connected: set apiUrl in config.js.";
+  $("api-info").textContent = API ? "Backend: " + API : "Backend not connected: set apiUrl in config.js.";
   if (SiteAPI.session.get()) start(); else showDash(false);
 })();
