@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lone Soulja Podcast</title>
+  <meta name="description" content="Lone Soulja — a podcast straight out of The Bahamas. Real talk, island culture, and stories from the 242.">
+  <meta property="og:title" content="Lone Soulja Podcast">
+  <meta property="og:description" content="Real talk, island culture, and stories from the 242.">
+  <meta property="og:image" content="assets/logo.svg">
+  <meta name="theme-color" content="#0B0B0B">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="nav">
+    <div class="wrap nav__inner">
+      <a href="#top" class="brand" aria-label="Lone Soulja home">
+        <img src="assets/logo.svg" alt="" width="40" height="40">
+        <span>LONE SOULJA</span>
+      </a>
+      <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+      <nav id="nav-links" class="nav__links">
+        <a href="#episodes">Episodes</a>
+        <a href="#about">About</a>
+        <a href="#listen">Listen</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- HERO -->
+    <section id="top" class="hero">
+      <div class="hero__flag" aria-hidden="true"></div>
+      <div class="wrap hero__inner">
+        <img class="hero__logo" src="assets/logo.svg" alt="Lone Soulja logo" width="180" height="180">
+        <p class="eyebrow">Straight from the 242 🇧🇸</p>
+        <h1>Lone <span>Soulja</span></h1>
+        <p class="hero__tag">Real talk. Island culture. Stories from The Bahamas and beyond.</p>
+        <div class="hero__cta">
+          <a href="#latest" class="btn btn--gold">▶ Play Latest Episode</a>
+          <a href="#listen" class="btn btn--ghost">Subscribe</a>
+        </div>
+      </div>
+      <div class="junkanoo" aria-hidden="true"></div>
+    </section>
+
+    <!-- LATEST -->
+    <section id="latest" class="section section--dark">
+      <div class="wrap">
+        <h2 class="section__title">Latest Episode</h2>
+        <article class="latest" id="latest-card"></article>
+      </div>
+    </section>
+
+    <!-- EPISODES -->
+    <section id="episodes" class="section">
+      <div class="wrap">
+        <div class="section__head">
+          <h2 class="section__title">All Episodes</h2>
+          <input id="search" class="search" type="search" placeholder="Search episodes…" aria-label="Search episodes">
+        </div>
+        <div id="episode-list" class="grid"></div>
+        <p id="no-results" class="muted" hidden>No episodes match that search.</p>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="section section--aqua">
+      <div class="wrap about">
+        <div class="about__art" aria-hidden="true">
+          <img src="assets/logo.svg" alt="" width="260" height="260">
+        </div>
+        <div>
+          <h2 class="section__title">About the Show</h2>
+          <p><strong>Lone Soulja</strong> is a podcast rooted in Bahamian culture — from Nassau to the Family Islands. Each episode brings honest conversation about life, hustle, music, faith, and what it means to stand on your own.</p>
+          <p>Whether you're home in the 242 or part of the diaspora, pull up a chair. This is your corner.</p>
+          <ul class="pillars">
+            <li>🎙️ Unfiltered conversations</li>
+            <li>🌊 Island life &amp; culture</li>
+            <li>🥁 Music, Junkanoo &amp; creatives</li>
+            <li>💪 Hustle &amp; self-made stories</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- LISTEN -->
+    <section id="listen" class="section section--dark">
+      <div class="wrap center">
+        <h2 class="section__title">Listen Everywhere</h2>
+        <p class="muted">Subscribe on your favourite platform so you never miss an episode.</p>
+        <div class="platforms" id="platforms"></div>
+      </div>
+    </section>
+
+    <!-- CONTACT / NEWSLETTER -->
+    <section id="contact" class="section">
+      <div class="wrap contact">
+        <div>
+          <h2 class="section__title">Stay Locked In</h2>
+          <p>Get new episodes and announcements in your inbox.</p>
+          <form id="newsletter" class="form" novalidate>
+            <label class="sr" for="email">Email address</label>
+            <input id="email" name="email" type="email" placeholder="you@example.com" required autocomplete="email">
+            <button class="btn btn--gold" type="submit">Join</button>
+          </form>
+          <p id="form-msg" class="form__msg" role="status" aria-live="polite"></p>
+        </div>
+        <div>
+          <h2 class="section__title">Be a Guest / Book Us</h2>
+          <p>Got a story the islands need to hear? Want to sponsor the show?</p>
+          <a class="btn btn--aqua" id="contact-email" href="#">Email the Show</a>
+          <div class="socials" id="socials"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__flag" aria-hidden="true"></div>
+    <div class="wrap footer__inner">
+      <p>© <span id="year"></span> Lone Soulja Podcast · Made in The Bahamas 🇧🇸</p>
+      <p class="motto">“Forward, Upward, Onward, Together.”</p>
+    </div>
+  </footer>
+
+  <!-- Sticky audio player -->
+  <div class="player" id="player" hidden>
+    <div class="wrap player__inner">
+      <div class="player__meta">
+        <strong id="player-title"></strong>
+        <span id="player-sub" class="muted"></span>
+      </div>
+      <audio id="audio" controls preload="none"></audio>
+      <button class="player__close" id="player-close" aria-label="Close player">✕</button>
+    </div>
+  </div>
+
+  <script src="episodes.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
