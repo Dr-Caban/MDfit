@@ -5,7 +5,7 @@
  */
 const SITE = {
   // Your Railway backend URL, no trailing slash, e.g. "https://lone-soulja-api.up.railway.app"
-  apiUrl: "",
+  apiUrl: "https://api-production-7e5f.up.railway.app",
 
   // Used only if the backend can't be reached:
   cashtag: "genocollie",
