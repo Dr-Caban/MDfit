@@ -116,7 +116,7 @@ p { margin: 0 0 1em; }
 .builds li::before { content: "✓"; position: absolute; left: 0; color: var(--aqua); font-weight: 700; }
 .nav__links .nav__cta { color: var(--gold); font-weight: 700; }
 
-/* Quick give (Cash App) */
+/* Quick give (Venmo) */
 .give { margin: 22px 0 8px; }
 .give__label { font-weight: 700; margin-bottom: 10px; }
 .give__amounts { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }

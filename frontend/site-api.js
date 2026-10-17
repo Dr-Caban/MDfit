@@ -1,4 +1,4 @@
-/* Shared helpers: backend API, admin session, Cash App links. Used by every page. */
+/* Shared helpers: backend API, admin session, Venmo links. Used by every page. */
 const SiteAPI = (() => {
   "use strict";
   const API = String((typeof SITE !== "undefined" && SITE.apiUrl) || "").replace(/\/+$/, "");
@@ -19,19 +19,22 @@ const SiteAPI = (() => {
     } catch (e) { return null; } finally { t.done(); }
   }
 
-  // ---- Cash App (minimum payment is $1)
-  const TAG = /^[A-Za-z][A-Za-z0-9]{0,19}$/;
+  // ---- Venmo (no fixed minimum)
+  const HANDLE = /^[A-Za-z0-9._-]{5,30}$/;
   function parseAmount(v) {
     const n = Number(String(v ?? "").replace(/[$,\s]/g, ""));
-    if (!Number.isFinite(n) || n < 1 || n > 10000) return null;
+    if (!Number.isFinite(n) || n < 0.01 || n > 10000) return null;
     return Math.round(n * 100) / 100;
   }
   const amountText = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
-  function cashAppUrl(tag, amount) {
-    tag = String(tag || "").replace(/^\$/, "");
-    if (!TAG.test(tag)) return "";
+  function venmoUrl(handle, amount, note) {
+    handle = String(handle || "").replace(/^@/, "");
+    if (!HANDLE.test(handle)) return "";
     const a = amount === undefined || amount === null || amount === "" ? null : parseAmount(amount);
-    return `https://cash.app/$${tag}` + (a ? "/" + amountText(a) : "");
+    if (!a) return `https://account.venmo.com/u/${handle}`;
+    const params = new URLSearchParams({ recipients: handle, amount: amountText(a), txn: "pay" });
+    if (note) params.set("note", note);
+    return `https://account.venmo.com/pay?${params.toString()}`;
   }
 
   // ---- Admin session (shared by /admin and /studio; expires after 12 hours)
@@ -79,5 +82,5 @@ const SiteAPI = (() => {
     return r;
   }
 
-  return { API, getSite, parseAmount, amountText, cashAppUrl, session, login, admin };
+  return { API, getSite, parseAmount, amountText, venmoUrl, session, login, admin };
 })();

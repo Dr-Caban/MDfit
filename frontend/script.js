@@ -5,7 +5,7 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   // State: starts from config.js fallbacks, replaced by live data from the backend
-  let settings = { show: {}, links: {}, donate: { cashtag: SITE.cashtag, amounts: [1, 5, 10], goal: 0, raised: 0 }, quotes: SITE.quotes || [], clips: [] };
+  let settings = { show: {}, links: {}, donate: { venmoHandle: SITE.venmoHandle, amounts: [1, 5, 10], goal: 0, raised: 0 }, quotes: SITE.quotes || [], clips: [] };
   let episodes = [];
   let feedUrl = "";
 
@@ -77,7 +77,7 @@
     }
   }
 
-  // ---- Donate: goal bar, Cash App quick give, other links
+  // ---- Donate: goal bar, Venmo quick give, other links
   function renderDonate() {
     const d = settings.donate || {};
     const money = (n) => "$" + Number(n || 0).toLocaleString("en-US");
@@ -91,14 +91,14 @@
       requestAnimationFrame(() => ($("#goal-fill").style.width = pct + "%"));
     }
 
-    const tag = d.cashtag || "";
-    const base = SiteAPI.cashAppUrl(tag);
+    const tag = d.venmoHandle || "";
+    const base = SiteAPI.venmoUrl(tag);
     $("#give").hidden = !base;
     if (base) {
-      $("#cashtag-label").textContent = "$" + tag;
+      $("#venmo-label").textContent = "@" + tag;
       const amounts = (d.amounts && d.amounts.length ? d.amounts : [1, 5, 10]).map(SiteAPI.parseAmount).filter(Boolean);
       $("#give-amounts").innerHTML = amounts.map((a) =>
-        `<a class="btn btn--dark" href="${esc(SiteAPI.cashAppUrl(tag, a))}" target="_blank" rel="noopener">$${esc(SiteAPI.amountText(a))}</a>`).join("");
+        `<a class="btn btn--dark" href="${esc(SiteAPI.venmoUrl(tag, a, "Lone Soulja Studio"))}" target="_blank" rel="noopener">$${esc(SiteAPI.amountText(a))}</a>`).join("");
     }
 
     const others = [["paypal", "PayPal"], ["stripe", "Card"], ["gofundme", "GoFundMe"]].filter(([k]) => d[k]);
@@ -110,9 +110,9 @@
     e.preventDefault();
     const amount = SiteAPI.parseAmount($("#give-amount").value);
     const msg = $("#give-msg");
-    if (!amount) { msg.textContent = "Enter an amount from $1 to $10,000 (Cash App's minimum is $1)."; return; }
+    if (!amount) { msg.textContent = "Enter an amount between $0.01 and $10,000."; return; }
     msg.textContent = "";
-    window.open(SiteAPI.cashAppUrl(settings.donate.cashtag, amount), "_blank", "noopener");
+    window.open(SiteAPI.venmoUrl(settings.donate.venmoHandle, amount, "Lone Soulja Studio"), "_blank", "noopener");
   });
 
   // ---- Clips: TikTok / YouTube Shorts / Instagram Reels / Facebook embeds

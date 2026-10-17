@@ -20,7 +20,7 @@ test("GET /api/site returns real defaults: no placeholder episodes or links", as
   const d = await r.json();
   assert.deepStrictEqual(d.episodes, []);
   assert.strictEqual(d.settings.show.title, "Lone Soulja");
-  assert.strictEqual(d.settings.donate.cashtag, "genocollie");
+  assert.strictEqual(d.settings.donate.venmoHandle, "");
   assert.deepStrictEqual(d.settings.donate.amounts, [1, 5, 10]);
   assert.ok(Object.values(d.settings.links).every((v) => v === ""), "no fake platform links");
   assert.strictEqual(d.settings.show.email, "");

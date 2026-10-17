@@ -66,7 +66,7 @@ function buildSeed(now = Date.now()) {
 
   // No episodes are seeded: publishing needs a real, reachable audio file.
   const settings = {
-    donate: { goal: 25000, raised: 6250, cashtag: "genocollie", amounts: [1, 5, 10] },
+    donate: { goal: 25000, raised: 6250, venmoHandle: "", amounts: [1, 5, 10] },
     quotes,
     meta: { seeded: true, seededAt: new Date(now).toISOString() }
   };

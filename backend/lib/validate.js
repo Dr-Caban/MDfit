@@ -15,7 +15,7 @@ function defaultSettings() {
       email: "", handle: "", category: "Comedy", explicit: true, language: "en", coverUrl: ""
     },
     links: Object.fromEntries(LINK_KEYS.map((k) => [k, ""])),
-    donate: { goal: 0, raised: 0, cashtag: "genocollie", amounts: [1, 5, 10], paypal: "", stripe: "", gofundme: "" },
+    donate: { goal: 0, raised: 0, venmoHandle: "", amounts: [1, 5, 10], paypal: "", stripe: "", gofundme: "" },
     quotes: [],
     clips: []
   };
@@ -103,15 +103,15 @@ function mergeSettings(current, body) {
     const b = obj(body.donate, "donate");
     if (b.goal !== undefined) s.donate.goal = Math.round(num(b.goal, "Goal"));
     if (b.raised !== undefined) s.donate.raised = Math.round(num(b.raised, "Raised"));
-    if (b.cashtag !== undefined) {
-      const t = str(b.cashtag, "Cashtag", { max: 21 }).replace(/^\$/, "");
-      if (t && !/^[A-Za-z][A-Za-z0-9]{0,19}$/.test(t)) fail("Cashtag must start with a letter and use only letters and numbers (max 20).");
-      s.donate.cashtag = t;
+    if (b.venmoHandle !== undefined) {
+      const t = str(b.venmoHandle, "Venmo handle", { max: 31 }).replace(/^@/, "");
+      if (t && !/^[A-Za-z0-9._-]{5,30}$/.test(t)) fail("Venmo handle must be 5-30 characters: letters, numbers, dots, underscores, hyphens.");
+      s.donate.venmoHandle = t;
     }
     if (b.amounts !== undefined) {
       if (!Array.isArray(b.amounts) || b.amounts.length < 1 || b.amounts.length > 6) fail("Quick amounts: between 1 and 6 amounts.");
-      // Cash App's minimum payment is $1
-      s.donate.amounts = b.amounts.map((a) => Math.round(num(a, "Quick amount", { min: 1, max: 10000 }) * 100) / 100);
+      // Venmo: no fixed minimum, allow /bin/bash.01+
+      s.donate.amounts = b.amounts.map((a) => Math.round(num(a, "Quick amount", { min: 0.01, max: 10000 }) * 100) / 100);
     }
     for (const k of ["paypal", "stripe", "gofundme"]) if (b[k] !== undefined) s.donate[k] = url(b[k], `${k} link`);
   }

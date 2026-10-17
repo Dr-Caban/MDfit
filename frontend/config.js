@@ -8,7 +8,8 @@ const SITE = {
   apiUrl: "https://api-production-7e5f.up.railway.app",
 
   // Used only if the backend can't be reached:
-  cashtag: "genocollie",
+  // Venmo @handle - update in /admin Settings
+  venmoHandle: "",
   quotes: [
     "Leggings with no a** are technically just long-sleeve panties. I said what I said, and I will NOT be taking questions at this time!",
     "You can't build an empire while arguing with people who still need instructions on shampoo bottles.",

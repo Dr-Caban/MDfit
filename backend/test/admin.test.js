@@ -50,7 +50,7 @@ test("settings: GET returns defaults", async () => {
   const s = await (await api.admin("/api/admin/settings")).json();
   assert.strictEqual(s.show.category, "Comedy");
   assert.strictEqual(s.show.explicit, true);
-  assert.strictEqual(s.donate.cashtag, "genocollie");
+  assert.strictEqual(s.donate.venmoHandle, "");
 });
 
 test("settings: invalid input is rejected and nothing is saved", async () => {
@@ -62,8 +62,8 @@ test("settings: invalid input is rejected and nothing is saved", async () => {
     [{ links: { spotify: "javascript:alert(1)" } }, /https/], [{ links: { spotify: "not a url" } }, /https/],
     [{ links: { myspace: "https://myspace.com" } }, /Unknown link/],
     [{ donate: null }, /object/], [{ donate: { goal: -1 } }, /number/], [{ donate: { goal: "" } }, /number/],
-    [{ donate: { raised: 2e9 } }, /number/], [{ donate: { cashtag: "$1bad" } }, /Cashtag/], [{ donate: { cashtag: "has-dash" } }, /Cashtag/],
-    [{ donate: { amounts: [] } }, /between 1 and 6/], [{ donate: { amounts: [0.5] } }, /from 1/],
+    [{ donate: { raised: 2e9 } }, /number/], [{ donate: { venmoHandle: "@no" } }, /Venmo/], [{ donate: { venmoHandle: "ab" } }, /Venmo/],
+    [{ donate: { amounts: [] } }, /between 1 and 6/], [{ donate: { amounts: [0] } }, /from 0.01/],
     [{ donate: { amounts: [1, 2, 3, 4, 5, 6, 7] } }, /between 1 and 6/], [{ donate: { amounts: "5" } }, /between 1 and 6/],
     [{ donate: { paypal: "http://paypal.me/x" } }, /https/],
     [{ quotes: "x" }, /list/], [{ quotes: ["x".repeat(601)] }, /600/],
@@ -81,7 +81,7 @@ test("settings: valid partial updates merge, normalise and show on /api/site", a
   let r = await api.admin("/api/admin/settings", put({
     show: { email: " Host@Example.COM ", handle: "@lonesoulja242", explicit: false },
     links: { spotify: "https://open.spotify.com/show/abc", tiktok: "https://www.tiktok.com/@lonesoulja242" },
-    donate: { goal: "25000", raised: 6250.4, cashtag: "$GenoCollie", amounts: [1, 5, 10, 20.555] },
+    donate: { goal: "25000", raised: 6250.4, venmoHandle: "@GenoCollie", amounts: [1, 5, 10, 20.555] },
     quotes: [" One ", "", "Two"],
     clips: ["https://youtube.com/shorts/abc123XYZ", " https://www.tiktok.com/@x/video/7400000000000000001 "]
   }));
@@ -91,7 +91,7 @@ test("settings: valid partial updates merge, normalise and show on /api/site", a
   assert.strictEqual(s.show.handle, "@lonesoulja242");
   assert.strictEqual(s.show.explicit, false);
   assert.strictEqual(s.show.title, "Lone Soulja", "untouched fields kept");
-  assert.deepStrictEqual(s.donate, { goal: 25000, raised: 6250, cashtag: "GenoCollie", amounts: [1, 5, 10, 20.56], paypal: "", stripe: "", gofundme: "" });
+  assert.deepStrictEqual(s.donate, { goal: 25000, raised: 6250, venmoHandle: "GenoCollie", amounts: [1, 5, 10, 20.56], paypal: "", stripe: "", gofundme: "" });
   assert.deepStrictEqual(s.quotes, ["One", "Two"]);
   assert.strictEqual(s.clips.length, 2);
 

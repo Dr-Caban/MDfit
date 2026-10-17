@@ -119,22 +119,22 @@
     const links = f("links");
     for (const k of Object.keys(s.links)) if (links[k]) links[k].value = s.links[k] || "";
     const don = f("donate");
-    for (const k of ["goal", "raised", "cashtag", "paypal", "stripe", "gofundme"]) don[k].value = s.donate[k] ?? "";
+    for (const k of ["goal", "raised", "venmoHandle", "paypal", "stripe", "gofundme"]) don[k].value = s.donate[k] ?? "";
     don.amounts.value = (s.donate.amounts || []).join(", ");
     f("quotes").quotes.value = (s.quotes || []).join("\n");
     f("clips").clips.value = (s.clips || []).join("\n");
     $("quote-count").textContent = `(${(s.quotes || []).length})`;
-    updateCashLink();
+    updateVenmoLink();
     $("ep-explicit").checked = !!s.show.explicit;
     renderDirStatus();
   }
 
-  function updateCashLink() {
-    const tag = document.querySelector('form[data-section="donate"]').elements.cashtag.value.trim().replace(/^\$/, "");
-    const base = location.origin + "/cashapp";
-    $("cash-link").textContent = tag ? `${base}  ·  ${base}/5  (opens $${tag} on Cash App)` : "Set a cashtag to get a share link.";
+  function updateVenmoLink() {
+    const tag = document.querySelector('form[data-section="donate"]').elements.venmoHandle.value.trim().replace(/^@/, "");
+    const base = location.origin + "/venmo";
+    $("venmo-link").textContent = tag ? `${base}  ·  ${base}/5  (opens @${tag} on Venmo)` : "Set a Venmo handle to get a share link.";
   }
-  document.querySelector('form[data-section="donate"]').elements.cashtag.addEventListener("input", updateCashLink);
+  document.querySelector('form[data-section="donate"]').elements.venmoHandle.addEventListener("input", updateVenmoLink);
 
   function renderDirStatus() {
     const L = settings.links;
@@ -157,8 +157,8 @@
     }
     if (section === "links") return { links: Object.fromEntries([...form.querySelectorAll("input")].map((i) => [i.name, i.value])) };
     if (section === "donate") {
-      const amounts = f.amounts.value.split(",").map((x) => x.trim().replace(/^\$/, "")).filter(Boolean).map(Number);
-      const o = { goal: f.goal.value === "" ? 0 : Number(f.goal.value), raised: f.raised.value === "" ? 0 : Number(f.raised.value), cashtag: f.cashtag.value, amounts };
+      const amounts = f.amounts.value.split(",").map((x) => x.trim().replace(/^@/, "")).filter(Boolean).map(Number);
+      const o = { goal: f.goal.value === "" ? 0 : Number(f.goal.value), raised: f.raised.value === "" ? 0 : Number(f.raised.value), venmoHandle: f.venmoHandle.value, amounts };
       for (const k of ["paypal", "stripe", "gofundme"]) o[k] = f[k].value;
       return { donate: o };
     }
