@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/cashapp",
+      "source": "/venmo",
       "headers": [
         {
           "key": "X-Robots-Tag",
@@ -44,14 +44,24 @@
   ],
   "rewrites": [
     {
-      "source": "/cashapp/:amount",
-      "destination": "/cashapp.html"
+      "source": "/venmo/:amount",
+      "destination": "/venmo.html"
     }
   ],
   "redirects": [
     {
       "source": "/donate",
       "destination": "/#support",
+      "permanent": false
+    },
+    {
+      "source": "/cashapp",
+      "destination": "/venmo",
+      "permanent": false
+    },
+    {
+      "source": "/cashapp/:amount",
+      "destination": "/venmo/:amount",
       "permanent": false
     }
   ]
