@@ -86,3 +86,10 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .share-row { display: flex; gap: 8px; }
 .share-row input { font-family: ui-monospace, monospace; font-size: 14px; }
 .share-more { font-size: 13px; }
+/* Logo on white (login card): the bright teal is for dark backgrounds only */
+.brand.dark .brand-sub { color: var(--accent); }
+/* Phones: keep table columns readable and let the table scroll sideways */
+@media (max-width: 600px) {
+  .table-wrap table { min-width: 600px; }
+  td a[href^="tel:"] { white-space: nowrap; }
+}
