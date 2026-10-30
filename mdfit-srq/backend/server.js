@@ -250,7 +250,9 @@ function createApp(cfg = loadConfig()) {
     const when = `${prettyDate(a.date)} at ${prettyTime(a.time)}`;
     const biz = s.business;
     notify.owner(`New booking: ${type.name}, ${when}`,
-      `${a.name}\n${a.email}\n${a.phone}\n\n${type.name} (${type.minutes} min)\n${when}\n\n${a.notes || "(no notes)"}`);
+      [`${a.name}\n${a.email}\n${a.phone}`, `${type.name} (${type.minutes} min)\n${when}`,
+        a.areas.length && `Where: ${a.areas.join(", ")}`, a.painLevel !== null && `Pain: ${a.painLevel}/10`, a.notes || "(no notes)"]
+        .filter(Boolean).join("\n\n"));
     const link = cancelLink("appointment", appt);
     notify.client(a.email, `You're booked: ${type.name}, ${when}`,
       `Hi ${a.name.split(" ")[0]},\n\nYou're booked at ${biz.name} for ${type.name} (${type.minutes} min) on ${when}.\n\n` +
@@ -428,7 +430,7 @@ function createApp(cfg = loadConfig()) {
   });
   admin.get("/appointments.csv", (req, res) => {
     res.type("text/csv").attachment("mdfit-appointments.csv")
-      .send(toCsv(appointments(), ["date", "time", "typeName", "minutes", "name", "email", "phone", "notes", "status", "adminNotes", "createdAt"]));
+      .send(toCsv(appointments(), ["date", "time", "typeName", "minutes", "name", "email", "phone", "areas", "painLevel", "notes", "status", "adminNotes", "createdAt"]));
   });
 
   // Leads

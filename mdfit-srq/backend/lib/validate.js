@@ -123,20 +123,25 @@ function time(v, field = "Time") {
   return t;
 }
 
+function areasInput(v) {
+  const areas = v === undefined || v === "" || v === null ? [] : Array.isArray(v) ? v : [v];
+  if (areas.length > AREAS.length) fail("Too many areas.");
+  areas.forEach((a) => oneOf(a, AREAS, "body area"));
+  return [...new Set(areas)];
+}
+const painInput = (v) => (v === undefined || v === "" || v === null ? null : int(v, "Pain level", { min: 0, max: 10 }));
+
 // Evaluation request / intake from the website
 function leadInput(b) {
   obj(b, "Request");
-  const areas = b.areas === undefined || b.areas === "" ? [] : Array.isArray(b.areas) ? b.areas : [b.areas];
-  if (areas.length > AREAS.length) fail("Too many areas.");
-  areas.forEach((a) => oneOf(a, AREAS, "body area"));
   return {
     name: str(b.name, "Name", { min: 2, max: 100 }),
     email: email(b.email),
     phone: phone(b.phone),
     service: b.service ? oneOf(b.service, SERVICES, "service") : "Not sure yet",
     goal: b.goal ? oneOf(b.goal, GOALS, "goal") : "Other",
-    areas: [...new Set(areas)],
-    painLevel: b.painLevel === undefined || b.painLevel === "" || b.painLevel === null ? null : int(b.painLevel, "Pain level", { min: 0, max: 10 }),
+    areas: areasInput(b.areas),
+    painLevel: painInput(b.painLevel),
     duration: b.duration ? oneOf(b.duration, DURATIONS, "how long") : "",
     surgery: b.surgery ? oneOf(b.surgery, SURGERY, "surgery answer") : "",
     preferredTime: str(b.preferredTime, "Preferred time", { max: 100 }),
@@ -165,7 +170,9 @@ function appointmentInput(b) {
     name: str(b.name, "Name", { min: 2, max: 100 }),
     email: email(b.email),
     phone: phone(b.phone, { required: true }),
-    notes: str(b.notes, "Notes", { max: 1000 })
+    notes: str(b.notes, "Notes", { max: 1000 }),
+    areas: areasInput(b.areas),
+    painLevel: painInput(b.painLevel)
   };
 }
 

@@ -171,47 +171,7 @@
         <p class="eyebrow">Book online</p>
         <h2 class="h2">Pick a time that works.</h2>
         <p class="sub">Real-time availability. You'll get a confirmation right away.</p>
-        <div class="booker" aria-live="polite">
-          <div class="booker-step">
-            <h3 class="step-title"><span>1</span> What do you need?</h3>
-            <div class="types" role="radiogroup" aria-label="Appointment type"></div>
-          </div>
-          <div class="booker-step">
-            <h3 class="step-title"><span>2</span> Choose a day</h3>
-            <div class="date-nav">
-              <button type="button" class="icon-btn" data-week="-1" aria-label="Earlier dates">‹</button>
-              <div class="dates" role="radiogroup" aria-label="Date"></div>
-              <button type="button" class="icon-btn" data-week="1" aria-label="Later dates">›</button>
-            </div>
-            <h3 class="step-title"><span>3</span> Choose a time</h3>
-            <div class="slots"><p class="muted">Loading availability…</p></div>
-          </div>
-          <form class="booker-step booker-form form" id="appt-form" novalidate hidden>
-            <h3 class="step-title"><span>4</span> Your details</h3>
-            <p class="picked"></p>
-            <div class="row">
-              <label>Full name<input name="name" required minlength="2" maxlength="100" autocomplete="name"></label>
-              <label>Mobile phone<input name="phone" type="tel" required maxlength="30" autocomplete="tel"></label>
-            </div>
-            <label>Email<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
-            <label>What's going on? (optional)<textarea name="notes" rows="2" maxlength="1000" placeholder="e.g. right knee, ACL repair in August"></textarea></label>
-            <input name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-            <button class="btn btn-lg" type="submit">Confirm booking</button>
-            <p class="form-msg" role="status"></p>
-          </form>
-          <div class="booked" hidden>
-            <svg viewBox="0 0 24 24" class="booked-ico" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m7.5 12.5 3 3 6-6.5"/></svg>
-            <h3>You're booked!</h3>
-            <p class="booked-when"></p>
-            <p class="muted booked-where"></p>
-            <div class="booked-actions">
-              <a class="btn" data-ics download="mdfit-appointment.ics">Add to calendar</a>
-              <a class="btn btn-line" data-gcal target="_blank" rel="noopener">Google Calendar</a>
-              <button class="btn btn-line" type="button" data-again>Book another</button>
-            </div>
-            <p class="fine">Need to change it? Call <a data-phone-link href="tel:+19413130562" data-bind="business.phone">941-313-0562</a>. Wear clothes you can move in.</p>
-          </div>
-        </div>
+        <div class="booker" aria-live="polite"><div class="booker-step"><p class="muted">Loading availability…</p></div></div>
       </div>
     </section>
 
@@ -358,7 +318,7 @@
     </div>
   </footer>
 
-  <div class="mobile-cta"><a href="tel:+19413130562" class="btn btn-line" data-phone-link>Call</a><a href="#book" class="btn">Book evaluation</a></div>
+  <div class="mobile-cta"><a href="tel:+19413130562" class="btn btn-line" data-phone-link>Call</a><a href="/book" class="btn">Book evaluation</a></div>
 
   <dialog id="book-dialog">
     <form id="book-form" class="form" novalidate>
@@ -375,6 +335,8 @@
   </dialog>
 
   <script src="config.js"></script>
+  <script src="common.js"></script>
+  <script src="booking.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -47,6 +47,11 @@
 
       <section data-panel="dash">
         <p class="banner" id="email-banner" hidden>Email notifications are off. Add <code>RESEND_API_KEY</code> and <code>NOTIFY_FROM</code> in Railway to get an email for every booking and request.</p>
+        <div class="share-card">
+          <div><b>Your booking link</b><span class="muted">Put it in your Instagram bio, Google Business Profile ("Appointment link") and text messages.</span></div>
+          <div class="share-row"><input id="book-link" readonly><button class="btn btn-sm" id="copy-link" type="button">Copy</button></div>
+          <div class="share-more muted">Phone consult only: <code id="call-link"></code></div>
+        </div>
         <div class="stats"></div>
         <h2>Today</h2>
         <div class="table-wrap"><table id="today"></table></div>

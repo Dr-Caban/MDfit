@@ -67,3 +67,9 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .badge.booked { background: var(--accent-soft); color: var(--accent); }
 .badge.completed { background: #e3f4ea; color: var(--ok); }
 .brand-name { color: inherit; }
+.share-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 18px; display: grid; gap: 10px; }
+.share-card b { display: block; }
+.share-card span.muted { font-size: 14px; }
+.share-row { display: flex; gap: 8px; }
+.share-row input { font-family: ui-monospace, monospace; font-size: 14px; }
+.share-more { font-size: 13px; }

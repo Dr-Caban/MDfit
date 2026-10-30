@@ -76,13 +76,23 @@
       [s.leads30d, "Requests last 30 days"], [s.bookingsThisWeek, "Class spots booked"], [s.subscribers, "Subscribers"]
     ].map(([n, l]) => `<div class="stat"><strong>${n}</strong><span>${l}</span></div>`).join("");
     const apptRow = (a, withDate) => `<tr><td>${withDate ? fmtDate(a.date) + " · " : ""}${fmtTime(a.time)}</td><td>${esc(a.typeName)} · ${a.minutes}m</td>
-      <td>${esc(a.name)}</td><td><a href="tel:${esc(a.phone)}">${esc(a.phone)}</a></td><td>${esc(a.notes)}</td></tr>`;
+      <td>${esc(a.name)}</td><td><a href="tel:${esc(a.phone)}">${esc(a.phone)}</a></td>
+      <td>${esc([(a.areas || []).join(", "), a.painLevel != null ? `pain ${a.painLevel}/10` : "", a.notes].filter(Boolean).join(" · "))}</td></tr>`;
     table($("#today"), ["Time", "Type", "Client", "Phone", "Notes"], s.today.map((a) => apptRow(a, false)), "Nothing booked today.");
     table($("#next-appts"), ["When", "Type", "Client", "Phone", "Notes"], s.nextAppointments.map((a) => apptRow(a, true)), "No upcoming appointments.");
     table($("#upcoming"), ["When", "Class", "Booked"], s.upcoming.map((x) =>
       `<tr><td>${fmtDate(x.date)} · ${fmtTime(x.time)}</td><td>${esc(x.title)}</td><td>${x.capacity - x.spotsLeft} / ${x.capacity}</td></tr>`),
       "No classes in the next 7 days. Add some under Classes.");
   }
+
+  // ---- Share link (the public site is where this admin page is served from)
+  const bookUrl = location.origin + "/book";
+  $("#book-link").value = bookUrl;
+  $("#call-link").textContent = bookUrl + "?type=call";
+  $("#copy-link").addEventListener("click", run(async () => {
+    try { await navigator.clipboard.writeText(bookUrl); } catch { $("#book-link").select(); document.execCommand("copy"); }
+    toast("Booking link copied.");
+  }));
 
   // ---- Appointments
   async function loadAppts() {
@@ -95,6 +105,7 @@
           <div class="meta">Booked ${when(a.createdAt)}</div>
         </header>
         <div><strong>${esc(a.name)}</strong> · <a href="tel:${esc(a.phone)}">${esc(a.phone)}</a> · <a href="mailto:${esc(a.email)}">${esc(a.email)}</a></div>
+        <div class="intake">${[...(a.areas || []), a.painLevel != null && `Pain ${a.painLevel}/10`].filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join("")}</div>
         ${a.notes ? `<p class="msg">${esc(a.notes)}</p>` : ""}
         <textarea rows="2" placeholder="Session notes (private)" data-notes>${esc(a.adminNotes)}</textarea>
         <div class="actions">

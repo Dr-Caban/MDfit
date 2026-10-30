@@ -39,13 +39,13 @@
   ],
   "redirects": [
     {
-      "source": "/book",
-      "destination": "/#book",
+      "source": "/evaluation",
+      "destination": "/book?type=eval",
       "permanent": false
     },
     {
-      "source": "/evaluation",
-      "destination": "/#book",
+      "source": "/call",
+      "destination": "/book?type=call",
       "permanent": false
     },
     {

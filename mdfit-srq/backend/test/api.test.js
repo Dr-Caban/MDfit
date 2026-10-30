@@ -214,7 +214,9 @@ test("appointments: availability, notice window, overlap, cancel, admin status",
   assert.equal((await book({ typeId: "nope" })).status, 400);
   assert.equal((await book({ time: "08:00" })).status, 409); // before opening
   assert.equal((await book({ date: "2026-11-02", time: "18:00" })).status, 409);
-  const ok = await book({});
+  assert.equal((await book({ areas: ["Tail"] })).status, 400);
+  assert.equal((await book({ painLevel: 12 })).status, 400);
+  const ok = await book({ areas: ["Knee"], painLevel: 5 });
   assert.equal(ok.status, 201);
   assert.equal(ok.body.message, "You're booked: Initial Evaluation, Tue, Nov 3 at 10:00 AM.");
   assert.equal((await book({ email: "b@example.com", time: "10:30" })).status, 409); // overlaps 10:00-11:00
@@ -235,10 +237,15 @@ test("appointments: availability, notice window, overlap, cancel, admin status",
   assert.equal(list.length, 2);
   assert.equal(list[0].cancelToken, undefined);
   assert.equal(list[0].time, "09:30");
+
   const upd = await s.call("PATCH", `/api/admin/appointments/${list[0].id}`, { status: "completed", adminNotes: "Left knee, VMO weak" });
   assert.equal(upd.body.status, "completed");
   assert.equal((await s.call("PATCH", `/api/admin/appointments/${list[0].id}`, { status: "maybe" })).status, 400);
   assert.equal((await s.call("GET", "/api/admin/appointments?all=1")).body.length, 3);
+  const pat = (await s.call("GET", "/api/admin/appointments?all=1")).body.find((x) => x.email === "pat@example.com");
+  assert.deepEqual(pat.areas, ["Knee"]);
+  assert.equal(pat.painLevel, 5);
+  assert.equal(pat.status, "cancelled");
   assert.match((await s.call("GET", "/api/admin/appointments.csv")).text, /c@example\.com/);
   const stats = (await s.call("GET", "/api/admin/stats")).body;
   assert.equal(stats.appointmentsWeek, 1); // the call was marked completed, the eval is still booked
@@ -277,7 +284,7 @@ test("email notifications go to owner and client when configured", async (t) => 
     resendKey: "re_test", resendUrl: `http://127.0.0.1:${fake.address().port}`, notifyFrom: "MD Fit <hello@example.com>",
     notifyEmail: "owner@example.com", siteUrl: "https://mdfit.example.com"
   }); t.after(s.close);
-  await s.call("POST", "/api/appointments", { typeId: "eval", date: "2026-11-03", time: "09:00", name: "Pat Doe", email: "pat@example.com", phone: "941-555-0100" });
+  await s.call("POST", "/api/appointments", { typeId: "eval", date: "2026-11-03", time: "09:00", name: "Pat Doe", email: "pat@example.com", phone: "941-555-0100", areas: ["Shoulder"], painLevel: 3 });
   await s.call("POST", "/api/leads", { name: "Sam Lee", email: "sam@example.com", areas: ["Neck"], painLevel: 4 });
   for (let i = 0; i < 50 && sent.length < 3; i++) await new Promise((r) => setTimeout(r, 20));
   assert.equal(sent.length, 3);
@@ -288,4 +295,5 @@ test("email notifications go to owner and client when configured", async (t) => 
   assert.match(client.subject, /Initial Evaluation/);
   assert.match(client.text, /https:\/\/mdfit\.example\.com\/cancel\?kind=appointment&id=/);
   assert.ok(owner.some((m) => /Pain: 4\/10/.test(m.text)));
+  assert.ok(owner.some((m) => /Where: Shoulder/.test(m.text) && /Pain: 3\/10/.test(m.text)));
 });

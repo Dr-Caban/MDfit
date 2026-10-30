@@ -4,8 +4,17 @@ Website + booking platform for **MD Fit** (Dr. Jared Caban, MD, MSc, CEP), 3214 
 
 | Folder | What it is | Host |
 |---|---|---|
-| `frontend/` | Website (`/`), admin portal (`/admin`), cancel page (`/cancel`). Plain HTML/CSS/JS, no build step | Vercel |
+| `frontend/` | Website (`/`), **booking site (`/book`)**, admin portal (`/admin`), cancel page (`/cancel`). Plain HTML/CSS/JS, no build step | Vercel |
 | `backend/` | Node/Express API | Railway |
+
+## Booking site: `mdfitsrq.com/book`
+A page with nothing but booking on it, made to share:
+- **Instagram bio**, **Facebook "Book Now" button**, text messages and email signatures.
+- **Google Business Profile** → Edit profile → **Appointment links** → paste `https://mdfitsrq.com/book`. Google then shows a "Book" button on your Maps/search listing.
+- Deep links open a specific type: `/book?type=eval`, `/book?type=session`, `/book?type=call` (short versions: `/evaluation`, `/call`).
+- The admin dashboard shows the link with a **Copy** button.
+
+Clients can optionally tap where it hurts and their pain level while booking, so it's on the appointment (and in your email) before they walk in.
 
 ## What it does
 
@@ -57,7 +66,7 @@ Website + booking platform for **MD Fit** (Dr. Jared Caban, MD, MSc, CEP), 3214 
 2. **API Keys** → create one → Railway `RESEND_API_KEY`.
 3. Railway `NOTIFY_FROM` = `MD Fit <bookings@mdfitsrq.com>`, `NOTIFY_EMAIL` = where you want alerts.
 
-Short links: `/book` and `/evaluation` → booking, `/consult` → intake, `/classes` → classes.
+Short links: `/book` booking site, `/evaluation` and `/call` → booking with that type picked, `/consult` → intake form, `/classes` → classes.
 
 ## Brand
 Colors are tokens at the top of `frontend/styles.css` (`--ink` navy, `--accent` teal). Change them there to match an official palette. Logo: `frontend/assets/logo.svg`.

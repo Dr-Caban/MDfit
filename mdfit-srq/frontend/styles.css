@@ -280,12 +280,24 @@ dialog .book-when { margin: -6px 0 4px; }
   .form, .booker-step, .hero-card { padding: 20px; }
   .session { grid-template-columns: 1fr; gap: 10px; }
   .session .btn { justify-self: start; }
-  .dates { grid-template-columns: repeat(7, minmax(40px, 1fr)); overflow-x: auto; }
-  .date b { font-size: 19px; }
-  .date-nav .icon-btn { width: 32px; height: 32px; font-size: 18px; }
+  .date-nav { gap: 4px; }
+  .dates { gap: 4px; }
+  .date { padding: 7px 0; border-radius: 10px; }
+  .date small { font-size: 10px; letter-spacing: 0; }
+  .date b { font-size: 18px; }
+  .open-word { display: none; }
+  .date-nav .icon-btn { width: 30px; height: 30px; font-size: 18px; }
   .trust-list strong { font-size: 20px; }
   .visit-list li { grid-template-columns: 1fr; gap: 2px; }
   .mobile-cta { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 25; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); }
   body { padding-bottom: 72px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+
+/* Booking widget: optional prep questions */
+.prep { border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; }
+.prep summary { cursor: pointer; font-weight: 600; font-size: 14.5px; color: var(--accent); }
+.prep summary .muted { font-weight: 400; }
+.prep[open] { display: grid; gap: 14px; }
+.prep[open] summary { margin-bottom: 4px; }
+.pain output { color: var(--accent); font-weight: 700; }
