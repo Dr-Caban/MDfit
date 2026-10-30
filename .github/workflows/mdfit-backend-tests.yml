@@ -1,0 +1,26 @@
+name: MDFIT SRQ backend tests
+
+on:
+  push:
+    paths: ["mdfit-srq/backend/**", ".github/workflows/mdfit-backend-tests.yml"]
+  pull_request:
+    paths: ["mdfit-srq/backend/**", ".github/workflows/mdfit-backend-tests.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mdfit-srq/backend
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mdfit-srq/backend/package-lock.json
+      - run: npm ci
+      - run: npm test

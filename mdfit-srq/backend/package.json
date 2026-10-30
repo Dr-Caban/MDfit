@@ -1,0 +1,18 @@
+{
+  "name": "mdfit-srq-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MDFIT SRQ API (Railway): consultations, class schedule + booking, newsletter, admin",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "hash-password": "node scripts/hash-password.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
