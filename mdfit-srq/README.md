@@ -88,7 +88,7 @@ Switch back to **MD Fit built-in** any time in the same place.
 Short links: `/book` booking site, `/evaluation` and `/call` → booking with that type picked, `/consult` → intake form, `/classes` → classes.
 
 ## Brand
-Colors are tokens at the top of `frontend/styles.css` (`--ink` navy, `--accent` teal). Change them there to match an official palette. Logo: `frontend/assets/logo.svg`.
+Brand taken from mdfitsrq.com: navy `#0A1A2E`, cream `#F6F4EE`, orange `#FF7A00`, gold `#C8A763`, Libre Baskerville headings and Montserrat body text. Colors are tokens at the top of `frontend/styles.css`. Logo: `frontend/assets/logo.webp` (their caduceus + barbell mark), favicon `assets/icon-64.png`.
 
 ## API
 Public: `GET /api/health`, `GET /api/site`, `GET /api/availability?type=eval&from=YYYY-MM-DD&days=7`, `POST /api/appointments`, `POST /api/appointments/:id/cancel`, `GET /api/schedule`, `POST /api/bookings`, `POST /api/bookings/:id/cancel`, `POST /api/leads`, `POST /api/subscribe`.
