@@ -198,7 +198,11 @@
   function mountCal(root, site, opts) {
     const c = site.booking.cal, biz = site.settings.business;
     const types = c.eventTypes;
-    let type = types.find((t) => t.slug === opts.type) || types.find((t) => /eval/i.test(t.slug)) || types[0] || null;
+    // ?type= can be an exact Cal slug or one of the built-in ids (eval / session / call), so /evaluation and /call work in both modes.
+    const ALIASES = { eval: /eval|assess|initial/i, session: /session|rehab|train|follow/i, call: /call|phone|consult/i };
+    let type = types.find((t) => t.slug === opts.type)
+      || (ALIASES[opts.type] && types.find((t) => ALIASES[opts.type].test(t.slug + " " + t.title)))
+      || types.find((t) => ALIASES.eval.test(t.slug + " " + t.title)) || types[0] || null;
     const brand = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f766e";
     const fallbackLink = () => `https://cal.com/${c.username}${type ? "/" + type.slug : ""}`;
 

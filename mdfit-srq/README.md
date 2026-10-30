@@ -31,7 +31,7 @@ What you get:
 - Cancelling a Cal booking in MD Fit admin cancels it in Cal too, so Cal emails the client.
 - The API key stays on the server. The site only receives your username and event-type names.
 - If Cal's API is briefly down, the booking page keeps using the last good event list; if the calendar can't load, clients see a direct link and your phone number.
-- Deep links use Cal slugs: `/book?type=phone-consult`.
+- Deep links work with Cal slugs (`/book?type=phone-consult`) and the short links `/evaluation` and `/call` pick the matching Cal event.
 
 Switch back to **MD Fit built-in** any time in the same place.
 
