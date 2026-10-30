@@ -67,6 +67,19 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .badge.booked { background: var(--accent-soft); color: var(--accent); }
 .badge.completed { background: #e3f4ea; color: var(--ok); }
 .brand-name { color: inherit; }
+.cal-admin { margin-bottom: 18px; }
+.provider { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.radio { display: flex !important; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 14px; cursor: pointer; }
+.radio input { width: auto; margin-top: 3px; accent-color: var(--accent); }
+.radio span { display: grid; gap: 2px; }
+.radio small { color: var(--muted); font-weight: 400; }
+.radio:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.cal-fields { display: grid; gap: 14px; }
+.cal-status { border-radius: 12px; padding: 12px 14px; background: var(--paper-2); font-size: 14px; }
+.cal-status.ok { background: #e3f4ea; }
+.cal-status.bad { background: #fdecea; }
+.cal-status ul { margin: 6px 0 0; padding-left: 18px; }
+.badge.cal { background: #111827; color: #fff; }
 .share-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 18px; display: grid; gap: 10px; }
 .share-card b { display: block; }
 .share-card span.muted { font-size: 14px; }

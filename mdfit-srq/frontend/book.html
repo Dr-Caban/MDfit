@@ -95,7 +95,7 @@
         mountBooker($(".booker"), data, {
           type: params.get("type"),
           onTypeChange: (t) => history.replaceState(null, "", `?type=${encodeURIComponent(t.id)}`),
-          onBooked: () => window.scrollTo({ top: 0, behavior: "smooth" })
+          onBooked: (a) => { if (a.provider !== "cal") window.scrollTo({ top: 0, behavior: "smooth" }); }
         });
       }).catch(() => {
         $(".booker").innerHTML = `<div class="booker-step"><h2 class="step-title">Online booking is unavailable right now</h2><p>Call <a href="tel:+19413130562">941-313-0562</a> and we'll get you scheduled.</p></div>`;

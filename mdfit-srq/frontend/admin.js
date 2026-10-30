@@ -100,7 +100,7 @@
     $("#appts-list").innerHTML = list.length ? list.map((a) => `
       <article class="lead appt ${a.status}" data-id="${a.id}">
         <header>
-          <div><h3>${fmtDate(a.date)} · ${fmtTime(a.time)} <span class="badge ${a.status}">${a.status}</span></h3>
+          <div><h3>${fmtDate(a.date)} · ${fmtTime(a.time)} <span class="badge ${a.status}">${a.status}</span>${a.source === "cal" ? ` <span class="badge cal">Cal.com</span>` : ""}</h3>
             <div class="meta">${esc(a.typeName)} · ${a.minutes} min</div></div>
           <div class="meta">Booked ${when(a.createdAt)}</div>
         </header>
@@ -124,11 +124,54 @@
     toast("Appointment saved."); loadAppts();
   }));
 
+  // ---- Booking system (built-in or Cal.com)
+  const cf = $("#cal-form");
+  $("#cal-hook").textContent = API + "/api/cal/webhook";
+  const calFields = () => ($(".cal-fields", cf).hidden = cf.provider.value !== "cal");
+  cf.addEventListener("change", calFields);
+  async function loadCalStatus() {
+    const box = $("#cal-status");
+    box.className = "cal-status"; box.innerHTML = `<span class="muted">Checking Cal.com…</span>`;
+    const st = await api("GET", "/api/admin/cal/status");
+    if (st.connected) {
+      box.className = "cal-status ok";
+      box.innerHTML = `<b>Connected</b> as <code>${esc(st.username)}</code>${st.timeZone ? ` · ${esc(st.timeZone)}` : ""}${st.webhookSecretSet ? " · webhook secret set" : " · <b>webhook secret not set</b> (bookings arrive on sync only)"}
+        <ul>${st.eventTypes.map((t) => `<li><code>${esc(t.slug)}</code> ${esc(t.title)}${t.minutes ? ` (${t.minutes} min)` : ""}</li>`).join("") || "<li>No visible event types. Create one in Cal.com.</li>"}</ul>`;
+    } else {
+      box.className = "cal-status bad";
+      box.innerHTML = `<b>Not connected.</b> ${esc(st.message || "")}`;
+    }
+  }
+  $("#cal-test").addEventListener("click", run(loadCalStatus));
+  $("#cal-sync").addEventListener("click", run(async () => {
+    const r = await api("POST", "/api/admin/cal/sync");
+    toast(`Synced ${r.synced} upcoming Cal.com booking${r.synced === 1 ? "" : "s"}.`);
+  }));
+  cf.addEventListener("submit", run(async (e) => {
+    e.preventDefault();
+    const msg = $(".form-msg", cf);
+    msg.className = "form-msg"; msg.textContent = "";
+    try {
+      await api("PUT", "/api/admin/settings", { booking: {
+        provider: cf.provider.value, calUsername: cf.calUsername.value,
+        calEventSlugs: cf.calEventSlugs.value.split(",").map((x) => x.trim()).filter(Boolean)
+      } });
+      msg.className = "form-msg ok";
+      msg.textContent = cf.provider.value === "cal" ? "Saved. The website now books through Cal.com." : "Saved. The website uses the built-in scheduler.";
+      if (cf.provider.value === "cal") loadCalStatus().catch(() => {});
+    } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+  }));
+
   // ---- Booking hours
   const hf = $("#hours-form");
   $("#hours-days").innerHTML = DAYS.map((d, i) => `<label class="day-hours">${d}<input data-day="${i}" placeholder="Closed"></label>`).join("");
   async function loadHours() {
     const s = await api("GET", "/api/admin/settings");
+    cf.provider.value = s.booking.provider;
+    cf.calUsername.value = s.booking.calUsername;
+    cf.calEventSlugs.value = s.booking.calEventSlugs.join(", ");
+    calFields();
+    if (s.booking.provider === "cal") loadCalStatus().catch(() => {});
     const sch = s.scheduling;
     $$("[data-day]", hf).forEach((el) => (el.value = (sch.hours[el.dataset.day] || []).map((w) => w.join("-")).join(", ")));
     hf.slotStepMin.value = String(sch.slotStepMin);

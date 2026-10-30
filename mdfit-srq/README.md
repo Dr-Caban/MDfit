@@ -16,6 +16,25 @@ A page with nothing but booking on it, made to share:
 
 Clients can optionally tap where it hurts and their pain level while booking, so it's on the appointment (and in your email) before they walk in.
 
+## Cal.com booking (optional)
+Use Cal.com as the booking engine and embed its calendar on `/book` and the homepage, in MD Fit colors.
+
+1. **Railway variables:**
+   - `CAL_API_KEY`: Cal.com → Settings → Developer → API keys → create. Only ever paste it into Railway.
+   - `CAL_WEBHOOK_SECRET`: any long random string, e.g. `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`.
+2. **Cal.com webhook:** Settings → Developer → Webhooks → New. Subscriber URL `https://<your-railway-api>/api/cal/webhook`, Secret = `CAL_WEBHOOK_SECRET`, events **Booking created, Booking rescheduled, Booking cancelled**.
+3. **Admin → Booking:** choose **Cal.com**, click **Test connection** (shows your username and event types), optionally list which event types to show and in what order, Save.
+
+What you get:
+- Clients book in Cal's calendar on your site; Cal handles confirmations, reminders, reschedules and calendar sync (Google/Outlook).
+- Every Cal booking also lands in **MD Fit admin → Appointments** (tagged Cal.com) via the webhook, or with **Sync Cal bookings now**. Duplicate webhook deliveries are ignored, and forged ones are rejected by signature.
+- Cancelling a Cal booking in MD Fit admin cancels it in Cal too, so Cal emails the client.
+- The API key stays on the server. The site only receives your username and event-type names.
+- If Cal's API is briefly down, the booking page keeps using the last good event list; if the calendar can't load, clients see a direct link and your phone number.
+- Deep links use Cal slugs: `/book?type=phone-consult`.
+
+Switch back to **MD Fit built-in** any time in the same place.
+
 ## What it does
 
 **For clients (website)**

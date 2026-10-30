@@ -4,6 +4,7 @@
   const { $, $$, esc, api, fmtTime, fmtDate, todayInTz, addDays, zonedToUtc, icsStamp, telHref, wire, areaChips } = window.MDFit;
 
   function mountBooker(root, site, opts = {}) {
+    if (site.booking && site.booking.provider === "cal" && site.booking.cal) return mountCal(root, site, opts);
     const types = site.settings.appointmentTypes;
     const biz = site.settings.business;
     const state = {
@@ -184,6 +185,83 @@
 
     renderTypes();
     load();
+  }
+
+  // ================= Cal.com embed =================
+  // Cal's official inline embed snippet (https://cal.com/docs/developing/guides/embeds). Loads app.cal.com/embed/embed.js once.
+  function loadCalEmbed() {
+    (function (C, A, L) { const p = function (a, ar) { a.q.push(ar); }; const d = C.document; C.Cal = C.Cal || function () { const cal = C.Cal; const ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === "string") { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ["initNamespace", namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
+    return window.Cal;
+  }
+
+  let calN = 0;
+  function mountCal(root, site, opts) {
+    const c = site.booking.cal, biz = site.settings.business;
+    const types = c.eventTypes;
+    let type = types.find((t) => t.slug === opts.type) || types.find((t) => /eval/i.test(t.slug)) || types[0] || null;
+    const brand = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f766e";
+    const fallbackLink = () => `https://cal.com/${c.username}${type ? "/" + type.slug : ""}`;
+
+    root.classList.add("booker-cal");
+    root.innerHTML = `
+      ${types.length > 1 ? `<div class="booker-step">
+        <h3 class="step-title"><span>1</span> What do you need?</h3>
+        <div class="types types-row" role="radiogroup" aria-label="Appointment type"></div>
+      </div>` : ""}
+      <div class="booker-step cal-step">
+        <h3 class="step-title"><span>${types.length > 1 ? 2 : 1}</span> Pick a time</h3>
+        <div class="cal-frame"><p class="muted cal-loading">Loading calendar…</p></div>
+        <p class="fine cal-fallback">Calendar not loading? <a target="_blank" rel="noopener">Open booking in a new tab</a> or call <a href="${telHref(biz.phone)}">${esc(biz.phone)}</a>.</p>
+      </div>`;
+
+    const renderTypes = () => {
+      const box = $(".types", root);
+      if (!box) return;
+      box.innerHTML = types.map((t) => `
+        <button type="button" class="type" role="radio" aria-checked="${type && t.slug === type.slug}" data-slug="${esc(t.slug)}">
+          <b>${esc(t.title)}</b>${t.minutes ? `<span class="mins">${t.minutes} min</span>` : ""}${t.description ? `<small>${esc(t.description.replace(/[*_#>`]/g, "").slice(0, 140))}</small>` : ""}
+        </button>`).join("");
+    };
+
+    const Cal = loadCalEmbed();
+    let ns = null;
+    function embed() {
+      const frame = $(".cal-frame", root);
+      frame.innerHTML = `<p class="muted cal-loading">Loading calendar…</p>`;
+      const el = document.createElement("div");
+      el.id = `cal-inline-${++calN}`;
+      el.className = "cal-inline";
+      frame.appendChild(el);
+      $(".cal-fallback a", root).href = fallbackLink();
+      ns = `mdfit${calN}`;
+      Cal("init", ns, { origin: c.origin || "https://cal.com" });
+      Cal.ns[ns]("inline", {
+        elementOrSelector: "#" + el.id,
+        calLink: type ? `${c.username}/${type.slug}` : c.username,
+        config: { layout: "month_view", theme: "light" }
+      });
+      Cal.ns[ns]("ui", {
+        theme: "light",
+        hideEventTypeDetails: types.length > 1,
+        layout: "month_view",
+        cssVarsPerTheme: { light: { "cal-brand": brand } }
+      });
+      Cal.ns[ns]("on", { action: "linkReady", callback: () => { const l = $(".cal-loading", frame); if (l) l.remove(); } });
+      Cal.ns[ns]("on", { action: "bookingSuccessfulV2", callback: () => { if (opts.onBooked) opts.onBooked({ provider: "cal" }); } });
+      // If the embed script is blocked or slow, make the fallback link obvious.
+      setTimeout(() => { if ($(".cal-loading", frame)) $(".cal-fallback", root).classList.add("show"); }, 8000);
+    }
+
+    $(".types", root)?.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-slug]");
+      if (!b || b.dataset.slug === type?.slug) return;
+      type = types.find((t) => t.slug === b.dataset.slug);
+      renderTypes(); embed();
+      if (opts.onTypeChange) opts.onTypeChange({ id: type.slug });
+    });
+
+    renderTypes();
+    embed();
   }
 
   window.MDFit.mountBooker = mountBooker;

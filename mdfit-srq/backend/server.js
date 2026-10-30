@@ -7,6 +7,7 @@ const { logger, mask, requestLogger } = require("./lib/logger");
 const { createStore } = require("./lib/store");
 const { verifyPassword, isValidHash, signToken, verifyToken } = require("./lib/auth");
 const { createNotifier } = require("./lib/notify");
+const { createCal, verifySignature, normaliseBooking } = require("./lib/cal");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings, EMAIL_RE
@@ -27,12 +28,16 @@ function loadConfig() {
     resendUrl: env("RESEND_URL", "https://api.resend.com"),
     notifyFrom: env("NOTIFY_FROM"),
     notifyEmail: env("NOTIFY_EMAIL").toLowerCase(),
+    calKey: env("CAL_API_KEY"),
+    calUrl: env("CAL_API_URL", "https://api.cal.com/v2"),
+    calWebhookSecret: env("CAL_WEBHOOK_SECRET"),
     now: () => new Date()
   };
 }
 
 const SESSION_HOURS = 12;
 const CLASS_BOOK_AHEAD_DAYS = 14;
+const CAL_CACHE_MS = 5 * 60 * 1000;
 const ACTIVITY_MAX = 500;
 
 // Starter group-class schedule, written on first boot only. Edit or delete in the admin portal.
@@ -74,6 +79,7 @@ function toCsv(rows, cols) {
 function createApp(cfg = loadConfig()) {
   const store = createStore(cfg.dataDir);
   const notify = createNotifier({ apiKey: cfg.resendKey, from: cfg.notifyFrom, ownerEmail: cfg.notifyEmail || cfg.adminEmail, apiUrl: cfg.resendUrl });
+  const cal = createCal({ apiKey: cfg.calKey, apiUrl: cfg.calUrl });
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
@@ -85,7 +91,7 @@ function createApp(cfg = loadConfig()) {
     return {
       ...d, ...s,
       business: { ...d.business, ...s.business }, coach: { ...d.coach, ...s.coach },
-      rating: { ...d.rating, ...s.rating }, scheduling: { ...d.scheduling, ...s.scheduling }
+      rating: { ...d.rating, ...s.rating }, scheduling: { ...d.scheduling, ...s.scheduling }, booking: { ...d.booking, ...s.booking }
     };
   };
   const classes = () => {
@@ -107,6 +113,70 @@ function createApp(cfg = loadConfig()) {
     list.unshift({ time: new Date().toISOString(), type, ...detail });
     store.write("activity", list.slice(0, ACTIVITY_MAX));
     logger.info("activity", { type, ...detail, email: detail.email ? mask(detail.email) : undefined });
+  }
+
+  // ---- Cal.com: username + event types for the embed. Cached in memory, last good copy kept on disk
+  // so the booking page keeps working if Cal's API is briefly down.
+  let calMem = { at: 0, data: null };
+  async function calInfo(s = settings(), { fresh = false } = {}) {
+    const b = s.booking;
+    if (!fresh && calMem.data && Date.now() - calMem.at < CAL_CACHE_MS) return pickEvents(calMem.data, b);
+    let data = store.read("calCache", null);
+    if (cal.enabled) {
+      try {
+        const me = await cal.me();
+        const username = b.calUsername || me.username;
+        const types = await cal.eventTypes(username);
+        data = {
+          username,
+          eventTypes: (Array.isArray(types) ? types : []).filter((t) => !t.hidden).map((t) => ({
+            id: t.id, slug: t.slug, title: t.title, minutes: t.lengthInMinutes ?? t.length ?? null, description: t.description || ""
+          })),
+          fetchedAt: new Date().toISOString()
+        };
+        store.write("calCache", data);
+      } catch (err) {
+        logger.warn("cal_fetch_failed", { error: err.message });
+        if (fresh) throw err;
+      }
+    }
+    if (!data && b.calUsername) data = { username: b.calUsername, eventTypes: [] };
+    calMem = { at: Date.now(), data };
+    return pickEvents(data, b);
+  }
+  function pickEvents(data, b) {
+    if (!data) return null;
+    const username = b.calUsername || data.username;
+    let types = data.eventTypes;
+    if (b.calEventSlugs.length) {
+      const known = new Map(types.map((t) => [t.slug, t]));
+      types = b.calEventSlugs.map((slug) => known.get(slug) || { slug, title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()), minutes: null, description: "" });
+    }
+    return { origin: "https://cal.com", username, eventTypes: types };
+  }
+
+  // Store a Cal booking as an MD Fit appointment so the admin, dashboard and built-in slots all see it.
+  function upsertCalBooking(raw, statusOverride) {
+    const b = normaliseBooking(raw);
+    if (!b.uid || !b.start) return null;
+    const local = nowParts(cfg.tz, new Date(b.start));
+    const list = appointments();
+    let appt = list.find((a) => a.calUid === b.uid);
+    const cancelled = statusOverride === "cancelled" || ["cancelled", "rejected"].includes(b.status);
+    const fields = {
+      source: "cal", calUid: b.uid, typeId: b.eventSlug || "cal", typeName: b.title, minutes: b.minutes || 60,
+      date: local.date, time: local.time, name: b.name, email: b.email, phone: b.phone, notes: b.notes
+    };
+    if (!appt) {
+      appt = { id: id(), ...fields, areas: [], painLevel: null, status: cancelled ? "cancelled" : "booked", adminNotes: "", cancelToken: newToken(), createdAt: new Date().toISOString() };
+      list.push(appt);
+    } else {
+      Object.assign(appt, fields, { updatedAt: new Date().toISOString() });
+      if (cancelled) appt.status = "cancelled";
+      else if (appt.status === "cancelled") appt.status = "booked";
+    }
+    store.write("appointments", list);
+    return appt;
   }
 
   // ---- Group classes: upcoming sessions for the next `days` days, with spots left.
@@ -166,7 +236,8 @@ function createApp(cfg = loadConfig()) {
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
   });
-  app.use(express.json({ limit: "100kb" }));
+  // Keep the raw body: Cal.com webhook signatures are computed over the exact bytes sent.
+  app.use(express.json({ limit: "200kb", verify: (req, res, buf) => { req.rawBody = buf; } }));
 
   // ---- Rate limiting (in memory, per IP)
   function limiter(max, windowMs) {
@@ -205,15 +276,47 @@ function createApp(cfg = loadConfig()) {
   app.get("/", (req, res) => res.json({ name: "MD Fit API", ok: true }));
   app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-  app.get("/api/site", (req, res) => {
-    const { scheduling, ...pub } = settings();
+  app.get("/api/site", async (req, res) => {
+    const s = settings();
+    const { scheduling, booking, ...pub } = s;
+    const calData = booking.provider === "cal" ? await calInfo(s) : null;
     res.set("Cache-Control", "no-cache");
     res.json({
       settings: pub, timeZone: cfg.tz,
+      booking: { provider: calData ? "cal" : "builtin", cal: calData },
       options: { goals: GOALS, services: SERVICES, areas: AREAS, durations: DURATIONS, surgery: SURGERY },
       // kept for older frontends
       goals: GOALS, services: SERVICES
     });
+  });
+
+  // Cal.com webhook: Settings → Developer → Webhooks → Subscriber URL = <API>/api/cal/webhook
+  app.post("/api/cal/webhook", (req, res) => {
+    if (!cfg.calWebhookSecret) return res.status(503).json({ error: "CAL_WEBHOOK_SECRET is not set on the server." });
+    if (!verifySignature(req.rawBody, req.get("x-cal-signature-256"), cfg.calWebhookSecret)) {
+      logger.warn("cal_webhook_bad_signature", {});
+      return res.status(401).json({ error: "Bad signature." });
+    }
+    const event = String(req.body?.triggerEvent || "");
+    const payload = req.body?.payload || {};
+    if (event === "PING") return res.json({ ok: true });
+    const handled = {
+      BOOKING_CREATED: () => upsertCalBooking(payload, "booked"),
+      BOOKING_RESCHEDULED: () => {
+        // Cal issues a new uid on reschedule; retire the old one.
+        if (payload.rescheduleUid || payload.fromReschedule) {
+          const list = appointments(), old = list.find((a) => a.calUid === (payload.rescheduleUid || payload.fromReschedule));
+          if (old) { old.status = "cancelled"; old.updatedAt = new Date().toISOString(); store.write("appointments", list); }
+        }
+        return upsertCalBooking(payload, "booked");
+      },
+      BOOKING_CANCELLED: () => upsertCalBooking(payload, "cancelled"),
+      BOOKING_REJECTED: () => upsertCalBooking(payload, "cancelled")
+    }[event];
+    if (!handled) return res.json({ ok: true, ignored: event });
+    const appt = handled();
+    if (appt) activity("cal_" + event.toLowerCase(), { email: appt.email, date: appt.date });
+    res.json({ ok: true });
   });
 
   app.get("/api/availability", (req, res) => {
@@ -402,6 +505,27 @@ function createApp(cfg = loadConfig()) {
     res.json(s);
   });
 
+  // Cal.com
+  admin.get("/cal/status", async (req, res) => {
+    const s = settings();
+    const out = { keySet: cal.enabled, webhookSecretSet: Boolean(cfg.calWebhookSecret), provider: s.booking.provider, connected: false };
+    if (!cal.enabled) return res.json({ ...out, message: "Add CAL_API_KEY in Railway to connect Cal.com." });
+    try {
+      const me = await cal.me();
+      const info = await calInfo(s, { fresh: true });
+      res.json({ ...out, connected: true, username: me.username, name: me.name, timeZone: me.timeZone, eventTypes: info.eventTypes });
+    } catch (err) {
+      res.json({ ...out, message: err.message });
+    }
+  });
+  admin.post("/cal/sync", async (req, res) => {
+    let list;
+    try { list = await cal.bookings("upcoming"); } catch (err) { return res.status(502).json({ error: err.message }); }
+    const seen = (Array.isArray(list) ? list : []).map((b) => upsertCalBooking(b)).filter(Boolean);
+    activity("cal_sync", { count: seen.length });
+    res.json({ ok: true, synced: seen.length });
+  });
+
   // Appointments
   admin.get("/appointments", (req, res) => {
     const { date: today } = nowParts(cfg.tz, cfg.now());
@@ -410,13 +534,17 @@ function createApp(cfg = loadConfig()) {
       .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1) * (all ? -1 : 1))
       .map(({ cancelToken, ...a }) => a));
   });
-  admin.patch("/appointments/:id", (req, res) => {
+  admin.patch("/appointments/:id", async (req, res) => {
     const list = appointments();
     const appt = list.find((x) => x.id === req.params.id);
     if (!appt) return res.status(404).json({ error: "Appointment not found." });
     const b = req.body || {};
     if (b.status !== undefined) {
       if (!APPT_STATUSES.includes(b.status)) return res.status(400).json({ error: "Unknown status." });
+      // Cancelling a Cal booking here cancels it in Cal too, so Cal emails the client and frees the slot.
+      if (b.status === "cancelled" && appt.status !== "cancelled" && appt.source === "cal") {
+        try { await cal.cancel(appt.calUid, "Cancelled by MD Fit"); } catch (err) { return res.status(502).json({ error: err.message }); }
+      }
       appt.status = b.status;
     }
     if (b.adminNotes !== undefined) {

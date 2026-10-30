@@ -35,7 +35,7 @@
           <button data-tab="classes">Classes</button>
           <button data-tab="bookings">Bookings</button>
           <button data-tab="subs">Subscribers</button>
-          <button data-tab="hours">Hours</button>
+          <button data-tab="hours">Booking</button>
           <button data-tab="settings">Settings</button>
           <button id="logout" class="link">Log out</button>
         </nav>
@@ -70,6 +70,27 @@
       </section>
 
       <section data-panel="hours" hidden>
+        <form id="cal-form" class="form cal-admin" novalidate>
+          <h2>Booking system</h2>
+          <div class="provider">
+            <label class="radio"><input type="radio" name="provider" value="builtin"> <span><b>MD Fit built-in</b><small>Uses the hours and appointment types below.</small></span></label>
+            <label class="radio"><input type="radio" name="provider" value="cal"> <span><b>Cal.com</b><small>Embeds your Cal.com calendar on /book and the homepage.</small></span></label>
+          </div>
+          <div class="cal-fields">
+            <div class="cal-status" id="cal-status"><span class="muted">Checking Cal.com…</span></div>
+            <div class="grid2">
+              <label>Cal.com username (blank = from API key)<input name="calUsername" placeholder="mdfit"></label>
+              <label>Event types to show, in order (blank = all)<input name="calEventSlugs" placeholder="initial-evaluation, phone-consult"></label>
+            </div>
+            <div class="bar">
+              <button class="btn btn-sm btn-line" type="button" id="cal-test">Test connection</button>
+              <button class="btn btn-sm btn-line" type="button" id="cal-sync">Sync Cal bookings now</button>
+            </div>
+            <p class="muted fine">Webhook for instant updates: Cal.com → Settings → Developer → Webhooks → Subscriber URL <code id="cal-hook"></code>, same secret as <code>CAL_WEBHOOK_SECRET</code> in Railway, events: Booking created, rescheduled, cancelled.</p>
+          </div>
+          <button class="btn" type="submit">Save booking system</button>
+          <p class="form-msg" role="status"></p>
+        </form>
         <form id="hours-form" class="form" novalidate>
           <h2>Booking hours</h2>
           <p class="muted">When clients can book 1-on-1 appointments online. Leave a day empty to close it. Split shifts: <code>09:00-12:00, 13:00-17:00</code></p>

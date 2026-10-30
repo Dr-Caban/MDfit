@@ -54,6 +54,8 @@ function defaultSettings() {
       { id: "session", name: "Rehab / Training Session", minutes: 60, description: "For existing clients continuing their plan." },
       { id: "call", name: "Free 15-Minute Phone Consult", minutes: 15, description: "Not sure where to start? Talk it through with Dr. Jared." }
     ],
+    // provider "builtin" = MD Fit's own scheduler; "cal" = Cal.com embed (needs CAL_API_KEY or a username)
+    booking: { provider: "builtin", calUsername: "", calEventSlugs: [] },
     scheduling: {
       hours: [[], weekday, weekday, weekday, weekday, weekday, []],
       slotStepMin: 30,
@@ -196,7 +198,7 @@ function classInput(b, { partial = false } = {}) {
 // Partial settings update: only the sections/fields sent are changed.
 function mergeSettings(current, body) {
   obj(body, "Settings");
-  const known = ["business", "rating", "coach", "packages", "testimonials", "appointmentTypes", "scheduling"];
+  const known = ["business", "rating", "coach", "packages", "testimonials", "appointmentTypes", "scheduling", "booking"];
   const unknown = Object.keys(body).filter((k) => !known.includes(k));
   if (unknown.length) fail(`Unknown setting: ${unknown[0]}`);
   if (!Object.keys(body).length) fail("Nothing to update.");
@@ -269,6 +271,21 @@ function mergeSettings(current, body) {
       };
     });
     if (new Set(s.appointmentTypes.map((t) => t.id)).size !== s.appointmentTypes.length) fail("Appointment type ids must be unique.");
+  }
+
+  if (body.booking !== undefined) {
+    const b = obj(body.booking, "booking");
+    if (b.provider !== undefined) s.booking.provider = oneOf(b.provider, ["builtin", "cal"], "booking system");
+    if (b.calUsername !== undefined) {
+      const u = str(b.calUsername, "Cal.com username", { max: 80 }).replace(/^https?:\/\/(app\.)?cal\.com\//, "").replace(/\/+$/, "");
+      if (u && !/^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)?$/.test(u)) fail("Cal.com username: letters, numbers, dots, dashes (e.g. mdfit or team/mdfit).");
+      s.booking.calUsername = u;
+    }
+    if (b.calEventSlugs !== undefined) {
+      if (!Array.isArray(b.calEventSlugs) || b.calEventSlugs.length > 10) fail("Cal.com event types: up to 10.");
+      s.booking.calEventSlugs = b.calEventSlugs.map((x) => str(x, "Event slug", { max: 80 })).filter(Boolean);
+      if (s.booking.calEventSlugs.some((x) => !/^[a-z0-9-]+$/i.test(x))) fail("Event slugs look like initial-evaluation (letters, numbers, dashes).");
+    }
   }
 
   if (body.scheduling !== undefined) {

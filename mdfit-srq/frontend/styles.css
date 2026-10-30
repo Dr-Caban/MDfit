@@ -301,3 +301,13 @@ dialog .book-when { margin: -6px 0 4px; }
 .prep[open] { display: grid; gap: 14px; }
 .prep[open] summary { margin-bottom: 4px; }
 .pain output { color: var(--accent); font-weight: 700; }
+
+/* Booking widget: Cal.com embed */
+.booker.booker-cal { grid-template-columns: 1fr; }
+.types-row { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.cal-frame { min-height: 520px; position: relative; }
+.cal-inline { width: 100%; overflow: auto; }
+.cal-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; }
+.cal-step .cal-fallback { margin-top: 10px; }
+.cal-fallback.show { font-size: 14px; color: var(--text); background: var(--accent-soft); padding: 10px 12px; border-radius: 10px; }
+.cal-fallback a { color: var(--accent); font-weight: 600; }
