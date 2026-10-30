@@ -1,4 +1,4 @@
-// MDFIT SRQ API: site content, free consultation requests, class schedule + booking, newsletter, admin.
+// MD Fit API: site content, evaluation intake, 1-on-1 appointment scheduling, group classes, newsletter, admin.
 // Deploy on Railway with Root Directory = mdfit-srq/backend.
 const express = require("express");
 const crypto = require("crypto");
@@ -6,9 +6,10 @@ const path = require("path");
 const { logger, mask, requestLogger } = require("./lib/logger");
 const { createStore } = require("./lib/store");
 const { verifyPassword, isValidHash, signToken, verifyToken } = require("./lib/auth");
+const { createNotifier } = require("./lib/notify");
 const {
-  ValidationError, LEAD_STATUSES, GOALS, SERVICES, DAYS,
-  defaultSettings, leadInput, bookingInput, classInput, mergeSettings, EMAIL_RE
+  ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
+  defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings, EMAIL_RE
 } = require("./lib/validate");
 
 const env = (k, d = "") => (process.env[k] || d).trim();
@@ -20,24 +21,27 @@ function loadConfig() {
     sessionSecret: env("SESSION_SECRET"),
     dataDir: env("DATA_DIR", path.join(__dirname, "data")),
     origins: env("ALLOWED_ORIGINS", "*").split(",").map((s) => s.trim()).filter(Boolean),
+    siteUrl: env("SITE_URL").replace(/\/+$/, ""),
     tz: env("TZ_NAME", "America/New_York"),
+    resendKey: env("RESEND_API_KEY"),
+    resendUrl: env("RESEND_URL", "https://api.resend.com"),
+    notifyFrom: env("NOTIFY_FROM"),
+    notifyEmail: env("NOTIFY_EMAIL").toLowerCase(),
     now: () => new Date()
   };
 }
 
 const SESSION_HOURS = 12;
-const BOOK_AHEAD_DAYS = 14;
+const CLASS_BOOK_AHEAD_DAYS = 14;
 const ACTIVITY_MAX = 500;
 
-// Starter schedule, written on first boot only. Edit or delete in the admin portal.
+// Starter group-class schedule, written on first boot only. Edit or delete in the admin portal.
 const STARTER_CLASSES = [
-  { title: "Strength & Conditioning", day: 1, time: "06:00", durationMin: 60, capacity: 8, coach: "", location: "", description: "Full-body strength work followed by a conditioning finisher." },
-  { title: "HIIT Bootcamp", day: 3, time: "06:00", durationMin: 45, capacity: 10, coach: "", location: "", description: "High-intensity intervals. All levels, every move can be scaled." },
-  { title: "Strength & Conditioning", day: 5, time: "06:00", durationMin: 60, capacity: 8, coach: "", location: "", description: "Full-body strength work followed by a conditioning finisher." },
-  { title: "Saturday Sweat", day: 6, time: "08:00", durationMin: 60, capacity: 12, coach: "", location: "", description: "Partner workout to finish the week strong." }
+  { title: "Mobility & Core", day: 2, time: "09:00", durationMin: 45, capacity: 8, coach: "Dr. Jared", location: "MD Fit, 3214 Clark Rd", description: "Joint mobility, core control and balance. Great for desk backs and stiff hips." },
+  { title: "Strength Foundations", day: 4, time: "09:00", durationMin: 60, capacity: 8, coach: "Dr. Jared", location: "MD Fit, 3214 Clark Rd", description: "Learn to load the big movement patterns safely, coached rep by rep." }
 ];
 
-// ---- Dates in the gym's time zone. Dates are "YYYY-MM-DD" strings, times "HH:MM".
+// ---- Dates in the clinic's time zone. Dates are "YYYY-MM-DD" strings, times "HH:MM".
 function nowParts(tz, d) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
     timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
@@ -46,15 +50,21 @@ function nowParts(tz, d) {
 }
 const addDays = (date, n) => new Date(Date.parse(date + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const weekday = (date) => new Date(date + "T12:00:00Z").getUTCDay();
-
+const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
+const toTime = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const prettyDate = (date) => new Date(date + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
 const prettyTime = (t) => { const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
 
 const id = () => crypto.randomBytes(6).toString("hex");
+const newToken = () => crypto.randomBytes(16).toString("hex");
+const tokenMatches = (given, expected) => {
+  const a = Buffer.from(String(given || "")), b = Buffer.from(String(expected || ""));
+  return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
+};
 
 function toCsv(rows, cols) {
   const cell = (v) => {
-    let s = String(v ?? "");
+    let s = Array.isArray(v) ? v.join("; ") : String(v ?? "");
     if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // stop spreadsheet formula injection
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
@@ -63,6 +73,7 @@ function toCsv(rows, cols) {
 
 function createApp(cfg = loadConfig()) {
   const store = createStore(cfg.dataDir);
+  const notify = createNotifier({ apiKey: cfg.resendKey, from: cfg.notifyFrom, ownerEmail: cfg.notifyEmail || cfg.adminEmail, apiUrl: cfg.resendUrl });
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
@@ -71,7 +82,11 @@ function createApp(cfg = loadConfig()) {
 
   const settings = () => {
     const d = defaultSettings(), s = store.read("settings", {});
-    return { ...d, ...s, business: { ...d.business, ...s.business }, coach: { ...d.coach, ...s.coach } };
+    return {
+      ...d, ...s,
+      business: { ...d.business, ...s.business }, coach: { ...d.coach, ...s.coach },
+      rating: { ...d.rating, ...s.rating }, scheduling: { ...d.scheduling, ...s.scheduling }
+    };
   };
   const classes = () => {
     let list = store.read("classes", null);
@@ -82,8 +97,10 @@ function createApp(cfg = loadConfig()) {
     return list;
   };
   const bookings = () => store.read("bookings", []);
+  const appointments = () => store.read("appointments", []);
   const leads = () => store.read("leads", []);
   const subscribers = () => store.read("subscribers", []);
+  const cancelLink = (kind, rec) => cfg.siteUrl ? `${cfg.siteUrl}/cancel?kind=${kind}&id=${rec.id}&token=${rec.cancelToken}` : "";
 
   function activity(type, detail = {}) {
     const list = store.read("activity", []);
@@ -92,7 +109,7 @@ function createApp(cfg = loadConfig()) {
     logger.info("activity", { type, ...detail, email: detail.email ? mask(detail.email) : undefined });
   }
 
-  // Upcoming sessions for the next `days` days, with spots left.
+  // ---- Group classes: upcoming sessions for the next `days` days, with spots left.
   function schedule(days = 7) {
     const { date: today, time: nowTime } = nowParts(cfg.tz, cfg.now());
     const active = classes().filter((c) => c.active !== false);
@@ -112,6 +129,27 @@ function createApp(cfg = loadConfig()) {
       }
     }
     return out.sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1));
+  }
+
+  // ---- 1-on-1 appointments: open start times for one appointment type on one date.
+  // One practitioner, so any live appointment blocks the time for every type.
+  function openSlots(type, date, s = settings()) {
+    const sch = s.scheduling;
+    const { date: today } = nowParts(cfg.tz, cfg.now());
+    if (date < today || date > addDays(today, sch.daysAhead) || sch.blockedDates.includes(date)) return [];
+    const cutoff = nowParts(cfg.tz, new Date(cfg.now().getTime() + sch.minNoticeHours * 3600e3));
+    const taken = appointments().filter((a) => a.date === date && a.status !== "cancelled")
+      .map((a) => [toMin(a.time), toMin(a.time) + a.minutes]);
+    const slots = [];
+    for (const [start, end] of sch.hours[weekday(date)] || []) {
+      for (let m = toMin(start); m + type.minutes <= toMin(end); m += sch.slotStepMin) {
+        const t = toTime(m);
+        if (date + t <= cutoff.date + cutoff.time) continue;
+        if (taken.some(([a, z]) => m < z && m + type.minutes > a)) continue;
+        slots.push(t);
+      }
+    }
+    return slots;
   }
 
   // ---- Headers, CORS, request log
@@ -164,16 +202,83 @@ function createApp(cfg = loadConfig()) {
   }
 
   // ================= Public =================
-  app.get("/", (req, res) => res.json({ name: "MDFIT SRQ API", ok: true }));
+  app.get("/", (req, res) => res.json({ name: "MD Fit API", ok: true }));
   app.get("/api/health", (req, res) => res.json({ ok: true }));
 
   app.get("/api/site", (req, res) => {
+    const { scheduling, ...pub } = settings();
     res.set("Cache-Control", "no-cache");
-    res.json({ settings: settings(), goals: GOALS, services: SERVICES });
+    res.json({
+      settings: pub, timeZone: cfg.tz,
+      options: { goals: GOALS, services: SERVICES, areas: AREAS, durations: DURATIONS, surgery: SURGERY },
+      // kept for older frontends
+      goals: GOALS, services: SERVICES
+    });
+  });
+
+  app.get("/api/availability", (req, res) => {
+    const s = settings();
+    const type = s.appointmentTypes.find((t) => t.id === req.query.type) || s.appointmentTypes[0];
+    const { date: today } = nowParts(cfg.tz, cfg.now());
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || "") && req.query.from > today ? req.query.from : today;
+    const days = Math.min(31, Math.max(1, Number.parseInt(req.query.days, 10) || 14));
+    const out = [];
+    for (let i = 0; i < days; i++) {
+      const date = addDays(from, i);
+      out.push({ date, slots: openSlots(type, date, s) });
+    }
+    res.set("Cache-Control", "no-cache");
+    res.json({ timeZone: cfg.tz, type, lastDate: addDays(today, s.scheduling.daysAhead), days: out });
+  });
+
+  app.post("/api/appointments", formLimit.mw, honeypot, (req, res) => {
+    const a = appointmentInput(req.body);
+    const s = settings();
+    const type = s.appointmentTypes.find((t) => t.id === a.typeId);
+    if (!type) return res.status(400).json({ error: "Pick an appointment type." });
+    if (!openSlots(type, a.date, s).includes(a.time))
+      return res.status(409).json({ error: "That time was just taken or isn't available. Pick another." });
+    const appt = {
+      id: id(), ...a, typeName: type.name, minutes: type.minutes, status: "booked", adminNotes: "",
+      cancelToken: newToken(), createdAt: new Date().toISOString()
+    };
+    const list = appointments();
+    list.push(appt);
+    store.write("appointments", list);
+    activity("appointment", { email: a.email, type: type.id, date: a.date });
+
+    const when = `${prettyDate(a.date)} at ${prettyTime(a.time)}`;
+    const biz = s.business;
+    notify.owner(`New booking: ${type.name}, ${when}`,
+      `${a.name}\n${a.email}\n${a.phone}\n\n${type.name} (${type.minutes} min)\n${when}\n\n${a.notes || "(no notes)"}`);
+    const link = cancelLink("appointment", appt);
+    notify.client(a.email, `You're booked: ${type.name}, ${when}`,
+      `Hi ${a.name.split(" ")[0]},\n\nYou're booked at ${biz.name} for ${type.name} (${type.minutes} min) on ${when}.\n\n` +
+      `${biz.address}\n${biz.phone}\n\nPlease wear comfortable clothes you can move in.` +
+      (link ? `\n\nNeed to cancel? ${link}` : "") + `\n\n${biz.name}`);
+
+    res.status(201).json({
+      ok: true,
+      appointment: { id: appt.id, typeName: type.name, minutes: type.minutes, date: a.date, time: a.time, cancelToken: appt.cancelToken },
+      message: `You're booked: ${type.name}, ${when}.`
+    });
+  });
+
+  app.post("/api/appointments/:id/cancel", formLimit.mw, (req, res) => {
+    const list = appointments();
+    const appt = list.find((x) => x.id === req.params.id);
+    if (!appt || !tokenMatches(req.body && req.body.token, appt.cancelToken) || appt.status === "cancelled")
+      return res.status(404).json({ error: "Appointment not found or already cancelled." });
+    appt.status = "cancelled";
+    appt.cancelledAt = new Date().toISOString();
+    store.write("appointments", list);
+    activity("appointment_cancelled", { email: appt.email, date: appt.date });
+    notify.owner(`Cancelled: ${appt.typeName}, ${prettyDate(appt.date)} at ${prettyTime(appt.time)}`, `${appt.name} (${appt.email}) cancelled online.`);
+    res.json({ ok: true });
   });
 
   app.get("/api/schedule", (req, res) => {
-    const days = Math.min(BOOK_AHEAD_DAYS, Math.max(1, Number.parseInt(req.query.days, 10) || 7));
+    const days = Math.min(CLASS_BOOK_AHEAD_DAYS, Math.max(1, Number.parseInt(req.query.days, 10) || 7));
     res.set("Cache-Control", "no-cache");
     res.json({ timeZone: cfg.tz, sessions: schedule(days) });
   });
@@ -184,35 +289,46 @@ function createApp(cfg = loadConfig()) {
     list.unshift(lead);
     store.write("leads", list);
     activity("lead", { email: lead.email, service: lead.service });
-    res.status(201).json({ ok: true, message: "Thanks! We'll reach out within one business day to set up your free consultation." });
+    notify.owner(`New evaluation request: ${lead.name}`, [
+      `${lead.name}\n${lead.email}\n${lead.phone || "(no phone)"}`,
+      `Service: ${lead.service}\nGoal: ${lead.goal}`,
+      lead.areas.length && `Where: ${lead.areas.join(", ")}`,
+      lead.painLevel !== null && `Pain: ${lead.painLevel}/10`,
+      lead.duration && `How long: ${lead.duration}`,
+      lead.surgery && `Surgery: ${lead.surgery}`,
+      lead.preferredTime && `Best time: ${lead.preferredTime}`,
+      lead.message
+    ].filter(Boolean).join("\n\n"));
+    res.status(201).json({ ok: true, message: "Thanks! We'll call you within one business day to get you started." });
   });
 
   app.post("/api/bookings", formLimit.mw, honeypot, (req, res) => {
     const b = bookingInput(req.body);
-    const session = schedule(BOOK_AHEAD_DAYS).find((s) => s.classId === b.classId && s.date === b.date);
+    const session = schedule(CLASS_BOOK_AHEAD_DAYS).find((s) => s.classId === b.classId && s.date === b.date);
     if (!session) return res.status(404).json({ error: "That class isn't open for booking. Pick another time." });
     const list = bookings();
     if (list.some((x) => x.classId === b.classId && x.date === b.date && x.email === b.email))
       return res.status(409).json({ error: "You're already booked for this class." });
     if (session.spotsLeft <= 0) return res.status(409).json({ error: "This class is full. Pick another time." });
-    const booking = { id: id(), ...b, title: session.title, time: session.time, cancelToken: crypto.randomBytes(16).toString("hex"), createdAt: new Date().toISOString() };
+    const booking = { id: id(), ...b, title: session.title, time: session.time, cancelToken: newToken(), createdAt: new Date().toISOString() };
     list.push(booking);
     store.write("bookings", list);
     activity("booking", { email: b.email, classId: b.classId, date: b.date });
+    const when = `${prettyDate(b.date)} at ${prettyTime(session.time)}`;
+    const link = cancelLink("class", booking);
+    notify.client(b.email, `You're in: ${session.title}, ${when}`,
+      `Hi ${b.name.split(" ")[0]},\n\nYour spot in ${session.title} on ${when} is saved.` + (link ? `\n\nCan't make it? ${link}` : ""));
     res.status(201).json({
       ok: true,
-      booking: { id: booking.id, title: booking.title, date: booking.date, time: booking.time, cancelToken: booking.cancelToken },
-      message: `You're in: ${session.title}, ${prettyDate(b.date)} at ${prettyTime(session.time)}.`
+      booking: { id: booking.id, title: booking.title, date: booking.date, time: booking.time, minutes: session.durationMin, cancelToken: booking.cancelToken },
+      message: `You're in: ${session.title}, ${when}.`
     });
   });
 
   app.post("/api/bookings/:id/cancel", formLimit.mw, (req, res) => {
-    const token = String((req.body && req.body.token) || "");
     const list = bookings();
     const i = list.findIndex((x) => x.id === req.params.id);
-    const ok = i >= 0 && token.length === list[i].cancelToken.length &&
-      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(list[i].cancelToken));
-    if (!ok) return res.status(404).json({ error: "Booking not found." });
+    if (i < 0 || !tokenMatches(req.body && req.body.token, list[i].cancelToken)) return res.status(404).json({ error: "Booking not found." });
     const [gone] = list.splice(i, 1);
     store.write("bookings", list);
     activity("booking_cancelled", { email: gone.email, classId: gone.classId, date: gone.date });
@@ -252,16 +368,26 @@ function createApp(cfg = loadConfig()) {
   const admin = express.Router();
   admin.use(requireAdmin);
 
-  admin.get("/me", (req, res) => res.json({ email: req.admin }));
+  admin.get("/me", (req, res) => res.json({ email: req.admin, emailNotifications: notify.enabled }));
 
   admin.get("/stats", (req, res) => {
+    const { date: today } = nowParts(cfg.tz, cfg.now());
+    const weekEnd = addDays(today, 6);
     const l = leads(), up = schedule(7);
-    res.json({
+    const live = appointments().filter((a) => a.status === "booked" && a.date >= today)
+      .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1));
+    const monthAgo = addDays(today, -30);
+    return res.json({
       leadsNew: l.filter((x) => x.status === "new").length,
       leadsTotal: l.length,
+      leads30d: l.filter((x) => x.createdAt.slice(0, 10) >= monthAgo).length,
+      appointmentsToday: live.filter((a) => a.date === today).length,
+      appointmentsWeek: live.filter((a) => a.date <= weekEnd).length,
       subscribers: subscribers().length,
       bookingsThisWeek: up.reduce((n, s) => n + (s.capacity - s.spotsLeft), 0),
       sessionsThisWeek: up.length,
+      today: live.filter((a) => a.date === today).map(({ cancelToken, ...a }) => a),
+      nextAppointments: live.slice(0, 8).map(({ cancelToken, ...a }) => a),
       upcoming: up.slice(0, 10)
     });
   });
@@ -272,6 +398,37 @@ function createApp(cfg = loadConfig()) {
     store.write("settings", s);
     activity("settings", { sections: Object.keys(req.body) });
     res.json(s);
+  });
+
+  // Appointments
+  admin.get("/appointments", (req, res) => {
+    const { date: today } = nowParts(cfg.tz, cfg.now());
+    const all = req.query.all === "1";
+    res.json(appointments().filter((a) => all || (a.date >= today && a.status !== "cancelled"))
+      .sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1) * (all ? -1 : 1))
+      .map(({ cancelToken, ...a }) => a));
+  });
+  admin.patch("/appointments/:id", (req, res) => {
+    const list = appointments();
+    const appt = list.find((x) => x.id === req.params.id);
+    if (!appt) return res.status(404).json({ error: "Appointment not found." });
+    const b = req.body || {};
+    if (b.status !== undefined) {
+      if (!APPT_STATUSES.includes(b.status)) return res.status(400).json({ error: "Unknown status." });
+      appt.status = b.status;
+    }
+    if (b.adminNotes !== undefined) {
+      if (typeof b.adminNotes !== "string" || b.adminNotes.length > 4000) return res.status(400).json({ error: "Notes must be text up to 4000 characters." });
+      appt.adminNotes = b.adminNotes;
+    }
+    appt.updatedAt = new Date().toISOString();
+    store.write("appointments", list);
+    const { cancelToken, ...out } = appt;
+    res.json(out);
+  });
+  admin.get("/appointments.csv", (req, res) => {
+    res.type("text/csv").attachment("mdfit-appointments.csv")
+      .send(toCsv(appointments(), ["date", "time", "typeName", "minutes", "name", "email", "phone", "notes", "status", "adminNotes", "createdAt"]));
   });
 
   // Leads
@@ -304,8 +461,8 @@ function createApp(cfg = loadConfig()) {
     res.json({ ok: true });
   });
   admin.get("/leads.csv", (req, res) => {
-    res.type("text/csv").attachment("mdfit-leads.csv")
-      .send(toCsv(leads(), ["createdAt", "name", "email", "phone", "service", "goal", "preferredTime", "message", "status", "notes"]));
+    res.type("text/csv").attachment("mdfit-leads.csv").send(toCsv(leads(),
+      ["createdAt", "name", "email", "phone", "service", "goal", "areas", "painLevel", "duration", "surgery", "preferredTime", "referral", "message", "status", "notes"]));
   });
 
   // Classes
@@ -336,7 +493,7 @@ function createApp(cfg = loadConfig()) {
     res.json({ ok: true });
   });
 
-  // Bookings
+  // Class bookings
   admin.get("/bookings", (req, res) => {
     const { date: today } = nowParts(cfg.tz, cfg.now());
     const all = req.query.all === "1";
@@ -386,7 +543,7 @@ function createApp(cfg = loadConfig()) {
 if (require.main === module) {
   const cfg = loadConfig();
   const port = Number(process.env.PORT) || 3000;
-  createApp(cfg).listen(port, () => logger.info("listening", { port, dataDir: cfg.dataDir, tz: cfg.tz, origins: cfg.origins }));
+  createApp(cfg).listen(port, () => logger.info("listening", { port, dataDir: cfg.dataDir, tz: cfg.tz, origins: cfg.origins, email: Boolean(cfg.resendKey && cfg.notifyFrom) }));
 }
 
 module.exports = { createApp, loadConfig, nowParts, addDays, weekday, toCsv };

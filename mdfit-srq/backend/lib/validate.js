@@ -4,26 +4,63 @@ class ValidationError extends Error {}
 const fail = (msg) => { throw new ValidationError(msg); };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const GOALS = ["Lose weight", "Build muscle", "Get stronger", "Improve conditioning", "Sport performance", "General health", "Other"];
-const SERVICES = ["Personal training", "Small group training", "Nutrition coaching", "Online coaching", "Not sure yet"];
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const SERVICES = ["Injury rehabilitation", "Post-surgical rehab", "Chronic pain", "Functional mobility",
+  "Strength & performance training", "Group classes", "Not sure yet"];
+const GOALS = ["Get out of pain", "Recover from surgery", "Move better", "Get stronger", "Return to sport", "Lose weight", "Other"];
+const AREAS = ["Neck", "Shoulder", "Upper back", "Lower back", "Hip", "Knee", "Ankle / foot", "Elbow / wrist / hand", "Other"];
+const DURATIONS = ["Less than 6 weeks", "6 weeks to 6 months", "More than 6 months", "No pain, performance goal"];
+const SURGERY = ["No", "Had surgery recently", "Surgery coming up"];
 const LEAD_STATUSES = ["new", "contacted", "booked", "client", "closed"];
+const APPT_STATUSES = ["booked", "completed", "no-show", "cancelled"];
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+// Defaults reflect MD Fit's public listings. Everything is editable in the admin portal.
 function defaultSettings() {
+  const weekday = [["09:00", "17:00"]];
   return {
     business: {
-      name: "MDFIT SRQ",
-      tagline: "Personal training & coaching in Sarasota, FL",
-      phone: "", email: "", address: "Sarasota, FL", hours: "",
-      instagram: "", facebook: "", tiktok: "", bookingNote: ""
+      name: "MD Fit",
+      tagline: "Physical Rehabilitation & Fitness",
+      phone: "941-313-0562",
+      email: "",
+      address: "3214 Clark Road, Sarasota, FL 34231",
+      mapsUrl: "https://www.google.com/maps/search/?api=1&query=MD+Fit+3214+Clark+Road+Sarasota+FL+34231",
+      hours: "Mon–Fri, 9 AM – 5 PM",
+      instagram: "", facebook: "https://www.facebook.com/MDFitSRQ/", tiktok: "",
+      bookingNote: "Every plan starts with an evaluation so we treat the cause, not just the symptom."
     },
-    coach: { name: "", title: "Head Coach", bio: "", photoUrl: "" },
+    rating: { score: "4.9", count: 61, source: "Birdeye", url: "https://reviews.birdeye.com/md-fit-168104670901999" },
+    coach: {
+      name: "Dr. Jared Caban",
+      title: "MD, MSc · Certified Clinical Exercise Physiologist",
+      bio: "Dr. Jared Caban completed his medical doctorate in 2017 and holds a Master's degree in performance. He is a certified Clinical Exercise Physiologist.\n\nMD Fit is his answer to the gap between the clinic and the gym: a hybrid of rehabilitation, performance and recovery. Instead of chasing symptoms, he finds the muscle at the source of the pain, corrects the movement pattern behind it, and builds the strength to keep it from coming back.",
+      photoUrl: ""
+    },
     packages: [
-      { name: "1-on-1 Training", price: "", unit: "per session", features: ["Custom program", "Form coaching", "Progress tracking"] },
-      { name: "Small Group", price: "", unit: "per month", features: ["2-6 people", "Coached classes", "Community accountability"] },
-      { name: "Online Coaching", price: "", unit: "per month", features: ["App-based program", "Weekly check-ins", "Nutrition guidance"] }
+      { name: "Initial Evaluation", price: "", unit: "60 minutes", features: ["Pain & movement assessment", "Posture, gait and muscle-balance screen", "Hands-on treatment", "Your personal recovery plan"] },
+      { name: "Rehab & Recovery", price: "", unit: "per session", features: ["Post-surgical & injury rehab", "Neuromuscular re-education", "Movement correction", "Home program between visits"] },
+      { name: "Strength & Performance", price: "", unit: "per session", features: ["1-on-1 coached training", "Built around your history", "Return-to-sport progressions", "Progress tracking"] }
     ],
-    testimonials: []
+    testimonials: [
+      { name: "Google review", quote: "Dr. Jared Caban has literally changed my life! His knowledge and experience has made my life so much better. I can now walk without shooting pains down my leg." },
+      { name: "Client review", quote: "Jared takes his time to find the muscle that is the problem and gives stretching exercises to solve the pain." },
+      { name: "Class review", quote: "Smart, practical, and focused on helping you actually move and feel better." }
+    ],
+    appointmentTypes: [
+      { id: "eval", name: "Initial Evaluation", minutes: 60, description: "Full pain and movement assessment, hands-on treatment and a plan." },
+      { id: "session", name: "Rehab / Training Session", minutes: 60, description: "For existing clients continuing their plan." },
+      { id: "call", name: "Free 15-Minute Phone Consult", minutes: 15, description: "Not sure where to start? Talk it through with Dr. Jared." }
+    ],
+    scheduling: {
+      hours: [[], weekday, weekday, weekday, weekday, weekday, []],
+      slotStepMin: 30,
+      minNoticeHours: 12,
+      daysAhead: 30,
+      blockedDates: []
+    }
   };
 }
 
@@ -42,8 +79,8 @@ function email(v, field = "Email", { required = true } = {}) {
   return e;
 }
 
-function phone(v) {
-  const p = str(v, "Phone", { max: 30 });
+function phone(v, { required = false } = {}) {
+  const p = str(v, "Phone", { max: 30, min: required ? 1 : 0 });
   if (p && !/^[0-9()+\-.\s]{7,30}$/.test(p)) fail("Phone number is not valid.");
   return p;
 }
@@ -73,30 +110,62 @@ function obj(v, field) {
   return v;
 }
 
-// Free consultation request from the website
+function date(v, field = "Date") {
+  const d = str(v, field, { min: 1, max: 10 });
+  if (!DATE_RE.test(d) || Number.isNaN(Date.parse(d + "T00:00:00Z")) || new Date(d + "T00:00:00Z").toISOString().slice(0, 10) !== d)
+    fail(`${field} must look like 2026-11-02.`);
+  return d;
+}
+
+function time(v, field = "Time") {
+  const t = str(v, field, { min: 1, max: 5 });
+  if (!TIME_RE.test(t)) fail(`${field} must be 24-hour like 09:00 or 17:30.`);
+  return t;
+}
+
+// Evaluation request / intake from the website
 function leadInput(b) {
   obj(b, "Request");
+  const areas = b.areas === undefined || b.areas === "" ? [] : Array.isArray(b.areas) ? b.areas : [b.areas];
+  if (areas.length > AREAS.length) fail("Too many areas.");
+  areas.forEach((a) => oneOf(a, AREAS, "body area"));
   return {
     name: str(b.name, "Name", { min: 2, max: 100 }),
     email: email(b.email),
     phone: phone(b.phone),
     service: b.service ? oneOf(b.service, SERVICES, "service") : "Not sure yet",
     goal: b.goal ? oneOf(b.goal, GOALS, "goal") : "Other",
+    areas: [...new Set(areas)],
+    painLevel: b.painLevel === undefined || b.painLevel === "" || b.painLevel === null ? null : int(b.painLevel, "Pain level", { min: 0, max: 10 }),
+    duration: b.duration ? oneOf(b.duration, DURATIONS, "how long") : "",
+    surgery: b.surgery ? oneOf(b.surgery, SURGERY, "surgery answer") : "",
     preferredTime: str(b.preferredTime, "Preferred time", { max: 100 }),
+    referral: str(b.referral, "How you heard about us", { max: 120 }),
     message: str(b.message, "Message", { max: 2000 })
   };
 }
 
 function bookingInput(b) {
   obj(b, "Booking");
-  const date = str(b.date, "Date", { min: 1, max: 10 });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date + "T00:00:00Z"))) fail("Date must look like 2026-11-02.");
   return {
     classId: str(b.classId, "Class", { min: 1, max: 40 }),
-    date,
+    date: date(b.date),
     name: str(b.name, "Name", { min: 2, max: 100 }),
     email: email(b.email),
     phone: phone(b.phone)
+  };
+}
+
+function appointmentInput(b) {
+  obj(b, "Appointment");
+  return {
+    typeId: str(b.typeId, "Appointment type", { min: 1, max: 30 }),
+    date: date(b.date),
+    time: time(b.time),
+    name: str(b.name, "Name", { min: 2, max: 100 }),
+    email: email(b.email),
+    phone: phone(b.phone, { required: true }),
+    notes: str(b.notes, "Notes", { max: 1000 })
   };
 }
 
@@ -106,12 +175,7 @@ function classInput(b, { partial = false } = {}) {
   const has = (k) => b[k] !== undefined;
   if (!partial || has("title")) c.title = str(b.title, "Class name", { min: 1, max: 80 });
   if (!partial || has("day")) c.day = int(b.day, "Day", { min: 0, max: 6 });
-  if (!partial || has("time")) {
-    const t = str(b.time, "Start time", { min: 1, max: 5 });
-    const m = t.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
-    if (!m) fail("Start time must be 24-hour like 06:00 or 17:30.");
-    c.time = t;
-  }
+  if (!partial || has("time")) c.time = time(b.time, "Start time");
   if (!partial || has("durationMin")) c.durationMin = int(b.durationMin ?? 60, "Length (minutes)", { min: 15, max: 240 });
   if (!partial || has("capacity")) c.capacity = int(b.capacity ?? 10, "Capacity", { min: 1, max: 100 });
   if (!partial || has("coach")) c.coach = str(b.coach, "Coach", { max: 80 });
@@ -125,7 +189,7 @@ function classInput(b, { partial = false } = {}) {
 // Partial settings update: only the sections/fields sent are changed.
 function mergeSettings(current, body) {
   obj(body, "Settings");
-  const known = ["business", "coach", "packages", "testimonials"];
+  const known = ["business", "rating", "coach", "packages", "testimonials", "appointmentTypes", "scheduling"];
   const unknown = Object.keys(body).filter((k) => !known.includes(k));
   if (unknown.length) fail(`Unknown setting: ${unknown[0]}`);
   if (!Object.keys(body).length) fail("Nothing to update.");
@@ -137,13 +201,25 @@ function mergeSettings(current, body) {
     for (const [k, max] of Object.entries(text)) if (b[k] !== undefined) s.business[k] = str(b[k], k, { max, min: k === "name" ? 1 : 0 });
     if (b.phone !== undefined) s.business.phone = phone(b.phone);
     if (b.email !== undefined) s.business.email = email(b.email, "Contact email", { required: false });
-    for (const k of ["instagram", "facebook", "tiktok"]) if (b[k] !== undefined) s.business[k] = url(b[k], `${k} link`);
+    for (const k of ["instagram", "facebook", "tiktok", "mapsUrl"]) if (b[k] !== undefined) s.business[k] = url(b[k], `${k} link`);
+  }
+
+  if (body.rating !== undefined) {
+    const b = obj(body.rating, "rating");
+    if (b.score !== undefined) {
+      const sc = str(String(b.score), "Rating", { max: 3 });
+      if (sc && !/^[1-5](\.\d)?$/.test(sc)) fail("Rating must look like 4.9.");
+      s.rating.score = sc;
+    }
+    if (b.count !== undefined) s.rating.count = int(b.count, "Review count", { min: 0, max: 100000 });
+    if (b.source !== undefined) s.rating.source = str(b.source, "Review source", { max: 40 });
+    if (b.url !== undefined) s.rating.url = url(b.url, "Reviews link");
   }
 
   if (body.coach !== undefined) {
     const b = obj(body.coach, "coach");
     if (b.name !== undefined) s.coach.name = str(b.name, "Coach name", { max: 80 });
-    if (b.title !== undefined) s.coach.title = str(b.title, "Coach title", { max: 80 });
+    if (b.title !== undefined) s.coach.title = str(b.title, "Coach title", { max: 120 });
     if (b.bio !== undefined) s.coach.bio = str(b.bio, "Coach bio", { max: 3000 });
     if (b.photoUrl !== undefined) s.coach.photoUrl = url(b.photoUrl, "Coach photo link");
   }
@@ -170,10 +246,50 @@ function mergeSettings(current, body) {
       return { name: str(t.name, `Testimonial ${i + 1} name`, { min: 1, max: 60 }), quote: str(t.quote, `Testimonial ${i + 1} quote`, { min: 1, max: 600 }) };
     });
   }
+
+  if (body.appointmentTypes !== undefined) {
+    const list = body.appointmentTypes;
+    if (!Array.isArray(list) || list.length < 1 || list.length > 8) fail("Appointment types: between 1 and 8.");
+    s.appointmentTypes = list.map((t, i) => {
+      obj(t, `Appointment type ${i + 1}`);
+      const id = str(t.id, `Appointment type ${i + 1} id`, { min: 1, max: 30 });
+      if (!/^[a-z0-9-]+$/.test(id)) fail(`Appointment type id "${id}": lowercase letters, numbers and dashes only.`);
+      return {
+        id,
+        name: str(t.name, `Appointment type ${i + 1} name`, { min: 1, max: 60 }),
+        minutes: int(t.minutes, `Appointment type ${i + 1} minutes`, { min: 10, max: 240 }),
+        description: str(t.description, `Appointment type ${i + 1} description`, { max: 200 })
+      };
+    });
+    if (new Set(s.appointmentTypes.map((t) => t.id)).size !== s.appointmentTypes.length) fail("Appointment type ids must be unique.");
+  }
+
+  if (body.scheduling !== undefined) {
+    const b = obj(body.scheduling, "scheduling");
+    if (b.hours !== undefined) {
+      if (!Array.isArray(b.hours) || b.hours.length !== 7) fail("Hours must list all 7 days.");
+      s.scheduling.hours = b.hours.map((day, d) => {
+        if (!Array.isArray(day) || day.length > 4) fail(`${DAYS[d]}: up to 4 time windows.`);
+        return day.map((w) => {
+          if (!Array.isArray(w) || w.length !== 2) fail(`${DAYS[d]}: each window is a start and end time.`);
+          const [a, z] = [time(w[0], `${DAYS[d]} start`), time(w[1], `${DAYS[d]} end`)];
+          if (a >= z) fail(`${DAYS[d]}: end time must be after start time.`);
+          return [a, z];
+        });
+      });
+    }
+    if (b.slotStepMin !== undefined) s.scheduling.slotStepMin = oneOf(int(b.slotStepMin, "Slot step"), [10, 15, 20, 30, 60], "slot step");
+    if (b.minNoticeHours !== undefined) s.scheduling.minNoticeHours = int(b.minNoticeHours, "Minimum notice (hours)", { min: 0, max: 168 });
+    if (b.daysAhead !== undefined) s.scheduling.daysAhead = int(b.daysAhead, "Days ahead", { min: 1, max: 90 });
+    if (b.blockedDates !== undefined) {
+      if (!Array.isArray(b.blockedDates) || b.blockedDates.length > 200) fail("Blocked dates: up to 200.");
+      s.scheduling.blockedDates = [...new Set(b.blockedDates.map((d) => date(d, "Blocked date")))].sort();
+    }
+  }
   return s;
 }
 
 module.exports = {
-  ValidationError, EMAIL_RE, GOALS, SERVICES, LEAD_STATUSES, DAYS,
-  defaultSettings, leadInput, bookingInput, classInput, mergeSettings
+  ValidationError, EMAIL_RE, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, LEAD_STATUSES, APPT_STATUSES, DAYS,
+  defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings
 };

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>MDFIT SRQ Admin</title>
+  <title>MD Fit Admin</title>
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,7 @@
 <body class="admin">
   <section id="login" class="login">
     <form id="login-form" class="form" novalidate>
-      <a href="/" class="brand dark"><img src="assets/logo.svg" alt="" width="36" height="36"><span>MDFIT SRQ</span></a>
+      <a href="/" class="brand dark"><img src="assets/logo.svg" alt="" width="38" height="38"><span class="brand-text"><span class="brand-name">MD FIT</span><span class="brand-sub">Rehab &amp; Fitness</span></span></a>
       <h1>Admin</h1>
       <label>Email<input name="email" type="email" required autocomplete="username"></label>
       <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
@@ -27,13 +27,15 @@
   <div id="app" hidden>
     <header class="nav">
       <div class="wrap nav-inner">
-        <a href="/" class="brand"><img src="assets/logo.svg" alt="" width="32" height="32"><span>MDFIT Admin</span></a>
+        <a href="/" class="brand"><img src="assets/logo.svg" alt="" width="34" height="34"><span class="brand-text"><span class="brand-name">MD FIT</span><span class="brand-sub">Admin</span></span></a>
         <nav class="tabs" role="tablist">
           <button data-tab="dash" aria-selected="true">Dashboard</button>
+          <button data-tab="appts">Appointments</button>
           <button data-tab="leads">Leads</button>
           <button data-tab="classes">Classes</button>
           <button data-tab="bookings">Bookings</button>
           <button data-tab="subs">Subscribers</button>
+          <button data-tab="hours">Hours</button>
           <button data-tab="settings">Settings</button>
           <button id="logout" class="link">Log out</button>
         </nav>
@@ -44,9 +46,41 @@
       <p id="toast" class="toast" role="status" hidden></p>
 
       <section data-panel="dash">
+        <p class="banner" id="email-banner" hidden>Email notifications are off. Add <code>RESEND_API_KEY</code> and <code>NOTIFY_FROM</code> in Railway to get an email for every booking and request.</p>
         <div class="stats"></div>
-        <h2>Next up</h2>
+        <h2>Today</h2>
+        <div class="table-wrap"><table id="today"></table></div>
+        <h2>Coming up</h2>
+        <div class="table-wrap"><table id="next-appts"></table></div>
+        <h2>Classes this week</h2>
         <div class="table-wrap"><table id="upcoming"></table></div>
+      </section>
+
+      <section data-panel="appts" hidden>
+        <div class="bar">
+          <label class="check"><input type="checkbox" id="appts-all"> Show past &amp; cancelled</label>
+          <button class="btn btn-sm btn-line" data-csv="/api/admin/appointments.csv">Download CSV</button>
+        </div>
+        <div id="appts-list" class="stack"></div>
+      </section>
+
+      <section data-panel="hours" hidden>
+        <form id="hours-form" class="form" novalidate>
+          <h2>Booking hours</h2>
+          <p class="muted">When clients can book 1-on-1 appointments online. Leave a day empty to close it. Split shifts: <code>09:00-12:00, 13:00-17:00</code></p>
+          <div class="grid2" id="hours-days"></div>
+          <div class="grid4">
+            <label>Start times every<select name="slotStepMin"><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">60 min</option></select></label>
+            <label>Minimum notice (hours)<input name="minNoticeHours" type="number" min="0" max="168"></label>
+            <label>Book up to (days ahead)<input name="daysAhead" type="number" min="1" max="90"></label>
+          </div>
+          <label>Closed dates (holidays, vacation), one per line as YYYY-MM-DD<textarea name="blockedDates" rows="4" placeholder="2026-12-25"></textarea></label>
+          <h2>Appointment types</h2>
+          <p class="muted">One per line: <code>id | Name | minutes | description</code>. Keep ids stable once people have booked.</p>
+          <textarea name="appointmentTypes" rows="5"></textarea>
+          <button class="btn" type="submit">Save hours</button>
+          <p class="form-msg" role="status"></p>
+        </form>
       </section>
 
       <section data-panel="leads" hidden>
@@ -100,12 +134,20 @@
             <label>Email<input name="business.email" type="email"></label>
             <label>Address<input name="business.address" maxlength="200"></label>
             <label>Hours<input name="business.hours" maxlength="300" placeholder="Mon-Fri 5am-8pm · Sat 7am-12pm"></label>
+            <label>Google Maps link<input name="business.mapsUrl" placeholder="https://maps.google.com/…"></label>
             <label>Instagram link<input name="business.instagram" placeholder="https://instagram.com/…"></label>
             <label>Facebook link<input name="business.facebook" placeholder="https://facebook.com/…"></label>
             <label>TikTok link<input name="business.tiktok" placeholder="https://tiktok.com/@…"></label>
-            <label>Pricing note<input name="business.bookingNote" maxlength="300" placeholder="Every plan starts with a free consultation."></label>
+            <label>Programs note<input name="business.bookingNote" maxlength="300"></label>
           </div>
-          <h2>Coach</h2>
+          <h2>Reviews badge</h2>
+          <div class="grid4">
+            <label>Rating<input name="rating.score" maxlength="3" placeholder="4.9"></label>
+            <label>Review count<input name="rating.count" type="number" min="0"></label>
+            <label>Source<input name="rating.source" maxlength="40" placeholder="Google"></label>
+            <label>Reviews link<input name="rating.url" placeholder="https://…"></label>
+          </div>
+          <h2>Dr. Jared</h2>
           <div class="grid2">
             <label>Name<input name="coach.name" maxlength="80"></label>
             <label>Title<input name="coach.title" maxlength="80"></label>

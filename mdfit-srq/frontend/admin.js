@@ -1,4 +1,4 @@
-// MDFIT SRQ admin portal: leads, classes, bookings, subscribers, site settings.
+// MD Fit admin portal: appointments, booking hours, leads, classes, bookings, subscribers, site settings.
 (() => {
   const API = window.MDFIT_CONFIG.apiUrl.replace(/\/+$/, "");
   const $ = (s, el = document) => el.querySelector(s);
@@ -6,6 +6,7 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const STATUSES = ["new", "contacted", "booked", "client", "closed"];
+  const APPT_STATUSES = ["booked", "completed", "no-show", "cancelled"];
   const when = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   const fmtTime = (t) => { const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
   const fmtDate = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
@@ -50,7 +51,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, settings: loadSettings };
+  const loaders = { dash: loadDash, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, settings: loadSettings };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -68,15 +69,87 @@
 
   // ---- Dashboard
   async function loadDash() {
-    const s = await api("GET", "/api/admin/stats");
+    const [s, me] = await Promise.all([api("GET", "/api/admin/stats"), api("GET", "/api/admin/me")]);
+    $("#email-banner").hidden = me.emailNotifications;
     $(".stats").innerHTML = [
-      [s.leadsNew, "New leads"], [s.leadsTotal, "Total leads"], [s.bookingsThisWeek, "Bookings next 7 days"],
-      [s.sessionsThisWeek, "Classes next 7 days"], [s.subscribers, "Subscribers"]
+      [s.appointmentsToday, "Appointments today"], [s.appointmentsWeek, "Appointments next 7 days"], [s.leadsNew, "New requests"],
+      [s.leads30d, "Requests last 30 days"], [s.bookingsThisWeek, "Class spots booked"], [s.subscribers, "Subscribers"]
     ].map(([n, l]) => `<div class="stat"><strong>${n}</strong><span>${l}</span></div>`).join("");
+    const apptRow = (a, withDate) => `<tr><td>${withDate ? fmtDate(a.date) + " · " : ""}${fmtTime(a.time)}</td><td>${esc(a.typeName)} · ${a.minutes}m</td>
+      <td>${esc(a.name)}</td><td><a href="tel:${esc(a.phone)}">${esc(a.phone)}</a></td><td>${esc(a.notes)}</td></tr>`;
+    table($("#today"), ["Time", "Type", "Client", "Phone", "Notes"], s.today.map((a) => apptRow(a, false)), "Nothing booked today.");
+    table($("#next-appts"), ["When", "Type", "Client", "Phone", "Notes"], s.nextAppointments.map((a) => apptRow(a, true)), "No upcoming appointments.");
     table($("#upcoming"), ["When", "Class", "Booked"], s.upcoming.map((x) =>
       `<tr><td>${fmtDate(x.date)} · ${fmtTime(x.time)}</td><td>${esc(x.title)}</td><td>${x.capacity - x.spotsLeft} / ${x.capacity}</td></tr>`),
       "No classes in the next 7 days. Add some under Classes.");
   }
+
+  // ---- Appointments
+  async function loadAppts() {
+    const list = await api("GET", "/api/admin/appointments" + ($("#appts-all").checked ? "?all=1" : ""));
+    $("#appts-list").innerHTML = list.length ? list.map((a) => `
+      <article class="lead appt ${a.status}" data-id="${a.id}">
+        <header>
+          <div><h3>${fmtDate(a.date)} · ${fmtTime(a.time)} <span class="badge ${a.status}">${a.status}</span></h3>
+            <div class="meta">${esc(a.typeName)} · ${a.minutes} min</div></div>
+          <div class="meta">Booked ${when(a.createdAt)}</div>
+        </header>
+        <div><strong>${esc(a.name)}</strong> · <a href="tel:${esc(a.phone)}">${esc(a.phone)}</a> · <a href="mailto:${esc(a.email)}">${esc(a.email)}</a></div>
+        ${a.notes ? `<p class="msg">${esc(a.notes)}</p>` : ""}
+        <textarea rows="2" placeholder="Session notes (private)" data-notes>${esc(a.adminNotes)}</textarea>
+        <div class="actions">
+          <select data-status>${APPT_STATUSES.map((x) => `<option ${x === a.status ? "selected" : ""}>${x}</option>`).join("")}</select>
+          <button class="mini" data-save>Save</button>
+        </div>
+      </article>`).join("") : `<p class="muted">No upcoming appointments.</p>`;
+  }
+  $("#appts-all").addEventListener("change", run(loadAppts));
+  $("#appts-list").addEventListener("click", run(async (e) => {
+    const card = e.target.closest(".appt");
+    if (!card || !e.target.matches("[data-save]")) return;
+    const status = $("[data-status]", card).value;
+    if (status === "cancelled" && !confirm("Cancel this appointment? The time opens up for booking again.")) return;
+    await api("PATCH", `/api/admin/appointments/${card.dataset.id}`, { status, adminNotes: $("[data-notes]", card).value });
+    toast("Appointment saved."); loadAppts();
+  }));
+
+  // ---- Booking hours
+  const hf = $("#hours-form");
+  $("#hours-days").innerHTML = DAYS.map((d, i) => `<label class="day-hours">${d}<input data-day="${i}" placeholder="Closed"></label>`).join("");
+  async function loadHours() {
+    const s = await api("GET", "/api/admin/settings");
+    const sch = s.scheduling;
+    $$("[data-day]", hf).forEach((el) => (el.value = (sch.hours[el.dataset.day] || []).map((w) => w.join("-")).join(", ")));
+    hf.slotStepMin.value = String(sch.slotStepMin);
+    hf.minNoticeHours.value = sch.minNoticeHours;
+    hf.daysAhead.value = sch.daysAhead;
+    hf.blockedDates.value = sch.blockedDates.join("\n");
+    hf.appointmentTypes.value = s.appointmentTypes.map((t) => [t.id, t.name, t.minutes, t.description].join(" | ")).join("\n");
+  }
+  hf.addEventListener("submit", run(async (e) => {
+    e.preventDefault();
+    const msg = $(".form-msg", hf);
+    msg.className = "form-msg"; msg.textContent = "";
+    try {
+      const hours = $$("[data-day]", hf).map((el) => el.value.split(",").map((x) => x.trim()).filter(Boolean).map((w) => {
+        const m = w.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+        if (!m) throw new Error(`${DAYS[el.dataset.day]}: write hours like 09:00-17:00`);
+        return [m[1].padStart(5, "0"), m[2].padStart(5, "0")];
+      }));
+      const appointmentTypes = hf.appointmentTypes.value.split("\n").map((x) => x.trim()).filter(Boolean).map((line) => {
+        const [id = "", name = "", minutes = "", description = ""] = line.split("|").map((x) => x.trim());
+        return { id, name, minutes: Number(minutes), description };
+      });
+      await api("PUT", "/api/admin/settings", {
+        scheduling: {
+          hours, slotStepMin: Number(hf.slotStepMin.value), minNoticeHours: Number(hf.minNoticeHours.value), daysAhead: Number(hf.daysAhead.value),
+          blockedDates: hf.blockedDates.value.split(/[\s,]+/).filter(Boolean)
+        },
+        appointmentTypes
+      });
+      msg.className = "form-msg ok"; msg.textContent = "Saved. Online booking uses the new hours right away.";
+    } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+  }));
 
   // ---- Leads
   async function loadLeads() {
@@ -89,7 +162,9 @@
             <div class="meta"><a href="mailto:${esc(l.email)}">${esc(l.email)}</a>${l.phone ? ` · <a href="tel:${esc(l.phone)}">${esc(l.phone)}</a>` : ""}</div></div>
           <div class="meta">${when(l.createdAt)}</div>
         </header>
-        <div class="meta">${esc(l.service)} · ${esc(l.goal)}${l.preferredTime ? " · Best time: " + esc(l.preferredTime) : ""}</div>
+        <div class="meta">${esc(l.service)} · ${esc(l.goal)}${l.preferredTime ? " · Best time: " + esc(l.preferredTime) : ""}${l.referral ? " · Heard via: " + esc(l.referral) : ""}</div>
+        <div class="intake">${[...(l.areas || []), l.painLevel != null && `Pain ${l.painLevel}/10`, l.duration, l.surgery && l.surgery !== "No" && l.surgery]
+          .filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join("")}</div>
         ${l.message ? `<p class="msg">${esc(l.message)}</p>` : ""}
         <textarea rows="2" placeholder="Notes" data-notes>${esc(l.notes)}</textarea>
         <div class="actions">
@@ -202,8 +277,9 @@
     e.preventDefault();
     const msg = $(".form-msg", sf);
     msg.className = "form-msg"; msg.textContent = "";
-    const body = { business: {}, coach: {} };
+    const body = { business: {}, coach: {}, rating: {} };
     $$("input[name*='.'], textarea[name*='.']", sf).forEach((el) => { const [sec, key] = el.name.split("."); body[sec][key] = el.value; });
+    body.rating.count = Number(body.rating.count || 0);
     body.packages = sf.packages.value.split(/\n\s*\n/).map((blk) => blk.split("\n").map((x) => x.trim()).filter(Boolean)).filter((l) => l.length)
       .map(([head, ...features]) => { const [name, price = "", unit = ""] = head.split("|").map((x) => x.trim()); return { name, price, unit, features }; });
     body.testimonials = sf.testimonials.value.split("\n").map((x) => x.trim()).filter(Boolean)

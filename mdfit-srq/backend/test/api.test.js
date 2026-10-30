@@ -53,32 +53,33 @@ test("health, site and CORS", async (t) => {
   const s = await start(); t.after(s.close);
   assert.equal((await s.call("GET", "/api/health")).body.ok, true);
   const site = await s.call("GET", "/api/site", undefined, { origin: "https://mdfit.example.com" });
-  assert.equal(site.body.settings.business.name, "MDFIT SRQ");
-  assert.ok(site.body.services.includes("Personal training"));
+  assert.equal(site.body.settings.business.name, "MD Fit");
+  assert.equal(site.body.settings.business.address, "3214 Clark Road, Sarasota, FL 34231");
+  assert.ok(site.body.options.areas.includes("Knee"));
+  assert.equal(site.body.settings.scheduling, undefined);
   assert.equal(site.headers.get("access-control-allow-origin"), "https://mdfit.example.com");
   const other = await s.call("GET", "/api/site", undefined, { origin: "https://evil.example.com" });
   assert.equal(other.headers.get("access-control-allow-origin"), null);
   assert.equal((await s.call("GET", "/nope")).status, 404);
 });
 
-test("schedule uses starter classes and skips past sessions", async (t) => {
+test("class schedule uses starter classes and skips past sessions", async (t) => {
   const s = await start(); t.after(s.close);
   const r = await s.call("GET", "/api/schedule?days=7");
   assert.equal(r.status, 200);
-  // Monday 06:00 is still ahead at 05:00, so it's included
-  assert.equal(r.body.sessions[0].date, "2026-11-02");
-  assert.equal(r.body.sessions[0].time, "06:00");
-  assert.equal(r.body.sessions.length, 4);
-  const late = await start({ now: () => new Date("2026-11-02T12:00:00Z") }); t.after(late.close); // 07:00 local
-  assert.equal((await late.call("GET", "/api/schedule")).body.sessions[0].date, "2026-11-04");
+  assert.deepEqual(r.body.sessions.map((x) => x.date), ["2026-11-03", "2026-11-05"]);
+  const late = await start({ now: () => new Date("2026-11-03T15:00:00Z") }); t.after(late.close); // Tue 10:00 local
+  assert.equal((await late.call("GET", "/api/schedule")).body.sessions[0].date, "2026-11-05");
 });
 
 test("consultation leads: validation, honeypot, admin workflow, CSV", async (t) => {
   const s = await start(); t.after(s.close);
   assert.equal((await s.call("POST", "/api/leads", { name: "A", email: "x" })).status, 400);
   assert.equal((await s.call("POST", "/api/leads", { name: "Sam Lee", email: "sam@example.com", service: "Yoga" })).status, 400);
+  assert.equal((await s.call("POST", "/api/leads", { name: "Sam Lee", email: "sam@example.com", areas: ["Spleen"] })).status, 400);
+  assert.equal((await s.call("POST", "/api/leads", { name: "Sam Lee", email: "sam@example.com", painLevel: 11 })).status, 400);
   assert.equal((await s.call("POST", "/api/leads", "not json")).status, 400);
-  const ok = await s.call("POST", "/api/leads", { name: "Sam Lee", email: "Sam@Example.com", phone: "(941) 555-0100", service: "Personal training", goal: "Get stronger", message: "=cmd" });
+  const ok = await s.call("POST", "/api/leads", { name: "Sam Lee", email: "Sam@Example.com", phone: "(941) 555-0100", service: "Injury rehabilitation", goal: "Get out of pain", areas: ["Knee", "Lower back"], painLevel: "6", duration: "More than 6 months", surgery: "No", message: "=cmd" });
   assert.equal(ok.status, 201);
   const bot = await s.call("POST", "/api/leads", { name: "Bot", email: "bot@example.com", company: "spam inc" });
   assert.equal(bot.status, 201);
@@ -89,6 +90,8 @@ test("consultation leads: validation, honeypot, admin workflow, CSV", async (t) 
   assert.equal(list.length, 1);
   assert.equal(list[0].email, "sam@example.com");
   assert.equal(list[0].status, "new");
+  assert.deepEqual(list[0].areas, ["Knee", "Lower back"]);
+  assert.equal(list[0].painLevel, 6);
   const upd = await s.call("PATCH", `/api/admin/leads/${list[0].id}`, { status: "contacted", notes: "Called Tue" });
   assert.equal(upd.body.status, "contacted");
   assert.equal((await s.call("PATCH", `/api/admin/leads/${list[0].id}`, { status: "weird" })).status, 400);
@@ -177,7 +180,7 @@ test("settings update is validated and public", async (t) => {
   assert.equal(r.status, 200);
   const pub = (await s.call("GET", "/api/site")).body.settings;
   assert.equal(pub.business.phone, "941-555-0100");
-  assert.equal(pub.business.name, "MDFIT SRQ");
+  assert.equal(pub.business.name, "MD Fit");
   assert.equal(pub.coach.name, "Coach Example");
   assert.equal(pub.testimonials.length, 1);
   assert.equal(pub.packages.length, 3);
@@ -194,4 +197,95 @@ test("login: wrong password, lockout, bad token, not configured", async (t) => {
 
   const bare = await start({ adminEmail: "", adminPasswordHash: "" }); t.after(bare.close);
   assert.equal((await bare.call("POST", "/api/admin/login", { email: "a@example.com", password: "x" })).status, 503);
+});
+
+test("appointments: availability, notice window, overlap, cancel, admin status", async (t) => {
+  const s = await start(); t.after(s.close);
+  const av = (await s.call("GET", "/api/availability?type=eval&days=3")).body;
+  assert.equal(av.type.id, "eval");
+  const byDate = Object.fromEntries(av.days.map((d) => [d.date, d.slots]));
+  assert.deepEqual(byDate["2026-11-02"], []); // Monday 05:00 + 12h notice: nothing left today
+  assert.equal(byDate["2026-11-03"][0], "09:00");
+  assert.equal(byDate["2026-11-03"].at(-1), "16:00"); // 60-min eval must end by 17:00
+  assert.equal(byDate["2026-11-03"].length, 15);
+
+  const book = (body) => s.call("POST", "/api/appointments", { typeId: "eval", date: "2026-11-03", time: "10:00", name: "Pat Doe", email: "pat@example.com", phone: "941-555-0100", ...body });
+  assert.equal((await book({ phone: "" })).status, 400);
+  assert.equal((await book({ typeId: "nope" })).status, 400);
+  assert.equal((await book({ time: "08:00" })).status, 409); // before opening
+  assert.equal((await book({ date: "2026-11-02", time: "18:00" })).status, 409);
+  const ok = await book({});
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.message, "You're booked: Initial Evaluation, Tue, Nov 3 at 10:00 AM.");
+  assert.equal((await book({ email: "b@example.com", time: "10:30" })).status, 409); // overlaps 10:00-11:00
+  assert.equal((await book({ email: "b@example.com", typeId: "call", time: "10:30" })).status, 409); // inside the eval
+  const call = await book({ email: "b@example.com", typeId: "call", time: "09:30" }); // 09:30-09:45 fits before it
+  assert.equal(call.status, 201);
+  const slots = (await s.call("GET", "/api/availability?type=call&from=2026-11-03&days=1")).body.days[0].slots;
+  assert.ok(!slots.includes("09:30") && !slots.includes("10:00") && !slots.includes("10:30") && slots.includes("11:00"));
+
+  const { id, cancelToken } = ok.body.appointment;
+  assert.equal((await s.call("POST", `/api/appointments/${id}/cancel`, { token: "x" })).status, 404);
+  assert.equal((await s.call("POST", `/api/appointments/${id}/cancel`, { token: cancelToken })).status, 200);
+  assert.equal((await s.call("POST", `/api/appointments/${id}/cancel`, { token: cancelToken })).status, 404);
+  assert.equal((await book({ email: "c@example.com" })).status, 201); // slot freed
+
+  await s.login();
+  const list = (await s.call("GET", "/api/admin/appointments")).body;
+  assert.equal(list.length, 2);
+  assert.equal(list[0].cancelToken, undefined);
+  assert.equal(list[0].time, "09:30");
+  const upd = await s.call("PATCH", `/api/admin/appointments/${list[0].id}`, { status: "completed", adminNotes: "Left knee, VMO weak" });
+  assert.equal(upd.body.status, "completed");
+  assert.equal((await s.call("PATCH", `/api/admin/appointments/${list[0].id}`, { status: "maybe" })).status, 400);
+  assert.equal((await s.call("GET", "/api/admin/appointments?all=1")).body.length, 3);
+  assert.match((await s.call("GET", "/api/admin/appointments.csv")).text, /c@example\.com/);
+  const stats = (await s.call("GET", "/api/admin/stats")).body;
+  assert.equal(stats.appointmentsWeek, 1); // the call was marked completed, the eval is still booked
+});
+
+test("scheduling settings: hours, blocked dates, validation", async (t) => {
+  const s = await start(); t.after(s.close);
+  await s.login();
+  const hours = [[], [], [["08:00", "12:00"], ["13:00", "15:00"]], [], [], [], []];
+  assert.equal((await s.call("PUT", "/api/admin/settings", { scheduling: { hours: [[]] } })).status, 400);
+  assert.equal((await s.call("PUT", "/api/admin/settings", { scheduling: { hours: [[], [], [["12:00", "09:00"]], [], [], [], []] } })).status, 400);
+  assert.equal((await s.call("PUT", "/api/admin/settings", { scheduling: { blockedDates: ["2026-02-30"] } })).status, 400);
+  assert.equal((await s.call("PUT", "/api/admin/settings", { appointmentTypes: [{ id: "a", name: "A", minutes: 30 }, { id: "a", name: "B", minutes: 30 }] })).status, 400);
+  const r = await s.call("PUT", "/api/admin/settings", {
+    scheduling: { hours, slotStepMin: 60, blockedDates: ["2026-11-10"] },
+    appointmentTypes: [{ id: "eval", name: "Evaluation", minutes: 60, description: "" }]
+  });
+  assert.equal(r.status, 200);
+  const days = (await s.call("GET", "/api/availability?type=eval&days=10")).body.days;
+  const d = Object.fromEntries(days.map((x) => [x.date, x.slots]));
+  assert.deepEqual(d["2026-11-03"], ["08:00", "09:00", "10:00", "11:00", "13:00", "14:00"]);
+  assert.deepEqual(d["2026-11-10"], []); // blocked
+  assert.deepEqual(d["2026-11-04"], []); // closed
+});
+
+test("email notifications go to owner and client when configured", async (t) => {
+  const http = require("node:http");
+  const sent = [];
+  const fake = http.createServer((req, res) => {
+    let body = ""; req.on("data", (c) => (body += c));
+    req.on("end", () => { sent.push({ auth: req.headers.authorization, ...JSON.parse(body) }); res.end("{}"); });
+  }).listen(0);
+  await new Promise((r) => fake.once("listening", r));
+  t.after(() => fake.close());
+  const s = await start({
+    resendKey: "re_test", resendUrl: `http://127.0.0.1:${fake.address().port}`, notifyFrom: "MD Fit <hello@example.com>",
+    notifyEmail: "owner@example.com", siteUrl: "https://mdfit.example.com"
+  }); t.after(s.close);
+  await s.call("POST", "/api/appointments", { typeId: "eval", date: "2026-11-03", time: "09:00", name: "Pat Doe", email: "pat@example.com", phone: "941-555-0100" });
+  await s.call("POST", "/api/leads", { name: "Sam Lee", email: "sam@example.com", areas: ["Neck"], painLevel: 4 });
+  for (let i = 0; i < 50 && sent.length < 3; i++) await new Promise((r) => setTimeout(r, 20));
+  assert.equal(sent.length, 3);
+  assert.equal(sent[0].auth, "Bearer re_test");
+  const owner = sent.filter((m) => m.to[0] === "owner@example.com");
+  const client = sent.find((m) => m.to[0] === "pat@example.com");
+  assert.equal(owner.length, 2);
+  assert.match(client.subject, /Initial Evaluation/);
+  assert.match(client.text, /https:\/\/mdfit\.example\.com\/cancel\?kind=appointment&id=/);
+  assert.ok(owner.some((m) => /Pain: 4\/10/.test(m.text)));
 });

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Cancel Booking | MD Fit</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background: var(--ink); min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+    .form { width: min(440px, 100%); text-align: center; justify-items: center; }
+    .form h1 { font: 800 38px/1 var(--display); text-transform: uppercase; margin: 6px 0 0; }
+    .brand { color: var(--text); }
+    .brand-sub { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="form">
+    <a href="/" class="brand"><img src="assets/logo.svg" alt="" width="38" height="38"><span class="brand-text"><span class="brand-name">MD FIT</span><span class="brand-sub">Rehab &amp; Fitness</span></span></a>
+    <h1>Cancel booking</h1>
+    <p class="muted" id="what">Need to cancel? Tap below and the time is released for someone else.</p>
+    <button class="btn btn-lg" id="go">Yes, cancel it</button>
+    <p class="form-msg" role="status"></p>
+    <a href="/#book" class="btn btn-line" id="rebook" hidden>Book a new time</a>
+  </div>
+  <script src="config.js"></script>
+  <script>
+    (() => {
+      const API = window.MDFIT_CONFIG.apiUrl.replace(/\/+$/, "");
+      const q = new URLSearchParams(location.search);
+      const kind = q.get("kind"), id = q.get("id"), token = q.get("token");
+      const btn = document.getElementById("go"), msg = document.querySelector(".form-msg");
+      const path = kind === "appointment" ? "appointments" : kind === "class" ? "bookings" : null;
+      if (!path || !/^[a-f0-9]{12}$/.test(id || "") || !token) {
+        btn.hidden = true;
+        msg.className = "form-msg err";
+        msg.textContent = "This cancel link is incomplete. Please call 941-313-0562.";
+        return;
+      }
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          const res = await fetch(`${API}/api/${path}/${id}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Couldn't cancel. Please call 941-313-0562.");
+          btn.hidden = true;
+          msg.className = "form-msg ok";
+          msg.textContent = "Cancelled. We hope to see you soon.";
+          document.getElementById("rebook").hidden = false;
+        } catch (err) {
+          btn.disabled = false;
+          msg.className = "form-msg err";
+          msg.textContent = err.message;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

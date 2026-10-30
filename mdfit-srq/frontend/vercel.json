@@ -1,18 +1,62 @@
 {
   "cleanUrls": true,
   "headers": [
-    { "source": "/admin", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] },
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/cancel",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Frame-Options", "value": "DENY" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
       ]
     }
   ],
   "redirects": [
-    { "source": "/book", "destination": "/#schedule", "permanent": false },
-    { "source": "/consult", "destination": "/#consult", "permanent": false }
+    {
+      "source": "/book",
+      "destination": "/#book",
+      "permanent": false
+    },
+    {
+      "source": "/evaluation",
+      "destination": "/#book",
+      "permanent": false
+    },
+    {
+      "source": "/consult",
+      "destination": "/#intake",
+      "permanent": false
+    },
+    {
+      "source": "/classes",
+      "destination": "/#classes",
+      "permanent": false
+    }
   ]
 }

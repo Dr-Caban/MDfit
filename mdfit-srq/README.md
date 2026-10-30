@@ -1,24 +1,36 @@
-# MDFIT SRQ
+# MD Fit — Physical Rehabilitation & Fitness
 
-Website + API for **MDFIT SRQ**, personal training in Sarasota, FL.
+Website + booking platform for **MD Fit** (Dr. Jared Caban, MD, MSc, CEP), 3214 Clark Road, Sarasota, FL.
 
 | Folder | What it is | Host |
 |---|---|---|
-| `frontend/` | Website (`/`) and admin portal (`/admin`). Plain HTML/CSS/JS, no build step | Vercel |
-| `backend/` | Node/Express API: consultation requests, class schedule + booking, newsletter, admin | Railway |
+| `frontend/` | Website (`/`), admin portal (`/admin`), cancel page (`/cancel`). Plain HTML/CSS/JS, no build step | Vercel |
+| `backend/` | Node/Express API | Railway |
 
-**Website:** programs, live class schedule with online booking (next 7 days, capacity-limited), packages, coach bio, testimonials, free-consultation form, newsletter sign-up. Content comes from the API and is edited in the admin portal.
+## What it does
 
-**Admin (`/admin`):** dashboard, leads (status + notes, CSV), weekly classes (add, pause, change capacity, delete), bookings, subscribers (CSV), and settings (business info, socials, coach, packages, testimonials).
+**For clients (website)**
+- **Online booking:** live availability for Initial Evaluation / Rehab Session / Free Phone Consult, built from your real hours. No double-booking, minimum notice, holidays blocked. Confirmation screen with **Add to calendar (.ics)** and **Google Calendar**.
+- **"Where does it hurt?"** quick start in the hero → **intake form** with body areas, pain level 0–10, how long, surgery status, goal, and how they heard about you.
+- The MD Fit Method (Assess → Release → Correct → Strengthen), services, what we treat, programs, Dr. Jared, reviews with rating badge, small-group class booking, visit info, newsletter.
+- Phone and mobile first: sticky Call / Book bar on phones, click-to-call everywhere.
+- Local SEO: `LocalBusiness` structured data (address, phone, hours) so Google can show it in search and Maps.
 
----
+**For you (admin at `/admin`)**
+- **Dashboard:** today's appointments, the week ahead, new requests, class spots.
+- **Appointments:** client details and notes, private session notes, mark completed / no-show / cancelled (cancelling reopens the slot). CSV export.
+- **Hours:** weekly hours (split shifts OK), slot spacing, minimum notice, how far ahead people can book, closed dates, appointment types and lengths.
+- **Leads:** every intake with body areas, pain level etc. as tags; status pipeline (new → contacted → booked → client); notes; CSV.
+- **Classes / Bookings / Subscribers**, and **Settings** for every piece of text on the site (phone, hours, bio, photo, packages and prices, reviews, rating badge, socials).
+
+**Email (optional):** with Resend set up, you get an email for every booking, cancellation and intake; clients get a confirmation with a one-click cancel link.
 
 ## Deploy
 
 ### 1. Backend → Railway
 1. railway.com → **New Project → Deploy from GitHub repo** → this repo.
 2. Service **Settings → Root Directory: `mdfit-srq/backend`**.
-3. **Add a Volume** mounted at **`/data`** (otherwise leads and bookings are lost on redeploy).
+3. **Add a Volume** mounted at **`/data`** (otherwise bookings are lost on redeploy).
 4. **Variables** (see `backend/.env.example`):
 
    | Variable | Value |
@@ -26,24 +38,34 @@ Website + API for **MDFIT SRQ**, personal training in Sarasota, FL.
    | `ADMIN_EMAIL` | admin login email |
    | `ADMIN_PASSWORD_HASH` | output of `npm run hash-password -- 'your password'` |
    | `SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-   | `ALLOWED_ORIGINS` | your Vercel address, e.g. `https://mdfit-srq.vercel.app` |
+   | `ALLOWED_ORIGINS` | your site address(es), comma-separated, e.g. `https://mdfitsrq.com,https://mdfit-srq.vercel.app` |
+   | `SITE_URL` | the main site address (for cancel links) |
    | `DATA_DIR` | `/data` |
    | `TZ_NAME` | `America/New_York` |
    | `NODE_ENV` | `production` |
+   | `RESEND_API_KEY`, `NOTIFY_FROM`, `NOTIFY_EMAIL` | optional email, see below |
 5. **Settings → Networking → Generate Domain**. That's your API address.
 
 ### 2. Frontend → Vercel
 1. In `frontend/config.js` replace `https://YOUR-RAILWAY-APP.up.railway.app` with the Railway address and push.
 2. vercel.com → **Add New → Project** → import this repo → **Root Directory: `mdfit-srq/frontend`**, Framework **Other** → Deploy.
-3. Put the Vercel address in Railway's `ALLOWED_ORIGINS`.
-4. Log in at `/admin` → **Settings**: fill in phone, email, address, hours, socials, coach bio/photo, package prices, testimonials. **Classes**: replace the starter schedule with your real one.
+3. To use **mdfitsrq.com**: Vercel → Project → Settings → Domains → add it and follow the DNS steps.
+4. Log in at `/admin` and check **Settings** (add Dr. Jared's photo link and package prices) and **Hours**.
 
-Short links: `/book` → schedule, `/consult` → consultation form.
+### 3. Email (optional, recommended)
+1. resend.com → sign up → **Domains** → add `mdfitsrq.com` and add the DNS records it shows.
+2. **API Keys** → create one → Railway `RESEND_API_KEY`.
+3. Railway `NOTIFY_FROM` = `MD Fit <bookings@mdfitsrq.com>`, `NOTIFY_EMAIL` = where you want alerts.
+
+Short links: `/book` and `/evaluation` → booking, `/consult` → intake, `/classes` → classes.
+
+## Brand
+Colors are tokens at the top of `frontend/styles.css` (`--ink` navy, `--accent` teal). Change them there to match an official palette. Logo: `frontend/assets/logo.svg`.
 
 ## API
-Public: `GET /api/health`, `GET /api/site`, `GET /api/schedule?days=7`, `POST /api/leads`, `POST /api/bookings`, `POST /api/bookings/:id/cancel` (with the `cancelToken` returned on booking), `POST /api/subscribe`.
+Public: `GET /api/health`, `GET /api/site`, `GET /api/availability?type=eval&from=YYYY-MM-DD&days=7`, `POST /api/appointments`, `POST /api/appointments/:id/cancel`, `GET /api/schedule`, `POST /api/bookings`, `POST /api/bookings/:id/cancel`, `POST /api/leads`, `POST /api/subscribe`.
 
-Admin (Bearer token from `POST /api/admin/login`; 12h sessions; 10 bad logins lock the IP for 15 min): `me`, `stats`, `settings` (GET/PUT), `leads` (GET, PATCH/DELETE `:id`), `leads.csv`, `classes` (GET/POST, PUT/DELETE `:id`), `bookings` (GET, DELETE `:id`), `subscribers` (GET, DELETE `:email`), `subscribers.csv`, `activity`.
+Admin (Bearer token from `POST /api/admin/login`; 12h sessions; 10 bad logins lock the IP for 15 min): `me`, `stats`, `settings` (GET/PUT), `appointments` (GET, PATCH `:id`), `appointments.csv`, `leads` (GET, PATCH/DELETE `:id`), `leads.csv`, `classes` (GET/POST, PUT/DELETE `:id`), `bookings` (GET, DELETE `:id`), `subscribers` (GET, DELETE `:email`), `subscribers.csv`, `activity`.
 
 Spam protection: hidden honeypot field on every form and 20 submissions/hour per IP.
 
