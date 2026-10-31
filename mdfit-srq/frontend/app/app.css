@@ -520,3 +520,30 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
   .hero h1 { font-size: 26px; }
 }
 @media (prefers-reduced-motion: reduce) { .view { animation: none; } .bar i { transition: none; } }
+
+/* ---- Pain Tool: narrow-down step and ranked muscle results */
+.refine { margin: 0 0 14px; }
+.refine-row { margin: 10px 0 14px; }
+.refine-row > b { display: block; color: var(--navy); font-size: 15px; margin-bottom: 8px; }
+.refine .pill { text-align: left; min-width: 0; }
+.refine .pill b { font-size: 13.5px; font-weight: 600; }
+.result-sum { border-top: 4px solid var(--accent); margin-top: 16px; }
+.result-sum h3 { margin: 4px 0 6px; font: 700 20px/1.3 var(--display); }
+.result-sum .log-row { grid-template-columns: 1fr auto auto; margin: 12px 0 0; }
+.muscle { position: relative; }
+.muscle.top { border: 2px solid var(--accent); }
+.mc-head { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: center; margin-bottom: 8px; }
+.mc-rank { width: 40px; height: 40px; border-radius: 50%; background: var(--navy); color: var(--gold); display: grid; place-items: center; font: 700 18px var(--display); }
+.muscle.top .mc-rank { background: var(--accent); color: var(--navy); }
+.mc-head h3 { margin: 2px 0 0; font: 700 19px/1.25 var(--display); }
+.mc-why { margin: 0 0 10px; font-size: 13px; color: var(--accent-text); font-weight: 600; }
+.mc-ref, .mc-does { margin: 0 0 10px; font-size: 14.5px; line-height: 1.55; }
+.mc-ref b, .mc-does b { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.mc-ref { background: var(--card-2); border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0; padding: 10px 12px; }
+.muscle .label { display: block; margin: 12px 0 6px; }
+.more-muscles summary { cursor: pointer; color: var(--accent-text); font-weight: 700; margin: 6px 2px 14px; }
+@media (min-width: 1000px) {
+  .result-sum, .more-muscles, #pain-results > .card:last-child { grid-column: 1 / -1; }
+  .more-muscles[open] { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 0 18px; }
+  .more-muscles summary { grid-column: 1 / -1; }
+}

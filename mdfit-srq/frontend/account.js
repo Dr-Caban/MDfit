@@ -369,61 +369,64 @@
   }
 
   // ================= Pain tool
-  // Areas follow Dr. Jared's referred-pain guides; rc = exercise library regions to suggest videos from.
+  // Body areas; painmuscles.js holds the precise spots and the muscles for each area id.
   const PAIN = {
     front: [
-      { id: "head", label: "Head", sub: "Forehead, temples", area: "Neck", rc: ["NK"], guides: ["posterior-neck"],
-        sources: [["Suboccipital muscles", "Tight muscles at the base of the skull can send pain to the forehead, behind the eye and the temple, often mistaken for migraine."]] },
-      { id: "neck", label: "Neck", sub: "Front and sides", area: "Neck", rc: ["NK", "ERG"], guides: ["scalenes", "posterior-neck"],
-        sources: [["Scalenes", "Neck pain and stiffness that can spread into the shoulder, upper back and arm."], ["Levator scapulae", "Pain at the side of the neck into the top of the shoulder."]] },
-      { id: "shoulder", label: "Shoulder", sub: "Front and outside", area: "Shoulder", rc: ["SH"], guides: ["rotator-cuff", "scalenes"],
-        sources: [["Supraspinatus (rotator cuff)", "Pain at the top of the shoulder that can run down the outside of the arm, worse overhead."], ["Scalenes", "Can refer to the front and side of the shoulder and down the arm."]] },
-      { id: "chest", label: "Chest & ribs", sub: "Front of rib cage", area: "Other", rc: ["SP", "UB"], guides: ["scalenes"],
-        sources: [["Scalenes & intercostals", "Tight neck and rib muscles can refer pain to the chest wall and ribs. Chest pain with shortness of breath needs emergency care: call 911."]] },
-      { id: "elbow", label: "Elbow", sub: "Forearm", area: "Elbow / wrist / hand", rc: ["EL", "WR"], guides: ["rotator-cuff", "scalenes"],
-        sources: [["Rotator cuff", "Infraspinatus and teres minor can refer down the outside of the arm toward the forearm."], ["Scalenes", "Tight scalenes can send pain down the arm and forearm."]] },
-      { id: "wrist", label: "Wrist & hand", sub: "Fingers, thumb", area: "Elbow / wrist / hand", rc: ["WR", "EL"], guides: ["scalenes", "rotator-cuff"],
-        sources: [["Scalenes", "Can refer into the hand, often the thumb, index and middle fingers, sometimes with tingling."], ["Subscapularis", "Can refer down the inner arm toward the ring and little fingers."]] },
-      { id: "hip", label: "Hip & groin", sub: "Front of hip", area: "Hip", rc: ["HP"], guides: ["iliopsoas", "lateral-hip"],
-        sources: [["Iliacus", "A common, often overlooked source of groin and inner-thigh pain and hip tightness."], ["TFL", "Pain down the front-outside of the thigh, usually stopping at the knee."]] },
-      { id: "thigh", label: "Thigh", sub: "Quads", area: "Hip", rc: ["LB", "HP"], guides: ["quads"],
-        sources: [["Rectus femoris (quads)", "A deep ache at the front of the hip and thigh, common after long sitting."]] },
-      { id: "knee", label: "Knee", sub: "Kneecap, shin", area: "Knee", rc: ["KN", "LB"], guides: ["quads", "calf"],
-        sources: [["Quadriceps", "Pain above, below or around the kneecap, worse on stairs, squatting or after sitting."], ["Calf (gastrocnemius)", "Can radiate to the back of the knee."]] },
-      { id: "ankle", label: "Ankle & foot", sub: "Arch, inner ankle", area: "Ankle / foot", rc: ["AN", "LB"], guides: ["calf"],
-        sources: [["Tibialis posterior", "Pain on the inside of the ankle and arch, often with flat feet or overpronation."], ["Soleus", "Can refer to the Achilles and heel, and contribute to plantar fasciitis."]] }
+      { id: "head", label: "Head", sub: "Forehead, temples", area: "Neck" },
+      { id: "neck", label: "Neck", sub: "Front and sides", area: "Neck" },
+      { id: "shoulder", label: "Shoulder", sub: "Front and outside", area: "Shoulder" },
+      { id: "chest", label: "Chest & ribs", sub: "Front of rib cage", area: "Other" },
+      { id: "elbow", label: "Elbow", sub: "Forearm", area: "Elbow / wrist / hand" },
+      { id: "wrist", label: "Wrist & hand", sub: "Fingers, thumb", area: "Elbow / wrist / hand" },
+      { id: "hip", label: "Hip & groin", sub: "Front of hip", area: "Hip" },
+      { id: "thigh", label: "Thigh", sub: "Quads", area: "Hip" },
+      { id: "knee", label: "Knee", sub: "Kneecap, shin", area: "Knee" },
+      { id: "ankle", label: "Ankle & foot", sub: "Arch, inner ankle", area: "Ankle / foot" }
     ],
     back: [
-      { id: "head-b", label: "Back of head", sub: "Base of skull", area: "Neck", rc: ["NK"], guides: ["posterior-neck"],
-        sources: [["Suboccipitals", "A deep ache at the base of the skull, a common driver of tension headaches."], ["Occipitalis", "Headache at the back of the head with scalp tenderness."]] },
-      { id: "neck-b", label: "Neck & traps", sub: "Upper traps", area: "Neck", rc: ["NK", "ERG"], guides: ["posterior-neck", "scalenes"],
-        sources: [["Levator scapulae", "Neck pain into the top of the shoulder and inner edge of the shoulder blade."], ["Upper posture", "Long desk hours load the back of the neck."]] },
-      { id: "upper-back", label: "Upper back", sub: "Between shoulder blades", area: "Upper back", rc: ["SP", "SH", "ERG"], guides: ["scalenes"],
-        sources: [["Scalenes", "Pain or burning between the shoulder blades that mimics rhomboid pain."]] },
-      { id: "shoulder-b", label: "Shoulder blade", sub: "Back of shoulder", area: "Shoulder", rc: ["SH"], guides: ["rotator-cuff"],
-        sources: [["Infraspinatus & teres minor", "Pain behind the shoulder that runs down the back-outside of the arm."]] },
-      { id: "low-back", label: "Low back", sub: "Lumbar spine", area: "Lower back", rc: ["SP", "CO", "HP"], guides: ["iliopsoas"],
-        sources: [["Psoas", "A tight psoas pulls the lumbar spine forward, loading the low back, often from long sitting."], ["Iliacus", "Pain at the back of the pelvis and high in the glute."]] },
-      { id: "glute", label: "Glutes", sub: "Buttock, outer hip", area: "Hip", rc: ["HP"], guides: ["lateral-hip", "iliopsoas"],
-        sources: [["Piriformis", "Pain from the middle of the glute down the back-outside of the thigh and calf."], ["Glute minimus", "Pain on the outside of the hip that travels down the side of the leg."]] },
-      { id: "hamstring", label: "Hamstring", sub: "Back of thigh", area: "Hip", rc: ["LB", "HP"], guides: ["lateral-hip"],
-        sources: [["Piriformis", "Its referral line runs down the back-outside of the thigh toward the calf."]] },
-      { id: "calf", label: "Calf", sub: "Lower leg", area: "Ankle / foot", rc: ["LB", "AN"], guides: ["calf"],
-        sources: [["Gastrocnemius", "Upper calf pain that can reach the back of the knee, often a deep cramp-like tightness."], ["Soleus", "Deeper, lower calf pain with standing and walking."]] },
-      { id: "heel", label: "Heel & Achilles", sub: "Back of ankle", area: "Ankle / foot", rc: ["AN", "LB"], guides: ["calf"],
-        sources: [["Soleus", "Refers to the Achilles and heel, and can contribute to plantar fasciitis."]] }
+      { id: "head-b", label: "Back of head", sub: "Base of skull", area: "Neck" },
+      { id: "neck-b", label: "Neck & traps", sub: "Upper traps", area: "Neck" },
+      { id: "upper-back", label: "Upper back", sub: "Between shoulder blades", area: "Upper back" },
+      { id: "shoulder-b", label: "Shoulder blade", sub: "Back of shoulder", area: "Shoulder" },
+      { id: "low-back", label: "Low back", sub: "Lumbar spine", area: "Lower back" },
+      { id: "glute", label: "Glutes", sub: "Buttock, outer hip", area: "Hip" },
+      { id: "hamstring", label: "Hamstring", sub: "Back of thigh", area: "Hip" },
+      { id: "calf", label: "Calf", sub: "Lower leg", area: "Ankle / foot" },
+      { id: "heel", label: "Heel & Achilles", sub: "Back of ankle", area: "Ankle / foot" }
     ]
   };
   const ALL_PAIN = [...PAIN.front, ...PAIN.back];
   let side = "front";
   const picked = new Set();
   const personSvg = '<svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg>';
+  // Step 1: areas. Step 2: where exactly + what makes it worse. Step 3: ranked muscles (painmuscles.js).
+  const MUS = window.MDFitMuscles;
+  const spotsPicked = new Set(), aggrPicked = new Set();
   function renderAreas() {
     $("#areas").innerHTML = PAIN[side].map((a) => `<button type="button" class="area" data-area="${a.id}" aria-pressed="${picked.has(a.id)}">
       <span class="aic">${personSvg}</span><span><b>${esc(a.label)}</b><small>${esc(a.sub)}</small></span><span class="radio" aria-hidden="true"></span></button>`).join("");
     const n = picked.size;
     $("#pain-go").disabled = !n;
-    $("#pain-go").textContent = n ? `Show what may be causing it (${n})` : "Select an area";
+    $("#pain-go").textContent = n ? "Find the muscles" : "Select an area";
+    renderRefine();
+  }
+  const spotKeys = () => ALL_PAIN.filter((a) => picked.has(a.id)).flatMap((a) => {
+    const mine = [...spotsPicked].filter((k) => k.startsWith(a.id + "|"));
+    return mine.length ? mine : (MUS.SPOTS[a.id] || []).map((s) => `${a.id}|${s[0]}`);
+  });
+  function renderRefine() {
+    const areas = ALL_PAIN.filter((a) => picked.has(a.id));
+    if (!areas.length) { $("#pain-refine").innerHTML = ""; return; }
+    // Only offer aggravators that matter for the muscles in play
+    const tags = [...new Set(MUS.rank(spotKeys()).flatMap((m) => m.worse))];
+    $("#pain-refine").innerHTML = `<div class="card refine">
+      <p class="label accent">Narrow it down</p>
+      ${areas.map((a) => `<div class="refine-row"><b>${esc(a.label)}: where exactly?</b><div class="pills">${(MUS.SPOTS[a.id] || []).map(([l]) => {
+        const k = `${a.id}|${l}`;
+        return `<button type="button" class="pill" role="checkbox" data-spot="${esc(k)}" aria-checked="${spotsPicked.has(k)}"><b>${esc(l)}</b></button>`;
+      }).join("")}</div></div>`).join("")}
+      <div class="refine-row"><b>What makes it worse?</b><div class="pills">${tags.map((t) => `<button type="button" class="pill" role="checkbox" data-aggr="${t}" aria-checked="${aggrPicked.has(t)}"><b>${esc(MUS.AGGRAVATORS[t])}</b></button>`).join("")}</div></div>
+      <p class="muted tiny">Optional. Pick any that fit and the list sorts the most likely muscles first.</p></div>`;
   }
   $$(".seg [data-side]").forEach((b) => b.addEventListener("click", () => {
     side = b.dataset.side;
@@ -433,34 +436,58 @@
   $("#areas").addEventListener("click", (e) => {
     const b = e.target.closest("[data-area]");
     if (!b) return;
-    picked.has(b.dataset.area) ? picked.delete(b.dataset.area) : picked.add(b.dataset.area);
+    const id = b.dataset.area;
+    if (picked.has(id)) { picked.delete(id); [...spotsPicked].forEach((k) => k.startsWith(id + "|") && spotsPicked.delete(k)); } else picked.add(id);
     renderAreas();
   });
-  const gentleFor = (rc, n) => EX.filter((e) => rc.includes(e.rc) && ["Mobility", "Rehab", "Neuroglide", "Posture", "Desk & posture"].includes(e.cat) && e.level <= 4)
-    .sort((a, b) => rc.indexOf(a.rc) - rc.indexOf(b.rc) || a.level - b.level).slice(0, n);
+  $("#pain-refine").addEventListener("click", (e) => {
+    const s = e.target.closest("[data-spot]"), g = e.target.closest("[data-aggr]");
+    if (s) spotsPicked.has(s.dataset.spot) ? spotsPicked.delete(s.dataset.spot) : spotsPicked.add(s.dataset.spot);
+    else if (g) aggrPicked.has(g.dataset.aggr) ? aggrPicked.delete(g.dataset.aggr) : aggrPicked.add(g.dataset.aggr);
+    else return;
+    renderRefine();
+  });
+  const byName = new Map(EX.map((e) => [e.name, e]));
+  const muscleCard = (m, i) => `
+    <article class="card muscle ${i ? "" : "top"}" data-muscle="${m.id}">
+      <div class="mc-head"><span class="mc-rank">${i + 1}</span><div><span class="label accent">${i === 0 ? "Most likely" : i < 3 ? "Also likely" : "Also check"}</span><h3>${esc(m.name)}</h3></div></div>
+      <p class="mc-why">Matches ${esc(m.spots.join(", ").toLowerCase())}${m.matches.length ? ` · worse with ${esc(m.matches.map((t) => MUS.AGGRAVATORS[t].toLowerCase()).join(", "))}` : ""}</p>
+      <p class="mc-ref"><b>Where it sends pain</b>${esc(m.refers)}</p>
+      <p class="mc-does"><b>What it does</b>${esc(m.does)}</p>
+      <p class="label">Relief videos from Dr. Jared</p>
+      <div class="mini-vids">${m.videos.map((n) => byName.get(n)).filter(Boolean).map(vcard).join("")}</div>
+      ${m.guide && GUIDES[m.guide] ? `<div class="guides"><button type="button" class="guide" data-guide="${m.guide}"><img src="assets/guides/${m.guide}-thumb.webp" alt="" width="52" height="52" loading="lazy"><span><b>${esc(GUIDES[m.guide])}</b><span>Open Dr. Jared's guide</span></span></button></div>` : ""}
+    </article>`;
   $("#pain-go").addEventListener("click", () => {
     const areas = ALL_PAIN.filter((a) => picked.has(a.id));
-    $("#pain-results").innerHTML = areas.map((a) => `
-      <div class="card result" data-result="${a.id}">
-        <span class="label gold">Possible sources</span>
-        <h3>${esc(a.label)}</h3>
-        <ul class="src">${a.sources.map(([t, d]) => `<li><b>${esc(t)}</b>${esc(d)}</li>`).join("")}</ul>
-        ${a.guides.length ? `<div class="guides">${a.guides.map((g) => `<button type="button" class="guide" data-guide="${g}"><img src="assets/guides/${g}-thumb.webp" alt="" width="52" height="52" loading="lazy"><span><b>${esc(GUIDES[g])}</b><span>Open Dr. Jared's guide</span></span></button>`).join("")}</div>` : ""}
-        <p class="label" style="margin-top:16px">Gentle relief videos</p>
-        <div class="mini-vids">${gentleFor(a.rc, 3).map(vcard).join("")}</div>
-        <div class="log-row"><label>Pain now: <output>5</output>/10<input type="range" min="0" max="10" value="5" aria-label="Pain level for ${esc(a.label)}"></label><button type="button" class="btn-gold sm" data-log="${esc(a.area)}">Log it</button></div>
-        <div class="row"><a class="btn-blue sm" href="/book">Book an evaluation</a><button type="button" class="btn-ghost sm" data-goto="videos">More videos</button></div>
-      </div>`).join("") + `<p class="muted tiny center">Educational only. Sudden, severe, or worsening pain, numbness, or weakness needs prompt medical care.</p>`;
+    const list = MUS.rank(spotKeys(), [...aggrPicked]);
+    const chosen = [...spotsPicked].map((k) => k.split("|")[1]);
+    const logAreas = [...new Set(areas.map((a) => a.area))];
+    $("#pain-results").innerHTML = `
+      <div class="card result-sum">
+        <span class="label accent">Your muscle map</span>
+        <h3>${list.length} muscles can send pain to ${esc(areas.map((a) => a.label.toLowerCase()).join(" and "))}</h3>
+        <p class="muted small">${chosen.length ? `You picked: ${esc(chosen.join(", "))}. ` : ""}Most likely first. Try the relief videos for the top one or two for a week and log how it feels.</p>
+        <div class="log-row"><label>Pain now: <output>5</output>/10<input type="range" min="0" max="10" value="5" aria-label="Pain level"></label>
+          ${logAreas.length > 1 ? `<select class="select sm" aria-label="Area">${logAreas.map((x) => `<option>${esc(x)}</option>`).join("")}</select>` : ""}
+          <button type="button" class="btn-gold sm" data-log="${esc(logAreas[0])}">Log it</button></div>
+      </div>
+      ${list.slice(0, 5).map(muscleCard).join("")}
+      ${list.length > 5 ? `<details class="more-muscles"><summary>Show ${list.length - 5} more muscles</summary>${list.slice(5).map((m, i) => muscleCard(m, i + 5)).join("")}</details>` : ""}
+      <div class="card"><div class="row"><a class="btn-blue sm" href="/book">Book an evaluation</a><button type="button" class="btn-ghost sm" data-goto="videos">More videos</button></div>
+      <p class="muted tiny center" style="margin:12px 0 0">Educational only, not a diagnosis. Sudden, severe or worsening pain, chest pain, numbness or weakness needs prompt medical care.</p></div>`;
     $("#pain-results").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   $("#pain-results").addEventListener("input", (e) => { if (e.target.type === "range") e.target.closest(".log-row").querySelector("output").textContent = e.target.value; });
   $("#pain-results").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-log]");
     if (!b) return;
-    const row = b.closest(".log-row"), a = ALL_PAIN.find((x) => x.id === b.closest("[data-result]").dataset.result);
+    const row = b.closest(".log-row"), sel = $("select", row);
+    const top = $(".muscle h3", $("#pain-results"));
     b.disabled = true;
     try {
-      await apiAuth("POST", "/api/me/pain", { area: b.dataset.log, level: Number($("input", row).value), note: a.label });
+      await apiAuth("POST", "/api/me/pain", { area: sel ? sel.value : b.dataset.log, level: Number($("input", row).value),
+        note: [...spotsPicked].map((k) => k.split("|")[1]).join(", ").slice(0, 300) || (top ? `Top match: ${top.textContent}` : "") });
       await loadPain();
       b.textContent = "Logged"; toast("Saved to your pain tracker.");
       loadRewards(true);
