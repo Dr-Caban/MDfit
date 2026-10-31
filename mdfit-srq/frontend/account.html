@@ -31,6 +31,7 @@
       <p class="hello">Welcome back</p>
       <h1 class="name" id="hello-name">&nbsp;</h1>
 
+      <div class="home-grid"><div class="col-main">
       <div class="streak card gold-edge">
         <div class="streak-top">
           <svg class="flame" viewBox="0 0 24 24"><path d="M13.5 1.5s.8 2.7.8 4.6c0 1.9-1.2 3.4-3.1 3.4-1.9 0-3.3-1.5-3.3-3.4l.03-.33C5.9 8 4.7 11.1 4.7 14.4 4.7 18.6 8 22 12 22s7.3-3.4 7.3-7.6c0-5.1-2.4-9.6-5.8-12.9zM11.7 19c-1.6 0-2.9-1.3-2.9-2.9 0-1.5 1-2.6 2.6-2.9 1.6-.3 3.3-1.1 4.2-2.4.4 1.2.6 2.5.6 3.8 0 2.4-2 4.4-4.5 4.4z"/></svg>
@@ -63,6 +64,7 @@
         <a class="card q" href="/book"><svg viewBox="0 0 24 24" class="ic green"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14zM7 11h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2z"/></svg><b>Book a Visit</b><span>See Dr. Jared</span></a>
       </div>
 
+      </div><div class="col-side">
       <div class="card plan" id="plan-card" hidden>
         <div class="card-head"><span class="label gold">From Dr. Jared</span><span class="muted small" id="plan-date"></span></div>
         <div id="plan"></div>
@@ -77,6 +79,7 @@
         <div class="card-head"><span class="label">Recent activity</span></div>
         <ul class="activity" id="activity"></ul>
       </div>
+      </div></div>
     </section>
 
     <!-- ================= GENERATE ================= -->
@@ -84,8 +87,10 @@
       <h1 class="big">Workout <em>Generator</em></h1>
       <p class="kicker">Customize every detail. Create a workout that fits you.</p>
       <button type="button" class="intro-btn" data-intro="generator"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> How it works with Dr. Jared</button>
+      <div class="gen-grid"><div class="gen-controls">
       <div id="pickers"></div>
       <button type="button" class="btn-gold" id="generate">Generate my workout</button>
+      </div>
       <div id="generated" hidden>
         <div class="card gen-card">
           <div class="today-head"><span class="label gold" id="gen-title"></span><button type="button" class="link-sm" id="shuffle">Shuffle</button></div>
@@ -94,6 +99,7 @@
           <button type="button" class="btn-blue" id="start-gen"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Start Workout</button>
         </div>
       </div>
+      </div>
     </section>
 
     <!-- ================= VIDEOS ================= -->
@@ -101,9 +107,11 @@
       <h1 class="big">Video <em>Library</em></h1>
       <p class="kicker"><span id="vid-count"></span> exercises coached by Dr. Jared</p>
       <button type="button" class="intro-btn" data-intro="library"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Start here: how to use the library</button>
+      <div class="vid-filters">
       <input type="search" id="vid-search" class="search" placeholder="Search exercises" aria-label="Search exercises">
       <div class="chips" id="vid-cats" role="tablist" aria-label="Category"></div>
       <select id="vid-region" class="select" aria-label="Body area"></select>
+      </div>
       <div class="vgrid" id="vgrid"></div>
       <p class="muted small center" id="vid-empty" hidden>No exercises match. Try another filter.</p>
     </section>
@@ -128,6 +136,7 @@
         <div><h1 class="name sm" id="p-name"></h1><p class="muted small" id="p-email"></p></div>
       </div>
 
+      <div class="profile-grid">
       <div class="card list-card">
         <div class="card-head"><span class="label">My appointments</span><a class="link-sm" href="/book">Book</a></div>
         <ul class="events" id="p-appts"></ul>
@@ -176,6 +185,7 @@
         <p class="small" id="install-text">Add MD Fit to your home screen for one-tap access.</p>
         <button type="button" class="btn-blue sm" id="install-btn" hidden>Install MD Fit</button>
       </div>
+      </div>
 
       <div class="profile-links">
         <a href="/">mdfitsrq.com</a><a href="tel:+19413130562">Call 941-313-0562</a>
@@ -186,11 +196,13 @@
   </div>
 
   <nav class="tabbar" aria-label="App">
-    <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>Home</button>
-    <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg>Generate</button>
-    <button type="button" data-tab="videos"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg>Videos</button>
-    <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg>Pain Tool</button>
-    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg>Profile</button>
+    <a class="side-brand" href="/"><img src="assets/logo.webp" alt="" width="48" height="48"><span><b>MD Fit</b><small>Physical Rehabilitation &amp; Fitness</small></span></a>
+    <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg><span>Home</span></button>
+    <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><span>Generate</span></button>
+    <button type="button" data-tab="videos"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg><span>Videos</span></button>
+    <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg><span>Pain Tool</span></button>
+    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg><span>Profile</span></button>
+    <div class="side-foot"><a class="side-book" href="/book">Book a visit</a><a href="tel:+19413130562">941-313-0562</a></div>
   </nav>
 
   <!-- Workout player -->
