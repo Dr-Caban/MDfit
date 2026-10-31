@@ -1,5 +1,5 @@
 // Minimal service worker so MD Fit installs as an app. Caches the app shell; API calls always go to the network.
-const CACHE = "mdfit-app-v1";
+const CACHE = "mdfit-app-v2";
 const SHELL = ["/account", "/app/app.css", "/account.js", "/app/exercises.js", "/app/generator.js", "/common.js", "/config.js", "/assets/logo.webp"];
 
 self.addEventListener("install", (e) => {
@@ -12,8 +12,8 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
-  e.respondWith(fetch(e.request).then((res) => {
+  e.respondWith(fetch(e.request, { cache: "no-cache" }).then((res) => {
     if (res.ok && SHELL.includes(url.pathname)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
     return res;
-  }).catch(() => caches.match(e.request)));
+  }).catch(() => caches.match(e.request, { ignoreSearch: true })));
 });

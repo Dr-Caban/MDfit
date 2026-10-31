@@ -2,6 +2,33 @@
   "cleanUrls": true,
   "headers": [
     {
+      "source": "/:page(account|book|login|admin|cancel)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(js|css|html)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
       "source": "/sw.js",
       "headers": [
         {
@@ -74,6 +101,21 @@
     {
       "source": "/classes",
       "destination": "/#classes",
+      "permanent": false
+    },
+    {
+      "source": "/assets/pain/guide-:id-thumb.webp",
+      "destination": "/assets/guides/:id-thumb.webp",
+      "permanent": false
+    },
+    {
+      "source": "/assets/pain/guide-:id.webp",
+      "destination": "/assets/guides/:id-anatomy.webp",
+      "permanent": false
+    },
+    {
+      "source": "/assets/pain/body-map:size.webp",
+      "destination": "/assets/pain/body-figures.webp",
       "permanent": false
     }
   ]
