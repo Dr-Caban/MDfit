@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Scalenes & Intercostals — MD Fit</title>
+<style>
+:root {
+  --ink: #0A1A2E;
+  --ink-light: #122240;
+  --accent: #E8922A;
+  --accent-text: #C67A18;
+  --gold: #C8A763;
+  --teal: #2ABCE8;
+  --red: #E84040;
+  --green: #3BBE6E;
+  --blue: #3B7BE8;
+  --text: #F0ECE4;
+  --text-muted: #A0A8B8;
+  --card: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.1);
+  --glow: 0 0 20px rgba(42,188,232,0.25);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--ink);color:var(--text);line-height:1.5;overflow-x:hidden}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px}
+header{text-align:center;padding:48px 20px 32px;position:relative}
+header::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.logo{width:56px;height:auto;margin-bottom:12px;filter:drop-shadow(0 0 12px rgba(42,188,232,0.4));animation:pulse-glow 3s ease-in-out infinite}
+h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;letter-spacing:-0.02em;margin-bottom:4px}
+.subtitle{color:var(--accent);font-size:0.95rem;font-weight:600;text-transform:uppercase;letter-spacing:0.12em}
+.tagline{color:var(--gold);font-size:0.85rem;margin-top:8px;font-weight:600;letter-spacing:0.06em}
+@keyframes pulse-glow{0%,100%{filter:drop-shadow(0 0 12px rgba(42,188,232,0.4))}50%{filter:drop-shadow(0 0 24px rgba(42,188,232,0.7))}}
+section{margin:40px 0}
+.section-title{font-size:1.15rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--teal);margin-bottom:20px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.anatomy-hero{display:flex;justify-content:center;gap:32px;margin-bottom:32px;flex-wrap:wrap}
+.anatomy-hero img{max-height:340px;width:auto;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.5));border-radius:12px;animation:float 6s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all 0.3s ease}
+.card:hover{border-color:var(--teal);box-shadow:var(--glow);transform:translateY(-2px)}
+.card h3{font-size:1rem;font-weight:700;margin-bottom:8px}
+.card-red h3{color:var(--red)}.card-blue h3{color:var(--blue)}.card-green h3{color:var(--green)}.card-gold h3{color:var(--gold)}
+.card p,.card li{font-size:0.85rem;color:var(--text-muted);line-height:1.55}
+.card ul{list-style:none;padding:0}
+.card li{padding:3px 0}
+.card li::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.card-red li::before{background:var(--red)}.card-blue li::before{background:var(--blue)}.card-green li::before{background:var(--green)}.card-gold li::before{background:var(--gold)}
+.attach-table{width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:12px}
+.attach-table th{text-align:left;padding:8px 12px;color:var(--teal);border-bottom:1px solid var(--border);font-weight:600}
+.attach-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-muted)}
+.overview{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:28px}
+.overview p{color:var(--text-muted);font-size:0.9rem;margin-bottom:10px}
+.check-list{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px}
+.check-list li{font-size:0.85rem;color:var(--text-muted);padding:4px 0}
+.check-list li::before{content:'✓';color:var(--teal);font-weight:700;margin-right:8px}
+.diff-table{width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:12px}
+.diff-table th{text-align:left;padding:8px 10px;color:var(--accent);border-bottom:2px solid var(--border);font-weight:700;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em}
+.diff-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text-muted)}
+.diff-table tr:hover td{background:rgba(255,255,255,0.03)}
+.pearls{background:linear-gradient(135deg,rgba(42,188,232,0.08),rgba(232,146,42,0.08));border:1px solid var(--border);border-radius:16px;padding:24px}
+.pearls li{font-size:0.85rem;color:var(--text-muted);padding:5px 0}
+.pearls li::before{content:'💎';margin-right:8px}
+.pearls ul{list-style:none;padding:0}
+footer{text-align:center;padding:40px 20px;border-top:1px solid var(--border);margin-top:40px}
+.footer-quote{font-style:italic;color:var(--gold);font-size:1rem;margin-bottom:4px}
+.footer-brand{color:var(--text-muted);font-size:0.8rem;letter-spacing:0.06em;text-transform:uppercase}
+.footer-taglines{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-top:16px}
+.footer-taglines span{font-size:0.75rem;color:var(--teal);font-weight:600;text-transform:uppercase;letter-spacing:0.08em}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="logo" src="../assets/logo.webp" alt="MD Fit" width="56" height="56">
+  <h1>The Scalenes &amp; Intercostals</h1>
+  <p class="subtitle">Anatomy · Attachments · Pain Patterns · Clinical Insights</p>
+  <p class="tagline">Breathe Easy. Move Free.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="overview">
+    <p>The scalenes (anterior, middle, posterior) attach from the cervical spine to the first and second ribs. They assist with neck flexion, lateral flexion, and rib elevation during breathing. When tight or overloaded, they can compress the brachial plexus and subclavian vessels (thoracic outlet), causing pain from the neck to the hand.</p>
+    <ul class="check-list">
+      <li>Assist neck flexion and lateral bending</li>
+      <li>Elevate ribs during breathing</li>
+      <li>Can compress the brachial plexus</li>
+      <li>Major contributor to thoracic outlet syndrome</li>
+      <li>Often overlooked source of arm and hand symptoms</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2 class="section-title">Anatomy</h2>
+    <div class="anatomy-hero">
+      <img src="../assets/pain/clean/scalenes-anatomy.png" alt="Scalenes anterior, middle and posterior views" loading="lazy">
+      <img src="../assets/pain/clean/scalenes-pain.png" alt="Scalenes referred pain patterns" loading="lazy">
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">The Muscles</h2>
+    <div class="card-grid">
+      <div class="card card-red">
+        <h3>Anterior Scalene</h3>
+        <ul>
+          <li>Origin: Transverse processes of C3–C6</li>
+          <li>Insertion: First rib (scalene tubercle)</li>
+          <li>Function: Neck flexion, lateral flexion, rib elevation</li>
+          <li>Common Issues: TOS compression, chest and arm referral</li>
+        </ul>
+      </div>
+      <div class="card card-blue">
+        <h3>Middle Scalene</h3>
+        <ul>
+          <li>Origin: Transverse processes of C2–C7</li>
+          <li>Insertion: First rib (posterior to subclavian groove)</li>
+          <li>Function: Lateral flexion, rib elevation</li>
+          <li>Common Issues: Brachial plexus compression, upper back pain</li>
+        </ul>
+      </div>
+      <div class="card card-green">
+        <h3>Posterior Scalene</h3>
+        <ul>
+          <li>Origin: Transverse processes of C5–C7</li>
+          <li>Insertion: Second rib (outer surface)</li>
+          <li>Function: Lateral flexion, rib elevation</li>
+          <li>Common Issues: Side of neck pain, upper back referral</li>
+        </ul>
+      </div>
+      <div class="card card-gold">
+        <h3>Intercostals</h3>
+        <ul>
+          <li>Origin: Inferior border of each rib</li>
+          <li>Insertion: Superior border of the rib below</li>
+          <li>Function: Rib cage expansion and compression during breathing</li>
+          <li>Common Issues: Chest wall pain, rib pain, pain with deep breathing</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Attachments</h2>
+    <table class="attach-table">
+      <thead><tr><th>Muscle</th><th>Origin</th><th>Insertion</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--red);font-weight:600">Anterior Scalene</td><td>C3–C6 transverse processes</td><td>First rib (scalene tubercle)</td><td>Neck flexion, lateral flexion</td></tr>
+        <tr><td style="color:var(--blue);font-weight:600">Middle Scalene</td><td>C2–C7 transverse processes</td><td>First rib (posterior)</td><td>Lateral flexion</td></tr>
+        <tr><td style="color:var(--green);font-weight:600">Posterior Scalene</td><td>C5–C7 transverse processes</td><td>Second rib</td><td>Lateral flexion</td></tr>
+        <tr><td style="color:var(--gold);font-weight:600">Intercostals</td><td>Inferior border of rib</td><td>Superior border of rib below</td><td>Breathing mechanics</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2 class="section-title">Referred Pain Patterns</h2>
+    <div class="card-grid">
+      <div class="card card-red">
+        <h3>Anterior Scalene</h3>
+        <ul>
+          <li>Chest pain (pectoral region)</li>
+          <li>Pain down the arm to the thumb, index, and middle fingers</li>
+          <li>Can mimic carpal tunnel syndrome</li>
+          <li>Often accompanied by tingling or numbness</li>
+        </ul>
+      </div>
+      <div class="card card-blue">
+        <h3>Middle Scalene</h3>
+        <ul>
+          <li>Upper back pain between the shoulder blades</li>
+          <li>Pain down the back of the arm</li>
+          <li>Can mimic rhomboid or thoracic spine pain</li>
+          <li>Often worse with prolonged sitting</li>
+        </ul>
+      </div>
+      <div class="card card-green">
+        <h3>Posterior Scalene</h3>
+        <ul>
+          <li>Side of neck pain</li>
+          <li>Upper back and interscapular pain</li>
+          <li>Can refer to the lateral arm</li>
+          <li>Often tight with forward head posture</li>
+        </ul>
+      </div>
+      <div class="card card-gold">
+        <h3>Intercostals</h3>
+        <ul>
+          <li>Chest wall and rib cage pain</li>
+          <li>Front and side of the torso</li>
+          <li>Pain with deep breathing, coughing, or twisting</li>
+          <li>Can mimic cardiac or visceral pain</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">How to Differentiate</h2>
+    <table class="diff-table">
+      <thead><tr><th>Muscle</th><th>Primary Pain Location</th><th>Arm Radiation</th><th>Key Movement Pain</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--red)">Anterior Scalene</td><td>Chest, front of shoulder</td><td>Arm → thumb/index/middle</td><td>Neck rotation, deep breathing</td></tr>
+        <tr><td style="color:var(--blue)">Middle Scalene</td><td>Upper back (interscapular)</td><td>Back of arm</td><td>Lateral flexion</td></tr>
+        <tr><td style="color:var(--green)">Posterior Scalene</td><td>Side of neck</td><td>Lateral arm</td><td>Lateral flexion, rotation</td></tr>
+        <tr><td style="color:var(--gold)">Intercostals</td><td>Chest wall, ribs</td><td>Wraps around torso</td><td>Deep breathing, twisting</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="pearls">
+      <h2 class="section-title" style="border-color:var(--accent)">Clinical Pearls</h2>
+      <ul>
+        <li>Scalene involvement closely mimics thoracic outlet syndrome and carpal tunnel.</li>
+        <li>Check breathing patterns — chest breathers overload the scalenes.</li>
+        <li>Forward head posture chronically loads the scalenes.</li>
+        <li>Palpate carefully — the neurovascular bundle runs between the anterior and middle scalene.</li>
+        <li>Intercostal trigger points can mimic cardiac or visceral pain — always rule out serious causes first.</li>
+        <li>Address posture and breathing mechanics for lasting relief.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="overview">
+      <h2 class="section-title" style="border-color:var(--gold)">The Takeaway</h2>
+      <ul class="check-list">
+        <li>Scalenes can cause pain from the neck to the fingertips.</li>
+        <li>Thoracic outlet compression mimics nerve and vascular conditions.</li>
+        <li>Breathing retraining is essential for lasting scalene relief.</li>
+        <li>Intercostal pain wraps around the chest — don't mistake it for something else.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p class="footer-quote">"Free your breath, free your body."</p>
+  <p class="footer-brand">— MD Fit</p>
+  <div class="footer-taglines">
+    <span>Breathe Easy. Move Free.</span>
+    <span>Anatomy Builds Knowledge. Movement Builds Freedom.</span>
+    <span>Fix the Source. Get Back to What You Love.</span>
+  </div>
+</footer>
+
+</body>
+</html>
