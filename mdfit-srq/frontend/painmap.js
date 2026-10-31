@@ -83,9 +83,9 @@
       <p class="eyebrow">${s.view === "front" ? "Front" : "Back"} view</p>
       <h3>${esc(s.label)} pain</h3>
       <p class="muted">Pain here doesn't always start here. The muscles that most often send pain to this spot, most likely first:</p>
-      <ol class="sources muscles">${muscles.slice(0, 5).map((m) => `<li><b>${esc(m.name)}</b><span>${esc(m.refers)}</span></li>`).join("")}</ol>
+      <ol class="sources muscles">${muscles.slice(0, 5).map((m) => `<li><b>${esc(m.name)}</b><span>${esc(m.refers)}</span><a href="/account#pain/muscle/${m.id}">Self-check &amp; protocol →</a></li>`).join("")}</ol>
       <div class="guide-cards">${guides.map(guideCard).join("")}</div>
-      <p class="fine"><a href="/account#pain">Narrow it down to your exact muscle in the free MD Fit app →</a></p>
+      <p class="fine"><a href="/account#pain">Find your exact muscle in the free MD Fit app →</a></p>
       <div class="painmap-cta">
         <a href="#book" class="btn">Book an evaluation</a>
         <a href="#intake" class="btn btn-line" data-area="${esc(s.area)}">Tell us about it</a>

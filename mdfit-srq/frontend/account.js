@@ -1,7 +1,7 @@
 // MD Fit client app (/account): Home, Generate, Videos, Pain Tool, Profile, plus the workout player.
 (() => {
   const { $, $$, esc, auth, apiAuth, api, wire, fmtDate, fmtTime, todayInTz, addDays, zonedToUtc, icsStamp, AREAS, loadSite } = window.MDFit;
-  if (!auth.get()) { location.replace("/login?next=/account"); return; }
+  if (!auth.get()) { location.replace("/login?next=" + encodeURIComponent("/account" + location.hash)); return; }
   const EX = window.MDFIT_EXERCISES || [], INTROS = window.MDFIT_INTROS || {}, Gen = window.MDFitGen;
 
   const ADDRESS = "3214 Clark Road, Sarasota, FL 34231";
@@ -27,8 +27,12 @@
 
   // ================= Tabs (hash routing so the back button and refresh work)
   const TABS = ["home", "generate", "videos", "pain", "progress", "profile"];
-  function show(tab) {
+  // Hash is "#tab" or "#pain/muscle/<id>" (deep link to a muscle report)
+  function show(hash) {
+    let [tab, sub, arg] = String(hash).split("/");
     if (!TABS.includes(tab)) tab = "home";
+    if (tab === "pain" && sub === "muscle" && arg) setTimeout(() => openReport(arg, false), 0);
+    else if (tab === "pain" && !$("#muscle-report").hidden) { $("#muscle-report").hidden = true; setMode("muscle"); }
     $$("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== tab));
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
     if (tab === "videos") renderVideos();
@@ -454,6 +458,7 @@
       <p class="mc-why">Matches ${esc(m.spots.join(", ").toLowerCase())}${m.matches.length ? ` · worse with ${esc(m.matches.map((t) => MUS.AGGRAVATORS[t].toLowerCase()).join(", "))}` : ""}</p>
       <p class="mc-ref"><b>Where it sends pain</b>${esc(m.refers)}</p>
       <p class="mc-does"><b>What it does</b>${esc(m.does)}</p>
+      <button type="button" class="btn-blue sm mc-report" data-report="${m.id}">Full muscle report &amp; protocol</button>
       <p class="label">Relief videos from Dr. Jared</p>
       <div class="mini-vids">${m.videos.map((n) => byName.get(n)).filter(Boolean).map(vcard).join("")}</div>
       ${m.guide && GUIDES[m.guide] ? `<div class="guides"><button type="button" class="guide" data-guide="${m.guide}"><img src="assets/guides/${m.guide}-thumb.webp" alt="" width="52" height="52" loading="lazy"><span><b>${esc(GUIDES[m.guide])}</b><span>Open Dr. Jared's guide</span></span></button></div>` : ""}
@@ -493,6 +498,154 @@
       loadRewards(true);
     } catch (err) { toast(err.message); b.disabled = false; }
   });
+
+  // ---- Pick a muscle: full report (anatomy, self-check, look-alikes, red flags, 3-phase protocol) from musclereports.js
+  const REPORTS = window.MDFIT_MUSCLE_REPORTS || {};
+  const GROUPS = [
+    ["Head & jaw", ["suboccipitals", "occipitalis", "splenius", "temporalis", "masseter", "scm"]],
+    ["Neck & upper back", ["upper-trap", "levator", "scalenes", "rhomboids", "mid-trap"]],
+    ["Shoulder & arm", ["supraspinatus", "infraspinatus", "teres-minor", "subscapularis", "deltoid", "biceps", "triceps", "lats"]],
+    ["Chest & ribs", ["pec-major", "pec-minor", "serratus", "intercostals"]],
+    ["Elbow, wrist & hand", ["wrist-extensors", "wrist-flexors", "brachioradialis", "supinator"]],
+    ["Low back & core", ["ql", "erectors", "multifidus", "psoas"]],
+    ["Hip & glutes", ["iliacus", "glute-med", "glute-min", "piriformis", "glute-max", "tfl", "adductors"]],
+    ["Thigh & knee", ["rectus-femoris", "vmo", "vastus-lateralis", "hamstrings", "popliteus"]],
+    ["Lower leg & foot", ["gastroc", "soleus", "tib-post", "tib-ant", "peroneals", "foot-intrinsics"]]
+  ];
+  function setMode(mode) {
+    $$(".mode-seg [data-mode]").forEach((b) => b.setAttribute("aria-selected", b.dataset.mode === mode));
+    $("#mode-area").hidden = mode !== "area";
+    $("#mode-muscle").hidden = mode !== "muscle";
+    $("#muscle-report").hidden = true;
+    if (mode === "muscle") renderMuscleList();
+  }
+  $$(".mode-seg [data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  function renderMuscleList() {
+    const q = $("#muscle-search").value.trim().toLowerCase();
+    const hit = (id) => { const m = MUS.MUSCLES[id]; return !q || (m.name + " " + m.refers + " " + m.does).toLowerCase().includes(q); };
+    $("#muscle-list").innerHTML = GROUPS.map(([g, ids]) => {
+      const list = ids.filter(hit);
+      return list.length ? `<div class="mgroup"><p class="label">${esc(g)}</p><div class="mchips">${list.map((id) =>
+        `<button type="button" class="mchip" data-report="${id}"><b>${esc(MUS.MUSCLES[id].name)}</b><span>${esc(MUS.MUSCLES[id].refers.split(/[.;]/)[0])}</span></button>`).join("")}</div></div>` : "";
+    }).join("") || `<p class="muted small center">No muscle matches "${esc(q)}".</p>`;
+  }
+  $("#muscle-search").addEventListener("input", renderMuscleList);
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-report]"); if (b) openReport(b.dataset.report); });
+
+  let report = null; // { id, answers: Map(index -> bool) }
+  function openReport(id, push = true) {
+    if (!MUS.MUSCLES[id]) return;
+    if (location.hash.slice(1).split("/")[0] !== "pain") show("pain");
+    if (push) history.pushState(null, "", `#pain/muscle/${id}`);
+    report = { id, answers: new Map() };
+    $("#mode-area").hidden = true; $("#mode-muscle").hidden = true;
+    $("#muscle-report").hidden = false;
+    renderReport();
+    window.scrollTo(0, 0);
+  }
+  const checkScore = () => {
+    const r = REPORTS[report.id], qs = (r && r.questions) || [];
+    const total = qs.reduce((n, q) => n + q.w, 0), yes = qs.reduce((n, q, i) => n + (report.answers.get(i) ? q.w : 0), 0);
+    return { total, yes, answered: report.answers.size, pct: total ? yes / total : 0, n: qs.length };
+  };
+  function verdict() {
+    const s = checkScore(), name = MUS.MUSCLES[report.id].name;
+    if (!s.answered) return `<p class="muted small">Answer the questions above to see how well your pain fits ${esc(name)}.</p>`;
+    const level = s.pct >= 0.6 ? ["strong", "Strong match"] : s.pct >= 0.3 ? ["possible", "Possible match"] : ["low", "Less likely"];
+    const msg = level[0] === "strong" ? `Your answers fit the classic ${esc(name)} pattern. Start the protocol below and track your pain for 1 to 2 weeks.`
+      : level[0] === "possible" ? `Some of your answers fit ${esc(name)}. It may be involved alongside another muscle. Try the Calm phase and compare with the other muscles from your area.`
+      : `Your answers don't fit ${esc(name)} well. Check the other muscles for your area, or have Dr. Jared assess it in person.`;
+    return `<div class="verdict ${level[0]}"><span class="label">Your self-check result</span><b>${level[1]}</b><div class="vbar"><i style="width:${Math.round(s.pct * 100)}%"></i></div>
+      <p>${msg}</p><small>${s.answered} of ${s.n} answered · educational self-check, not a medical diagnosis</small></div>`;
+  }
+  const stepLi = (st) => {
+    const ex = st.video && byName.get(st.video);
+    return `<li class="pstep">${ex ? `<button type="button" class="pthumb" data-video="${ex.id}" aria-label="Watch ${esc(ex.name)}">${thumbImg(ex.id)}</button>` : `<span class="pthumb none"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>`}
+      <div><b>${esc(st.name)}</b><span class="dose">${esc(st.dose)}</span><p>${esc(st.how)}</p></div></li>`;
+  };
+  const PHASES = [["calm", "Phase 1 · Calm it down", "Days 1 to 7"], ["restore", "Phase 2 · Restore", "Weeks 2 to 3"], ["strengthen", "Phase 3 · Strengthen", "Weeks 3 to 6"]];
+  function renderReport() {
+    const id = report.id, m = MUS.MUSCLES[id], r = REPORTS[id] || {};
+    const list = (arr) => `<ul class="rlist">${(arr || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    $("#muscle-report").innerHTML = `
+      <button type="button" class="link-sm back-link" data-back>← Back to the Pain Tool</button>
+      <header class="hero report-hero"><div><p class="gd-eyebrow">Muscle report</p><h1>${esc(m.name)}</h1><p>${esc(m.does)}</p></div>
+        ${m.guide ? `<img src="assets/guides/${m.guide}-thumb.webp" alt="" width="110" height="110">` : ""}</header>
+      <div class="report-grid">
+        <div class="col-main">
+          <section class="card"><span class="label accent">Where it sends pain</span><p class="rlead">${esc(m.refers)}</p>
+            ${r.symptoms ? `<p class="label">What people usually feel</p>${list(r.symptoms)}` : ""}</section>
+          ${r.questions ? `<section class="card"><span class="label accent">Self-check: is it this muscle?</span>
+            <ol class="qlist">${r.questions.map((q, i) => `<li><p>${esc(q.q)}</p><div class="yn" data-q="${i}"><button type="button" data-a="1" aria-pressed="${report.answers.get(i) === true}">Yes</button><button type="button" data-a="0" aria-pressed="${report.answers.get(i) === false}">No</button></div></li>`).join("")}</ol>
+            <div id="verdict">${verdict()}</div></section>` : ""}
+          ${r.tests && r.tests.length ? `<section class="card"><span class="label accent">Quick self-tests</span>${r.tests.map((t) => `<div class="rtest"><b>${esc(t.name)}</b><p>${esc(t.how)}</p><p class="pos"><b>Positive if:</b> ${esc(t.positive)}</p></div>`).join("")}</section>` : ""}
+          ${r.protocol ? `<section class="card protocol"><span class="label accent">Dr. Jared's protocol</span>
+            ${PHASES.map(([k, t, when]) => (r.protocol[k] || []).length ? `<div class="phase"><div class="phase-head"><b>${t}</b><span>${when}</span><button type="button" class="ev-act" data-phase="${k}">Start</button></div><ol class="psteps">${r.protocol[k].map(stepLi).join("")}</ol></div>` : "").join("")}
+            <div class="row"><button type="button" class="btn-gold sm" data-save-protocol>Save to My Programs</button><a class="btn-blue sm" href="/book">Book with Dr. Jared</a></div>
+            ${r.expect ? `<p class="expect"><b>What to expect:</b> ${esc(r.expect)}</p>` : ""}</section>` : ""}
+        </div>
+        <div class="col-side">
+          ${r.origin ? `<section class="card"><span class="label accent">Anatomy</span><dl class="anat"><dt>Origin</dt><dd>${esc(r.origin)}</dd><dt>Insertion</dt><dd>${esc(r.insertion)}</dd><dt>Action</dt><dd>${esc(r.action)}</dd><dt>Nerve</dt><dd>${esc(r.nerve)}</dd></dl></section>` : ""}
+          <section class="card"><span class="label accent">Often worse with</span><div class="tags">${m.worse.map((w) => `<span>${esc(MUS.AGGRAVATORS[w])}</span>`).join("")}</div>
+            ${r.causes ? `<p class="label">What keeps it irritated</p>${list(r.causes)}` : ""}</section>
+          ${r.mimics ? `<section class="card"><span class="label accent">Often mistaken for</span>${list(r.mimics)}</section>` : ""}
+          ${r.habits ? `<section class="card"><span class="label accent">Daily habits that help</span>${list(r.habits)}</section>` : ""}
+          ${r.redFlags ? `<section class="card redflags"><span class="label">Get seen promptly if</span>${list(r.redFlags)}${r.seePro ? `<p class="small">${esc(r.seePro)}</p>` : ""}</section>` : ""}
+          ${m.guide && GUIDES[m.guide] ? `<div class="guides"><button type="button" class="guide" data-guide="${m.guide}"><img src="assets/guides/${m.guide}-thumb.webp" alt="" width="52" height="52" loading="lazy"><span><b>${esc(GUIDES[m.guide])}</b><span>Open Dr. Jared's guide</span></span></button></div>` : ""}
+          <section class="card"><span class="label accent">Log it</span>
+            <div class="log-row"><label>Pain now: <output>5</output>/10<input type="range" min="0" max="10" value="5" aria-label="Pain level"></label><button type="button" class="btn-gold sm" data-report-log>Log it</button></div></section>
+        </div>
+      </div>
+      <p class="muted tiny center">Educational only, not a medical diagnosis. Written for MD Fit patients; your in-person evaluation always comes first.</p>`;
+  }
+  // Muscle id -> pain-log area (first Pain Tool area whose spots list the muscle)
+  const logAreaFor = (id) => {
+    for (const a of ALL_PAIN) if ((MUS.SPOTS[a.id] || []).some((s) => s[1].includes(id))) return a.area;
+    return "Other";
+  };
+  function protocolWorkout(phases) {
+    const id = report.id, r = REPORTS[id], name = MUS.MUSCLES[id].name;
+    const steps = (k) => (r.protocol[k] || []).map((st) => st.video && byName.get(st.video) && { ...byName.get(st.video), sets: st.dose, block: PHASES.find((p) => p[0] === k)[1].split(" · ")[1] }).filter(Boolean);
+    const all = phases.flatMap(steps);
+    return { title: `${name.split(" (")[0]} protocol`.slice(0, 80), goal: "Mobility & Recovery", goalId: "mobility", location: "home", level: "beginner", levelLabel: "Protocol",
+      rounds: 1, restEx: 15, restRound: 0, minutes: Math.max(5, all.length * 3), warmup: [], circuit: all, cooldown: [], exercises: all, perRound: all.length };
+  }
+  $("#muscle-report").addEventListener("click", async (e) => {
+    if (e.target.closest("[data-back]")) { history.pushState(null, "", "#pain"); $("#muscle-report").hidden = true; setMode($("#mode-muscle").hidden && $("#pain-results").innerHTML ? "area" : "muscle"); return; }
+    const yn = e.target.closest(".yn [data-a]");
+    if (yn) {
+      report.answers.set(Number(yn.parentElement.dataset.q), yn.dataset.a === "1");
+      $$("button", yn.parentElement).forEach((b) => b.setAttribute("aria-pressed", b === yn));
+      $("#verdict").innerHTML = verdict();
+      return;
+    }
+    const ph = e.target.closest("[data-phase]");
+    if (ph) {
+      const w = protocolWorkout([ph.dataset.phase]);
+      if (!w.exercises.length) return toast("This phase is done without videos: follow the written steps.");
+      return startPlayer(w);
+    }
+    if (e.target.closest("[data-save-protocol]")) {
+      const w = protocolWorkout(["calm", "restore", "strengthen"]);
+      if (!w.circuit.length) return toast("No video steps to save for this protocol.");
+      try {
+        lib = await apiAuth("POST", "/api/me/programs", { name: w.title.slice(0, 60), workout: { ...w, warmup: [], cooldown: [], circuit: w.circuit.slice(0, 20).map((x) => ({ id: x.id, sets: String(x.sets).slice(0, 30) })) } });
+        renderPrograms(); toast(`Saved "${w.title}" to My Programs.`);
+      } catch (err) { toast(err.message); }
+      return;
+    }
+    const lg = e.target.closest("[data-report-log]");
+    if (lg) {
+      const row = lg.closest(".log-row"), s = checkScore();
+      lg.disabled = true;
+      try {
+        await apiAuth("POST", "/api/me/pain", { area: logAreaFor(report.id), level: Number($("input", row).value),
+          note: `${MUS.MUSCLES[report.id].name}${s.answered ? ` · self-check ${Math.round(s.pct * 100)}%` : ""}`.slice(0, 300) });
+        await loadPain(); lg.textContent = "Logged"; loadRewards(true);
+      } catch (err) { toast(err.message); lg.disabled = false; }
+    }
+  });
+  $("#muscle-report").addEventListener("input", (e) => { if (e.target.type === "range") e.target.closest(".log-row").querySelector("output").textContent = e.target.value; });
 
   // ================= Profile
   function renderProfile() {

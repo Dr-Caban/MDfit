@@ -386,6 +386,7 @@ dialog .book-when { margin: -6px 0 4px; }
 .sources.muscles li { counter-increment: m; position: relative; padding-left: 44px; }
 .sources.muscles li::before { content: counter(m); position: absolute; left: 10px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); color: var(--gold); display: grid; place-items: center; font: 700 12px var(--body); }
 .sources.muscles li:first-child { border-left-color: var(--accent); }
+.sources.muscles a { color: var(--accent-text); font-weight: 700; font-size: 13px; text-decoration: none; margin-top: 2px; }
 .sources.muscles li:first-child::before { background: var(--accent); color: var(--ink); }
 .guide-cards { display: grid; gap: 10px; }
 .guide-card { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 8px; cursor: pointer; font: inherit; color: inherit; }

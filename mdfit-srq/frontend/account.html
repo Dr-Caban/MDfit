@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=de1e4ae8">
+  <link rel="stylesheet" href="app/app.css?v=ff87a8dc">
   <link rel="stylesheet" href="guides.css?v=e075f0a0">
 </head>
 <body class="mdapp">
@@ -150,13 +150,21 @@
       </header>
       <div class="info"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>Educational tool only. Not medical advice or diagnosis.</div>
       <button type="button" class="intro-btn" data-intro="pain"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Watch: how the pain tool works</button>
-      <div class="seg" role="tablist"><button type="button" role="tab" data-side="front" aria-selected="true">Front</button><button type="button" role="tab" data-side="back" aria-selected="false">Back</button></div>
-      <p class="center muted">Select the area(s) where you feel discomfort</p>
-      <div class="areas" id="areas"></div>
-      <div id="pain-refine"></div>
-      <button type="button" class="btn-gold sticky-cta" id="pain-go" disabled>Select an area</button>
-      <div id="pain-results"></div>
-      <a class="link center block" href="/#pain-map">Open the interactive body map</a>
+      <div class="seg mode-seg" role="tablist" aria-label="How to search"><button type="button" role="tab" data-mode="area" aria-selected="true">Find by area</button><button type="button" role="tab" data-mode="muscle" aria-selected="false">Pick a muscle</button></div>
+      <div id="mode-area">
+        <div class="seg" role="tablist"><button type="button" role="tab" data-side="front" aria-selected="true">Front</button><button type="button" role="tab" data-side="back" aria-selected="false">Back</button></div>
+        <p class="center muted">Select the area(s) where you feel discomfort</p>
+        <div class="areas" id="areas"></div>
+        <div id="pain-refine"></div>
+        <button type="button" class="btn-gold sticky-cta" id="pain-go" disabled>Select an area</button>
+        <div id="pain-results"></div>
+        <a class="link center block" href="/#pain-map">Open the interactive body map</a>
+      </div>
+      <div id="mode-muscle" hidden>
+        <input type="search" id="muscle-search" class="search" placeholder="Search muscles, e.g. piriformis, rotator cuff, calf" aria-label="Search muscles">
+        <div id="muscle-list"></div>
+      </div>
+      <div id="muscle-report" hidden></div>
     </section>
 
     <!-- ================= PROGRESS ================= -->
@@ -299,7 +307,8 @@
   <script src="app/exercises.js?v=7d154684"></script>
   <script src="app/generator.js?v=31e17920"></script>
   <script src="painmuscles.js?v=a474d7c4"></script>
+  <script src="musclereports.js?v=22e26e9f"></script>
   <script src="guides.js?v=3f48694d"></script>
-  <script src="account.js?v=e09e0fd0"></script>
+  <script src="account.js?v=c4729d21"></script>
 </body>
 </html>

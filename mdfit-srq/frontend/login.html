@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=2d5fa0d3">
+  <link rel="stylesheet" href="styles.css?v=0f3d372d">
   <link rel="stylesheet" href="account.css?v=15ed29fe">
 </head>
 <body class="auth-page">
@@ -72,7 +72,8 @@
     (() => {
       const { $, $$, api, auth, wire } = window.MDFit;
       const q = new URLSearchParams(location.search);
-      const next = /^\/[a-z]*$/.test(q.get("next") || "") ? q.get("next") : "/account";
+      // Same-site paths only, optionally with an app deep link like /account#pain/muscle/ql
+      const next = /^\/[a-z]*(#[a-z0-9/-]*)?$/.test(q.get("next") || "") ? q.get("next") : "/account";
       if (auth.get() && !q.get("reset")) { location.replace(next); return; }
 
       function mode(m) {
