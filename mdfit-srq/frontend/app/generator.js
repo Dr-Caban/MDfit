@@ -1,6 +1,6 @@
 // Workout generator: builds a session from Dr. Jared's exercise library.
-// Structure: warm-up (mobility/activation) → main block (goal regions, level band) → cool-down (mobility/rehab).
-// Sets/reps live in PRESCRIBE so they can be tuned in one place.
+// Structure: optional warm-up → a circuit (exercises per round × rounds, with rest) → optional cool-down.
+// Reps/holds live in PRESCRIBE so they can be tuned in one place.
 (() => {
   const EX = window.MDFIT_EXERCISES || [];
 
@@ -18,35 +18,47 @@
     { id: "office", label: "Office / Desk", icon: "office" }
   ];
   const LEVELS = [
-    { id: "beginner", label: "Beginner", min: 1, max: 3, bars: 1 },
-    { id: "intermediate", label: "Intermediate", min: 2, max: 6, bars: 2 },
-    { id: "advanced", label: "Advanced", min: 4, max: 8, bars: 3 },
-    { id: "elite", label: "Elite", min: 6, max: 9, bars: 4 }
+    { id: "beginner", label: "Beginner", hint: "Build the foundation", min: 1, max: 3, bars: 1 },
+    { id: "intermediate", label: "Intermediate", hint: "Progress and improve", min: 2, max: 6, bars: 2 },
+    { id: "advanced", label: "Advanced", hint: "Challenge yourself", min: 4, max: 8, bars: 3 },
+    { id: "elite", label: "Elite", hint: "Maximum intensity", min: 6, max: 9, bars: 4 }
   ];
-  const LENGTHS = [
-    { id: 15, label: "15 min", count: 5 },
-    { id: 30, label: "30 min", count: 6 },
-    { id: 45, label: "45 min", count: 8 },
-    { id: 60, label: "60 min", count: 10 }
+  const LENGTHS = [15, 20, 30, 45, 60, 90];
+  const PER_ROUND = [2, 3, 4, 5, 6, 8, 10];
+  const ROUNDS = [1, 2, 3, 4, 5, 6, 8, 10];
+  const REST_EX = [0, 15, 20, 30, 45, 60, 90];
+  const REST_ROUND = [0, 30, 60, 90, 120, 180];
+  const ADDONS = [
+    { id: "warmup", label: "Warm-up", on: true },
+    { id: "cooldown", label: "Cool-down", on: true },
+    { id: "mobility", label: "Mobility / flexibility" },
+    { id: "core", label: "Core work" },
+    { id: "balance", label: "Balance / stability" },
+    { id: "sport", label: "Sport specific (power)" },
+    { id: "bodyweight", label: "No equipment" }
   ];
   const TITLES = { beginner: "Foundations", intermediate: "Strength", advanced: "Power", elite: "Performance" };
 
+  // Per-round prescription for circuit moves; warm-up and cool-down use the same table
   const PRESCRIBE = {
-    Strength: { beginner: "2 × 10", intermediate: "3 × 10", advanced: "4 × 8", elite: "5 × 6" },
-    Power: { beginner: "2 × 6", intermediate: "3 × 6", advanced: "4 × 5", elite: "5 × 4" },
-    Activation: { beginner: "2 × 10", intermediate: "2 × 12", advanced: "3 × 12", elite: "3 × 15" },
-    Mobility: { beginner: "2 × 30 sec", intermediate: "2 × 45 sec", advanced: "2 × 60 sec", elite: "3 × 45 sec" },
-    Rehab: { beginner: "2 × 8 slow", intermediate: "3 × 8 slow", advanced: "3 × 10 slow", elite: "3 × 12 slow" },
-    Neuroglide: { beginner: "2 × 6 gentle", intermediate: "2 × 8 gentle", advanced: "2 × 10 gentle", elite: "2 × 10 gentle" },
+    Strength: { beginner: "10 reps", intermediate: "10 reps", advanced: "8 reps", elite: "6 reps" },
+    Power: { beginner: "6 reps", intermediate: "6 reps", advanced: "5 reps", elite: "4 reps" },
+    Activation: { beginner: "10 reps", intermediate: "12 reps", advanced: "12 reps", elite: "15 reps" },
+    Mobility: { beginner: "30 sec", intermediate: "45 sec", advanced: "60 sec", elite: "45 sec" },
+    Rehab: { beginner: "8 slow reps", intermediate: "8 slow reps", advanced: "10 slow reps", elite: "12 slow reps" },
+    Neuroglide: { beginner: "6 gentle reps", intermediate: "8 gentle reps", advanced: "10 gentle reps", elite: "10 gentle reps" },
     Posture: { beginner: "2 min", intermediate: "2 min", advanced: "3 min", elite: "3 min" },
     Lifestyle: { beginner: "Daily habit", intermediate: "Daily habit", advanced: "Daily habit", elite: "Daily habit" },
     "Desk & posture": { beginner: "Set up once", intermediate: "Set up once", advanced: "Set up once", elite: "Set up once" }
   };
-  const prescription = (ex, level) => (PRESCRIBE[ex.cat] || PRESCRIBE.Mobility)[level] || "2 × 10";
+  const prescription = (ex, level) => (PRESCRIBE[ex.cat] || PRESCRIBE.Mobility)[level] || "10 reps";
+  // Rough seconds one set takes, for the time estimate
+  const workSecs = (rx) => { const m = rx.match(/(\d+)\s*(sec|min)/); return m ? Number(m[1]) * (m[2] === "min" ? 60 : 1) : 45; };
 
   // Exercises that need gym equipment (when the filename doesn't say home/gym)
   const EQUIP = /\b(DB|KB|Cable|Bench|Barbell|Sled|Erg|Bike|Pulldown|Landmine|GHD|TRX|Rack|Med Ball|Heavy Bag|Pole|Box|Pull Up|Muscle Up|Deadlift|Swing|Wall Ball|Farmer|Clean|Thruster|Strict Press|Push Press|Kettlebell|Dumbbell|Row|Fly|Curl To Press|Lat)\b/i;
   const needsGym = (e) => e.loc === "gym" || (e.loc === "any" && EQUIP.test(e.name));
+  const BALANCE = /balance|single leg|march|heel walk|toe walk/i;
   const WARM = ["Mobility", "Activation", "Neuroglide"];
   const COOL = ["Mobility", "Rehab", "Neuroglide"];
   const MAIN = ["Strength", "Power", "Activation"];
@@ -70,52 +82,80 @@
     return out;
   }
 
-  function generate({ goal = "full", location = "home", level = "intermediate", length = 45, seed = Date.now() } = {}) {
-    const G = GOALS.find((g) => g.id === goal) || GOALS[2];
-    const L = LEVELS.find((l) => l.id === level) || LEVELS[1];
-    const N = (LENGTHS.find((x) => x.id === Number(length)) || LENGTHS[2]).count;
-    const rand = rng(seed), taken = new Set();
-    let pool = byLocation(location);
-    if (pool.length < N) pool = EX.filter((e) => !needsGym(e));
+  const DEFAULTS = { goal: "full", location: "home", level: "intermediate", length: 45, perRound: 8, rounds: 5, restEx: 15, restRound: 45,
+    addons: { warmup: true, cooldown: true } };
+
+  // Estimated minutes for a plan, used for the summary and to fit rounds to a target length
+  function estimate({ warm = 0, cool = 0, perRound, rounds, restEx, restRound, work = 45 }) {
+    const secs = (warm + cool) * 75 + rounds * (perRound * work + (perRound - 1) * restEx) + (rounds - 1) * restRound;
+    return Math.max(1, Math.round(secs / 60));
+  }
+  // Picking a length sets a sensible circuit for it; clients can still change exercises, rounds and rest
+  const PRESETS = { 15: [4, 3, 15, 30], 20: [5, 3, 15, 45], 30: [6, 4, 15, 60], 45: [8, 5, 15, 45], 60: [8, 6, 20, 60], 90: [10, 7, 20, 90] };
+  function presetFor(length) {
+    const [perRound, rounds, restEx, restRound] = PRESETS[length] || PRESETS[45];
+    return { perRound, rounds, restEx, restRound };
+  }
+
+  function generate(input = {}) {
+    const o = { ...DEFAULTS, ...input, addons: { ...DEFAULTS.addons, ...(input.addons || {}) }, seed: input.seed ?? Date.now() };
+    const G = GOALS.find((g) => g.id === o.goal) || GOALS[2];
+    const L = LEVELS.find((l) => l.id === o.level) || LEVELS[1];
+    const perRound = Math.min(10, Math.max(1, Number(o.perRound) || 5)), rounds = Math.min(10, Math.max(1, Number(o.rounds) || 1));
+    const rand = rng(o.seed), taken = new Set();
+    let pool = byLocation(o.location);
+    if (o.addons.bodyweight) pool = pool.filter((e) => !needsGym(e));
+    if (pool.length < perRound + 4) pool = EX.filter((e) => !needsGym(e));
     const inRegion = (e) => !G.regions || G.regions.includes(e.rc) || (G.id === "full" && e.rc === "FB");
     const inBand = (e, lo = L.min, hi = L.max) => e.level >= lo && e.level <= hi;
+    // Warm-ups and cool-downs stay easy (level 4 or below) whatever the session level
+    const easy = (e) => e.level <= Math.min(L.max, 4);
+    const nWarm = o.addons.warmup ? (o.length <= 15 ? 1 : 2) : 0, nCool = o.addons.cooldown ? (o.length <= 20 ? 1 : 2) : 0;
 
-    let warm, main, cool;
+    let warm = pick(pool.filter((e) => WARM.includes(e.cat) && inRegion(e) && easy(e)), nWarm, rand, taken);
+    if (warm.length < nWarm) warm.push(...pick(pool.filter((e) => WARM.includes(e.cat) && easy(e)), nWarm - warm.length, rand, taken));
+
+    // Add-ons each claim one circuit slot (while slots remain)
+    const circuit = [];
+    const slot = (list) => { if (circuit.length < perRound) circuit.push(...list.slice(0, perRound - circuit.length)); };
+    if (o.addons.mobility && !G.mobility) slot(pick(pool.filter((e) => e.cat === "Mobility" && inRegion(e) && e.level <= L.max), 1, rand, taken));
+    if (o.addons.core && G.id !== "core") slot(pick(pool.filter((e) => ["CO", "SP"].includes(e.rc) && MAIN.includes(e.cat) && e.level <= L.max), 1, rand, taken));
+    if (o.addons.balance) slot(pick(pool.filter((e) => BALANCE.test(e.name) && e.level <= L.max), 1, rand, taken));
+    if (o.addons.sport && !G.mobility) slot(pick(pool.filter((e) => e.cat === "Power" && inBand(e, Math.max(1, L.min - 1), L.max)), 1, rand, taken));
+
+    const need = () => perRound - circuit.length;
     if (G.mobility) {
-      // Recovery stays gentle: level 5 max (some "mobility" videos are athletic drills), easy warm-up and cool-down
+      // Recovery stays gentle: level 5 max (some "mobility" videos are athletic drills)
       const mob = pool.filter((e) => [...COOL, "Activation", "Posture"].includes(e.cat) && e.level <= Math.min(L.max, 5));
-      const gentle = (e) => e.level <= 4;
-      warm = pick(mob.filter((e) => WARM.includes(e.cat) && gentle(e)), Math.max(1, Math.round(N * 0.3)), rand, taken);
-      cool = pick(mob.filter((e) => COOL.includes(e.cat) && gentle(e)), 1, rand, taken);
-      main = pick(mob, N - warm.length - cool.length, rand, taken);
-      if (warm.length + main.length + cool.length < N) main.push(...pick(pool.filter((e) => [...COOL, "Activation", "Posture"].includes(e.cat) && gentle(e)), N - warm.length - main.length - cool.length, rand, taken));
+      slot(pick(mob, need(), rand, taken));
     } else {
-      const nWarm = N >= 8 ? 2 : 1;
-      // Warm-ups and cool-downs stay easy (level 4 or below) whatever the session level
-      const easy = (e) => e.level <= Math.min(L.max, 4);
-      warm = pick(pool.filter((e) => WARM.includes(e.cat) && inRegion(e) && easy(e)), nWarm, rand, taken);
-      if (warm.length < nWarm) warm.push(...pick(pool.filter((e) => WARM.includes(e.cat) && easy(e)), nWarm - warm.length, rand, taken));
-      const nMain = N - warm.length - 1;
-      // Full body: mix upper and lower so it isn't all one area
-      let mainPool = pool.filter((e) => MAIN.includes(e.cat) && inRegion(e) && inBand(e));
+      const mainPool = pool.filter((e) => MAIN.includes(e.cat) && inRegion(e) && inBand(e));
       if (G.id === "full") {
-        const up = mainPool.filter((e) => ["SH", "UB", "EL"].includes(e.rc)), low = mainPool.filter((e) => ["HP", "LB", "KN"].includes(e.rc)), fb = mainPool.filter((e) => ["FB", "CO"].includes(e.rc));
-        main = [...pick(fb, Math.ceil(nMain / 3), rand, taken), ...pick(low, Math.ceil(nMain / 3), rand, taken), ...pick(up, nMain, rand, taken)].slice(0, nMain);
-      } else main = pick(mainPool, nMain, rand, taken);
+        // Full body: mix lower, upper and whole-body so it isn't all one area
+        const groups = [["FB", "CO"], ["HP", "LB", "KN"], ["SH", "UB", "EL"]].map((rc) => mainPool.filter((e) => rc.includes(e.rc)));
+        for (let i = 0; need() > 0 && i < perRound * 3; i++) slot(pick(groups[i % 3], 1, rand, taken));
+      } else slot(pick(mainPool, need(), rand, taken));
       // Not enough at this level/location: widen the level band, then any region
-      if (main.length < nMain) main.push(...pick(pool.filter((e) => MAIN.includes(e.cat) && inRegion(e) && inBand(e, 1, 9)), nMain - main.length, rand, taken));
-      if (main.length < nMain) main.push(...pick(pool.filter((e) => MAIN.includes(e.cat) && inBand(e, 1, L.max)), nMain - main.length, rand, taken));
-      cool = pick(pool.filter((e) => COOL.includes(e.cat) && inRegion(e) && easy(e)), 1, rand, taken);
-      if (!cool.length) cool = pick(pool.filter((e) => COOL.includes(e.cat) && easy(e)), 1, rand, taken);
+      if (need() > 0) slot(pick(pool.filter((e) => MAIN.includes(e.cat) && inRegion(e)), need(), rand, taken));
+      if (need() > 0) slot(pick(pool.filter((e) => MAIN.includes(e.cat) && e.level <= L.max), need(), rand, taken));
     }
+    if (need() > 0) slot(pick(pool.filter((e) => e.level <= L.max), need(), rand, taken));
+
+    let cool = pick(pool.filter((e) => COOL.includes(e.cat) && inRegion(e) && easy(e)), nCool, rand, taken);
+    if (cool.length < nCool) cool.push(...pick(pool.filter((e) => COOL.includes(e.cat) && easy(e)), nCool - cool.length, rand, taken));
+
     const tag = (arr, block) => arr.map((e) => ({ ...e, block, sets: prescription(e, L.id) }));
-    const exercises = [...tag(warm, "Warm-up"), ...tag(main, G.mobility ? "Flow" : "Main"), ...tag(cool, "Cool-down")];
+    const w = tag(warm, "Warm-up"), c = tag(circuit, "Circuit"), d = tag(cool, "Cool-down");
+    const work = c.length ? Math.round(c.reduce((s, e) => s + workSecs(e.sets), 0) / c.length) : 45;
     return {
       title: G.mobility ? "Mobility & Recovery Flow" : `${G.label} ${TITLES[L.id]}`,
-      goal: G.label, goalId: G.id, location, level: L.id, levelLabel: L.label, minutes: Number(length),
-      exercises, seed, createdAt: new Date().toISOString()
+      goal: G.label, goalId: G.id, location: o.location, level: L.id, levelLabel: L.label,
+      perRound: c.length, rounds, restEx: Number(o.restEx) || 0, restRound: Number(o.restRound) || 0, addons: o.addons,
+      warmup: w, circuit: c, cooldown: d, exercises: [...w, ...c, ...d],
+      minutes: estimate({ warm: w.length, cool: d.length, perRound: c.length, rounds, restEx: Number(o.restEx) || 0, restRound: Number(o.restRound) || 0, work }),
+      seed: o.seed, createdAt: new Date().toISOString()
     };
   }
 
-  window.MDFitGen = { GOALS, LOCATIONS, LEVELS, LENGTHS, generate, prescription, needsGym };
+  window.MDFitGen = { GOALS, LOCATIONS, LEVELS, LENGTHS, PER_ROUND, ROUNDS, REST_EX, REST_ROUND, ADDONS, DEFAULTS, generate, presetFor, estimate, prescription, needsGym };
 })();

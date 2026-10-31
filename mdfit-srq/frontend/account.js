@@ -77,20 +77,22 @@
   }
 
   // Today's workout: one per day from the client's last generator settings, kept until they change it
-  const PREFS_KEY = "mdfit_prefs", TODAY_KEY = "mdfit_today";
-  const prefs = { goal: "full", location: "home", level: "intermediate", length: 45, ...store.get(PREFS_KEY, {}) };
+  const PREFS_KEY = "mdfit_prefs2", TODAY_KEY = "mdfit_today2";
+  const saved = store.get(PREFS_KEY, {});
+  const prefs = { ...Gen.DEFAULTS, ...saved, addons: { ...Gen.DEFAULTS.addons, ...(saved.addons || {}) } };
   const daySeed = (d) => [...d].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
   function todaysWorkout() {
-    const t = todayInTz(), saved = store.get(TODAY_KEY, null);
-    if (saved && saved.date === t && saved.workout) return saved.workout;
+    const t = todayInTz(), s = store.get(TODAY_KEY, null);
+    if (s && s.date === t && s.workout && s.workout.circuit) return s.workout;
     const w = Gen.generate({ ...prefs, seed: daySeed(t + (client?.id || "")) });
     store.set(TODAY_KEY, { date: t, workout: w });
     return w;
   }
+  const planLine = (w) => `${w.circuit.length} exercises × ${w.rounds} round${w.rounds === 1 ? "" : "s"}`;
   function renderToday() {
     const w = todaysWorkout();
     $("#today-title").textContent = w.title;
-    $("#today-meta").textContent = `${w.minutes} min · ${w.exercises.length} exercises · ${w.levelLabel}`;
+    $("#today-meta").textContent = `About ${w.minutes} min · ${planLine(w)} · ${w.levelLabel}`;
   }
   $("#start-today").addEventListener("click", () => startPlayer(todaysWorkout()));
 
@@ -188,7 +190,7 @@
   }
   $("#bell").addEventListener("click", () => { $("#notes").hidden = !$("#notes").hidden; $("#bell .dot").hidden = true; });
 
-  // ================= Generate
+  // ================= Generate: numbered steps, summary and add-ons (MD Fit generator design)
   const ICONS = {
     upper: '<path d="M12 2a3 3 0 1 1-3 3 3 3 0 0 1 3-3zM3 9h18v2h-6v11h-2v-6h-2v6H9V11H3z"/>',
     lower: '<path d="M9 2h6l1 9-1.5 11h-2L12 14l-.5 8h-2L8 11z"/>',
@@ -198,70 +200,81 @@
     home: '<path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/>',
     gym: '<path d="M20.6 14.9 22 13.4 20.6 12l-3.6 3.6L8.4 7l3.6-3.6L10.6 2 9.1 3.4 7.7 2 5.6 4.1 4.1 2.6 2.7 4.1l1.4 1.4L2 7.7l1.4 1.4L2 10.6 3.4 12 7 8.4l8.6 8.6-3.6 3.6 1.4 1.4 1.4-1.4 1.4 1.4 2.1-2.1 1.5 1.4 1.4-1.4-1.4-1.4 2.1-2.1z"/>',
     outdoor: '<path d="M14 6 10.3 11l2.8 3.8-1.6 1.2C9.8 13.8 7 10 7 10l-6 8h22z"/>',
-    office: '<path d="M20 18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2H0v2h24v-2zM4 6h16v10H4z"/>',
-    clock: '<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7z"/>'
+    office: '<path d="M20 18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2H0v2h24v-2zM4 6h16v10H4z"/>'
   };
-  const bars = (n) => `<svg viewBox="0 0 24 24">${[0, 1, 2, 3].map((i) => `<rect x="${3 + i * 5}" y="${18 - i * 4}" width="3.5" height="${4 + i * 4}" rx="1" opacity="${i < n ? 1 : .25}"/>`).join("")}</svg>`;
-  const PICKERS = [
-    { key: "goal", title: "Workout goal", sub: "What do you want to focus on?", items: Gen.GOALS.map((g) => ({ id: g.id, label: g.label, svg: `<svg viewBox="0 0 24 24">${ICONS[g.icon]}</svg>` })) },
-    { key: "location", title: "Location", sub: "Where are you training?", items: Gen.LOCATIONS.map((l) => ({ id: l.id, label: l.label, svg: `<svg viewBox="0 0 24 24">${ICONS[l.icon]}</svg>` })) },
-    { key: "level", title: "Difficulty", sub: "Choose your level", items: Gen.LEVELS.map((l) => ({ id: l.id, label: l.label, svg: bars(l.bars) })) },
-    { key: "length", title: "Workout length", sub: "How much time do you have?", items: Gen.LENGTHS.map((l) => ({ id: l.id, label: l.label, svg: `<svg viewBox="0 0 24 24">${ICONS.clock}</svg>` })) }
+  const svgIc = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+  const bars = (n) => `<span class="bars-ic" aria-hidden="true">${[1, 2, 3, 4].map((i) => `<i class="${i <= n ? "on" : ""}" style="height:${6 + i * 6}px"></i>`).join("")}</span>`;
+  const secs = (v) => (v ? `${v} sec` : "None");
+  const choice = { ...prefs, addons: { ...prefs.addons } };
+  // type "cards" = big tiles, "pills" = number chips. Each step reads/writes choice[key].
+  const STEPS = [
+    { key: "goal", title: "Workout goal / type", sub: "Choose the primary focus.", type: "cards", items: Gen.GOALS.map((g) => ({ v: g.id, html: `${svgIc(g.icon)}<b>${esc(g.label)}</b>` })) },
+    { key: "location", title: "Location", sub: "Where will you be working out?", type: "cards", items: Gen.LOCATIONS.map((l) => ({ v: l.id, html: `${svgIc(l.icon)}<b>${esc(l.label)}</b>` })) },
+    { key: "level", title: "Difficulty level", sub: "Match the workout to your current ability.", type: "cards", items: Gen.LEVELS.map((l) => ({ v: l.id, html: `${bars(l.bars)}<b>${l.label}</b><small>${l.hint}</small>` })) },
+    { key: "length", title: "Workout length", sub: "Sets exercises, rounds and rest to fit. Fine-tune below.", type: "pills", items: Gen.LENGTHS.map((n) => ({ v: n, html: `<b>${n}</b><small>min</small>` })) },
+    { key: "perRound", title: "Exercises per round", sub: "How many different exercises in each round?", type: "pills", items: Gen.PER_ROUND.map((n) => ({ v: n, html: `<b>${n}</b>` })) },
+    { key: "rounds", title: "Rounds", sub: "How many total rounds of the workout?", type: "pills", items: Gen.ROUNDS.map((n) => ({ v: n, html: `<b>${n}</b>` })) },
+    { key: "restEx", title: "Rest between exercises", sub: "How much rest between each exercise?", type: "pills", items: Gen.REST_EX.map((n) => ({ v: n, html: n ? `<b>${n}</b><small>sec</small>` : `<b>None</b><small>0 sec</small>` })) },
+    { key: "restRound", title: "Rest between rounds", sub: "How much rest between each round?", type: "pills", items: Gen.REST_ROUND.map((n) => ({ v: n, html: n ? `<b>${n}</b><small>sec</small>` : `<b>None</b><small>0 sec</small>` })) }
   ];
-  const choice = { ...prefs };
-  $("#pickers").innerHTML = PICKERS.map((p) => `
-    <div class="picker" data-key="${p.key}">
-      <h3>${p.title}</h3><p>${p.sub}</p>
-      <div class="carousel">
-        <button type="button" class="arrow" data-step="-1" aria-label="Previous ${p.title.toLowerCase()}"><svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4-4.6-4.6z"/></svg></button>
-        <div class="choice" aria-live="polite"></div>
-        <button type="button" class="arrow" data-step="1" aria-label="Next ${p.title.toLowerCase()}"><svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></button>
+  const stepHtml = (st, i) => `
+    <section class="step" data-key="${st.key}">
+      <div class="step-head"><span class="step-num">${i + 1}</span><div><h3>${st.title}</h3><p>${st.sub}</p></div></div>
+      <div class="${st.type === "cards" ? "opt-cards" : "pills"}" role="radiogroup" aria-label="${esc(st.title)}">
+        ${st.items.map((it) => `<button type="button" class="${st.type === "cards" ? "opt" : "pill"}" role="radio" data-v="${it.v}">${it.html}</button>`).join("")}
       </div>
-      <div class="dots" aria-hidden="true">${p.items.map(() => "<i></i>").join("")}</div>
-    </div>`).join("");
-  function renderPicker(el) {
-    const p = PICKERS.find((x) => x.key === el.dataset.key);
-    let i = p.items.findIndex((x) => String(x.id) === String(choice[p.key]));
-    if (i < 0) { i = 0; choice[p.key] = p.items[0].id; }
-    $(".choice", el).innerHTML = `${p.items[i].svg}<b>${esc(p.items[i].label)}</b>`;
-    $$(".dots i", el).forEach((d, j) => d.classList.toggle("on", j === i));
-    $$(".arrow", el).forEach((a) => (a.disabled = (a.dataset.step < 0 && i === 0) || (a.dataset.step > 0 && i === p.items.length - 1)));
+    </section>`;
+  // Steps 1, 4 full width; 2+3, 5+6, 7+8 pair up on wider screens
+  $("#steps").innerHTML = [stepHtml(STEPS[0], 0), `<div class="step-pair">${stepHtml(STEPS[1], 1)}${stepHtml(STEPS[2], 2)}</div>`, stepHtml(STEPS[3], 3),
+    `<div class="step-pair">${stepHtml(STEPS[4], 4)}${stepHtml(STEPS[5], 5)}</div>`, `<div class="step-pair">${stepHtml(STEPS[6], 6)}${stepHtml(STEPS[7], 7)}</div>`].join("");
+  $("#addons").innerHTML = Gen.ADDONS.map((a) => `<li><button type="button" class="toggle" role="switch" data-addon="${a.id}"><span>${esc(a.label)}</span><i aria-hidden="true"></i></button></li>`).join("");
+
+  function renderChoices() {
+    $$("#steps .step").forEach((el) => $$("[data-v]", el).forEach((b) => b.setAttribute("aria-checked", String(b.dataset.v) === String(choice[el.dataset.key]))));
+    $$("#addons [data-addon]").forEach((b) => b.setAttribute("aria-checked", String(!!choice.addons[b.dataset.addon])));
+    const G = Gen.GOALS.find((g) => g.id === choice.goal), Lo = Gen.LOCATIONS.find((l) => l.id === choice.location), Lv = Gen.LEVELS.find((l) => l.id === choice.level);
+    const est = Gen.estimate({ warm: choice.addons.warmup ? (choice.length <= 15 ? 1 : 2) : 0, cool: choice.addons.cooldown ? (choice.length <= 20 ? 1 : 2) : 0, ...choice });
+    const rows = [["Type", G.label], ["Location", Lo.label], ["Difficulty", Lv.label], ["Estimated time", `${est} min`, "est"],
+      ["Exercises per round", choice.perRound], ["Total rounds", choice.rounds], ["Rest between exercises", secs(choice.restEx)], ["Rest between rounds", secs(choice.restRound)]];
+    $("#summary").innerHTML = rows.map(([k, v, c]) => `<dt>${k}</dt><dd${c ? ` class="${c}"` : ""}>${esc(v)}</dd>`).join("");
   }
-  function stepPicker(el, dir) {
-    const p = PICKERS.find((x) => x.key === el.dataset.key);
-    const i = p.items.findIndex((x) => String(x.id) === String(choice[p.key]));
-    const n = Math.min(p.items.length - 1, Math.max(0, i + dir));
-    choice[p.key] = p.items[n].id;
-    renderPicker(el);
-  }
-  $$(".picker").forEach((el) => {
-    renderPicker(el);
-    $$(".arrow", el).forEach((a) => a.addEventListener("click", () => stepPicker(el, Number(a.dataset.step))));
-    // Swipe the card left/right like the phone app
-    let x0 = null;
-    const c = $(".choice", el);
-    c.addEventListener("pointerdown", (e) => (x0 = e.clientX));
-    c.addEventListener("pointerup", (e) => { if (x0 !== null && Math.abs(e.clientX - x0) > 40) stepPicker(el, e.clientX < x0 ? 1 : -1); x0 = null; });
+  $("#steps").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-v]");
+    if (!b) return;
+    const key = b.closest(".step").dataset.key, num = ["length", "perRound", "rounds", "restEx", "restRound"].includes(key);
+    choice[key] = num ? Number(b.dataset.v) : b.dataset.v;
+    if (key === "length") Object.assign(choice, Gen.presetFor(choice.length));
+    renderChoices();
+  });
+  $("#addons").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-addon]");
+    if (!b) return;
+    choice.addons[b.dataset.addon] = !choice.addons[b.dataset.addon];
+    renderChoices();
+  });
+  $("#randomize").addEventListener("click", () => {
+    const any = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    choice.goal = any(Gen.GOALS).id; choice.location = any(Gen.LOCATIONS).id; choice.level = any(Gen.LEVELS).id;
+    choice.length = any(Gen.LENGTHS); Object.assign(choice, Gen.presetFor(choice.length));
+    renderChoices();
   });
 
   let current = null;
   const exLi = (e) => `<li><button type="button" class="ex" data-video="${e.id}">${thumbImg(e.id)}
     <span><b>${esc(e.name)}</b><span><span class="sets">${esc(e.sets)}</span> · ${esc(e.region)} · ${esc(e.cat)}</span></span></button></li>`;
   function renderGenerated() {
+    const w = current, loc = Gen.LOCATIONS.find((l) => l.id === w.location);
     $("#generated").hidden = false;
-    $("#gen-title").textContent = current.title;
-    const loc = Gen.LOCATIONS.find((l) => l.id === current.location);
-    $("#gen-meta").textContent = `${current.minutes} min · ${current.exercises.length} exercises · ${current.levelLabel} · ${loc ? loc.label : ""}. Tap an exercise to watch Dr. Jared demo it.`;
-    let last = "";
-    $("#gen-list").innerHTML = current.exercises.map((e) => {
-      const head = e.block !== last ? `<li class="block-tag">${esc(e.block)}</li>` : "";
-      last = e.block;
-      return head + exLi(e);
-    }).join("");
+    $("#gen-title").textContent = w.title;
+    $("#gen-meta").textContent = `About ${w.minutes} min · ${planLine(w)} · ${w.levelLabel} · ${loc ? loc.label : ""}. Tap any exercise to watch Dr. Jared demo it.`;
+    const group = (label, list, note = "") => list.length ? `<li class="block-tag">${label}${note ? `<span>${note}</span>` : ""}</li>${list.map(exLi).join("")}` : "";
+    $("#gen-list").innerHTML = group("Warm-up", w.warmup)
+      + group(`Circuit × ${w.rounds} round${w.rounds === 1 ? "" : "s"}`, w.circuit, [w.restEx && `${w.restEx}s between exercises`, w.restRound && w.rounds > 1 && `${w.restRound}s between rounds`].filter(Boolean).join(" · "))
+      + group("Cool-down", w.cooldown);
   }
   function generateNow(seed = Date.now()) {
     current = Gen.generate({ ...choice, seed });
-    Object.assign(prefs, choice);
+    Object.assign(prefs, choice, { addons: { ...choice.addons } });
     store.set(PREFS_KEY, prefs);
     // This becomes today's workout on Home too
     store.set(TODAY_KEY, { date: todayInTz(), workout: current });
@@ -271,6 +284,7 @@
   $("#generate").addEventListener("click", () => { generateNow(); $("#generated").scrollIntoView({ behavior: "smooth", block: "start" }); });
   $("#shuffle").addEventListener("click", () => generateNow());
   $("#start-gen").addEventListener("click", () => current && startPlayer(current));
+  renderChoices();
 
   // ================= Videos
   const CATS = ["All", ...["Strength", "Mobility", "Activation", "Rehab", "Power", "Neuroglide", "Posture", "Lifestyle", "Desk & posture"].filter((c) => EX.some((e) => e.cat === c))];
@@ -518,11 +532,24 @@
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
-  // ================= Workout player
-  const P = { w: null, i: 0, start: 0, tick: null };
+  // ================= Workout player: warm-up → circuit rounds with rest countdowns → cool-down
+  const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false };
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  function buildSteps(w) {
+    const out = [];
+    w.warmup.forEach((e) => out.push({ e, label: "Warm-up" }));
+    for (let r = 1; r <= w.rounds; r++) {
+      w.circuit.forEach((e, i) => {
+        out.push({ e, label: `Round ${r} of ${w.rounds}` });
+        if (w.restEx && i < w.circuit.length - 1) out.push({ rest: w.restEx, label: "Rest" });
+      });
+      if (r < w.rounds && w.restRound) out.push({ rest: w.restRound, label: `Rest before round ${r + 1}` });
+    }
+    w.cooldown.forEach((e) => out.push({ e, label: "Cool-down" }));
+    return out;
+  }
   function startPlayer(w) {
-    P.w = w; P.i = 0; P.start = Date.now();
+    P.w = w; P.steps = buildSteps(w); P.i = 0; P.start = Date.now(); P.done = false;
     $("#player").hidden = false;
     document.body.style.overflow = "hidden";
     clearInterval(P.tick);
@@ -531,47 +558,67 @@
     renderStep();
   }
   function closePlayer() {
-    clearInterval(P.tick);
+    clearInterval(P.tick); clearInterval(P.rest);
     $("#player").hidden = true;
     $("#p-body").innerHTML = "";
     document.body.style.overflow = "";
   }
   function renderStep() {
-    const list = P.w.exercises, n = list.length;
+    clearInterval(P.rest);
+    const n = P.steps.length;
     if (P.i >= n) return finish();
-    const e = list[P.i], next = list[P.i + 1];
-    $("#p-step").textContent = `Exercise ${P.i + 1} of ${n}`;
+    const st = P.steps[P.i], next = P.steps.slice(P.i + 1).find((x) => x.e);
+    const exNum = P.steps.slice(0, P.i + 1).filter((x) => x.e).length, exTotal = P.steps.filter((x) => x.e).length;
+    $("#p-step").textContent = st.e ? `${st.label} · ${exNum} of ${exTotal}` : st.label;
     $("#p-bar").style.width = `${(P.i / n) * 100}%`;
+    $("#p-prev").disabled = P.i === 0;
+    $("#p-next").textContent = P.i === n - 1 ? "Finish" : st.rest ? "Skip rest" : "Next";
+    const upNext = next ? `<div class="p-next">Up next: <b>${esc(next.e.name)}</b> · ${esc(next.e.sets)}</div>` : `<div class="p-next">Last one. Finish strong.</div>`;
+    if (st.rest) {
+      let left = st.rest;
+      $("#p-body").innerHTML = `<div class="p-rest"><p class="p-block">${esc(st.label)}</p><div class="count" id="rest-count">${left}</div><p>Breathe. Get set for the next move.</p>${upNext}</div>`;
+      P.rest = setInterval(() => {
+        left--;
+        const c = $("#rest-count");
+        if (c) c.textContent = Math.max(0, left);
+        if (left <= 0) { clearInterval(P.rest); P.i++; renderStep(); }
+      }, 1000);
+      return;
+    }
+    const e = st.e;
     $("#p-body").innerHTML = `
       <div class="frame"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(e.id)}/preview" title="${esc(e.name)} demo" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
-      <p class="p-block">${esc(e.block)}</p>
+      <p class="p-block">${esc(st.label)}</p>
       <h2 class="p-name">${esc(e.name)}</h2>
       <p class="p-sets">${esc(e.sets)}</p>
       <p class="p-meta">${esc(exMeta(e))}</p>
-      ${next ? `<div class="p-next">Up next: <b>${esc(next.name)}</b> · ${esc(next.sets)}</div>` : `<div class="p-next">Last one. Finish strong.</div>`}`;
-    $("#p-prev").disabled = P.i === 0;
-    $("#p-next").textContent = P.i === n - 1 ? "Finish" : "Next";
+      ${upNext}`;
   }
   async function finish() {
-    clearInterval(P.tick);
-    const secs = Math.floor((Date.now() - P.start) / 1000), minutes = Math.min(300, Math.max(1, Math.round(secs / 60)));
+    clearInterval(P.tick); clearInterval(P.rest);
+    P.done = true;
+    const secsUsed = Math.floor((Date.now() - P.start) / 1000), minutes = Math.min(300, Math.max(1, Math.round(secsUsed / 60)));
     $("#p-bar").style.width = "100%";
     $("#p-step").textContent = "Complete";
     $("#p-prev").disabled = true;
     $("#p-next").textContent = "Done";
-    $("#p-body").innerHTML = `<div class="done"><div class="big-check"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></div>
+    $("#p-body").innerHTML = `<div class="p-done"><div class="big-check"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></div>
       <h2>Workout complete</h2><p class="muted">${esc(P.w.title)}</p><p class="muted small" id="done-msg">Saving…</p></div>`;
     try {
-      const r = await apiAuth("POST", "/api/me/workouts", { title: P.w.title.slice(0, 80), goal: P.w.goal, minutes, exercises: P.w.exercises.length });
+      const r = await apiAuth("POST", "/api/me/workouts", { title: P.w.title.slice(0, 80), goal: P.w.goal, minutes, exercises: Math.min(50, P.w.exercises.length) });
       stats = { ...r.stats, recent: [r.workout, ...((stats && stats.recent) || [])].slice(0, 10) };
       $("#done-msg").outerHTML = `<div class="stats3"><div><b>${r.stats.streak}</b><span>Day streak</span></div><div><b>${minutes}</b><span>Minutes</span></div><div><b>${r.stats.workouts}</b><span>Workouts</span></div></div>`;
       renderStats(); renderActivity(); renderNotes();
     } catch (err) { $("#done-msg").textContent = "Couldn't save this workout: " + err.message; }
-    P.i = P.w.exercises.length + 1;
   }
-  $("#p-next").addEventListener("click", () => { if (P.i > P.w.exercises.length) return closePlayer(); P.i++; renderStep(); });
-  $("#p-prev").addEventListener("click", () => { if (P.i > 0) { P.i--; renderStep(); } });
-  $("#p-close").addEventListener("click", () => { if (P.i > P.w.exercises.length || confirm("End this workout? It won't be saved.")) closePlayer(); });
+  $("#p-next").addEventListener("click", () => { if (P.done) return closePlayer(); P.i++; renderStep(); });
+  $("#p-prev").addEventListener("click", () => {
+    if (P.done || P.i === 0) return;
+    P.i--;
+    while (P.i > 0 && P.steps[P.i].rest) P.i--; // back skips over rest screens
+    renderStep();
+  });
+  $("#p-close").addEventListener("click", () => { if (P.done || confirm("End this workout? It won't be saved.")) closePlayer(); });
 
   // ================= Load
   show(location.hash.slice(1) || "home");
