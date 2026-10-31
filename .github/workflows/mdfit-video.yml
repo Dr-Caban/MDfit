@@ -36,6 +36,7 @@ jobs:
         working-directory: mdfit-video
     steps:
       - name: Groq key
+        working-directory: .
         env:
           INPUT_KEY: ${{ inputs.groq_api_key }}
           SECRET_KEY: ${{ secrets.GROQ_API_KEY }}
