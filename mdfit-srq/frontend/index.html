@@ -44,7 +44,7 @@
       <nav id="menu">
         <a href="#method">Method</a>
         <a href="#services">Services</a>
-        <a href="#treat">What we treat</a>
+        <a href="#pain-map">Pain map</a>
         <a href="#dr">Dr. Jared</a>
         <a href="#reviews">Reviews</a>
         <a href="#classes">Classes</a>
@@ -76,7 +76,7 @@
           <p class="muted">Tap all that apply. We'll take it from there.</p>
           <div class="chips" data-areas></div>
           <button class="btn btn-block" type="submit">Start my plan</button>
-          <p class="fine">Or <a href="#book">pick a time now</a>, evaluations open Mon–Fri.</p>
+          <p class="fine">Not sure? <a href="#pain-map">Use Dr. Jared's pain map</a> or <a href="#book">pick a time now</a>.</p>
         </form>
       </div>
     </section>
@@ -163,6 +163,29 @@
           <li>Posture &amp; gait problems</li>
           <li>Balance &amp; fall prevention</li>
         </ul>
+      </div>
+    </section>
+
+    <!-- PAIN MAP -->
+    <section id="pain-map" class="section painmap-section">
+      <div class="wrap">
+        <p class="eyebrow">Find the source</p>
+        <h2 class="h2">Tap where it hurts.</h2>
+        <p class="sub">Pain often starts somewhere else. Tap a point on Dr. Jared's body map to see which muscles commonly send pain there, and open his guide for it.</p>
+        <div class="painmap">
+          <div class="painmap-figure">
+            <img src="assets/pain/body-map.webp" srcset="assets/pain/body-map-800.webp 800w, assets/pain/body-map.webp 1312w" sizes="(max-width: 960px) 100vw, 640px" alt="MD Fit body map, front and back views, with tappable pain points" width="1312" height="1199" loading="lazy">
+            <div class="hotspots"></div>
+          </div>
+          <aside class="painmap-panel" aria-live="polite">
+            <p class="eyebrow">How it works</p>
+            <h3>Pick a glowing point</h3>
+            <p class="muted">Forehead, neck, shoulder, elbow, wrist, hip, groin, knee, ankle, base of skull, low back, glute, hamstring or calf: each one shows the usual suspects and Dr. Jared's guide.</p>
+            <div class="painmap-cta"><a href="#book" class="btn">Book an evaluation</a></div>
+          </aside>
+        </div>
+        <h3 class="library-title">Dr. Jared's referred-pain guides</h3>
+        <div class="guide-library"></div>
       </div>
     </section>
 
@@ -321,6 +344,11 @@
 
   <div class="mobile-cta"><a href="tel:+19413130562" class="btn btn-line" data-phone-link>Call</a><a href="/book" class="btn">Book evaluation</a></div>
 
+  <dialog id="guide-dialog" class="guide-dialog">
+    <div class="guide-head"><h3></h3><a class="guide-full" target="_blank" rel="noopener">Open full size</a><button type="button" class="close" aria-label="Close">&times;</button></div>
+    <img alt="">
+  </dialog>
+
   <dialog id="book-dialog">
     <form id="book-form" class="form" novalidate>
       <button type="button" class="close" aria-label="Close">&times;</button>
@@ -339,5 +367,6 @@
   <script src="common.js"></script>
   <script src="booking.js"></script>
   <script src="app.js"></script>
+  <script src="painmap.js"></script>
 </body>
 </html>
