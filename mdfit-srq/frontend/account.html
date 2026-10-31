@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <title>MD Fit</title>
-  <meta name="theme-color" content="#16171d">
+  <meta name="theme-color" content="#0A1A2E">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,6 +13,9 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="assets/icon-64.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/app-icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="app/app.css">
 </head>
 <body class="mdapp">
@@ -66,7 +69,7 @@
 
       </div><div class="col-side">
       <div class="card plan" id="plan-card" hidden>
-        <div class="card-head"><span class="label gold">From Dr. Jared</span><span class="muted small" id="plan-date"></span></div>
+        <div class="card-head"><span class="label accent">From Dr. Jared</span><span class="muted small" id="plan-date"></span></div>
         <div id="plan"></div>
       </div>
 
@@ -84,28 +87,42 @@
 
     <!-- ================= GENERATE ================= -->
     <section class="view" id="view-generate" data-view="generate" hidden>
-      <h1 class="big">Workout <em>Generator</em></h1>
-      <p class="kicker">Customize every detail. Create a workout that fits you.</p>
+      <header class="hero">
+        <div><h1>Workout <em>Generator</em></h1><p>Customize every detail. Create a workout that fits you.</p></div>
+        <p class="hero-tag">Any goal<br>Any environment<br>Any level<br><b>Your workout</b></p>
+      </header>
       <button type="button" class="intro-btn" data-intro="generator"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> How it works with Dr. Jared</button>
-      <div class="gen-grid"><div class="gen-controls">
-      <div id="pickers"></div>
-      <button type="button" class="btn-gold" id="generate">Generate my workout</button>
+      <div class="gen-layout">
+        <div class="gen-steps" id="steps"></div>
+        <aside class="gen-side">
+          <div class="summary">
+            <h2><svg viewBox="0 0 24 24"><path d="M19 3h-4.2A3 3 0 0 0 12 1a3 3 0 0 0-2.8 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 0a1 1 0 1 1-1 1 1 1 0 0 1 1-1zm2 14H7v-2h7zm3-4H7v-2h10zm0-4H7V7h10z"/></svg>Workout summary</h2>
+            <dl id="summary"></dl>
+            <button type="button" class="btn-accent" id="generate">Generate workout <svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></button>
+            <button type="button" class="btn-outline-light" id="randomize"><svg viewBox="0 0 24 24"><path d="M10.6 9.2 5.4 4 4 5.4l5.2 5.2zM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4zm.3 9.4-1.4 1.4 3.1 3.1-2 2H20v-5.5l-2 2z"/></svg> Randomize settings</button>
+          </div>
+          <div class="addons">
+            <h3>Optional add-ons</h3>
+            <p>Include extra elements in your workout.</p>
+            <ul id="addons"></ul>
+          </div>
+        </aside>
       </div>
       <div id="generated" hidden>
         <div class="card gen-card">
-          <div class="today-head"><span class="label gold" id="gen-title"></span><button type="button" class="link-sm" id="shuffle">Shuffle</button></div>
+          <div class="today-head"><span class="label accent" id="gen-title"></span><button type="button" class="link-sm" id="shuffle">Shuffle exercises</button></div>
           <p class="muted small" id="gen-meta"></p>
           <ol class="ex-list" id="gen-list"></ol>
-          <button type="button" class="btn-blue" id="start-gen"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Start Workout</button>
+          <button type="button" class="btn-blue" id="start-gen"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Start workout</button>
         </div>
-      </div>
       </div>
     </section>
 
     <!-- ================= VIDEOS ================= -->
     <section class="view" id="view-videos" data-view="videos" hidden>
-      <h1 class="big">Video <em>Library</em></h1>
-      <p class="kicker"><span id="vid-count"></span> exercises coached by Dr. Jared</p>
+      <header class="hero">
+        <div><h1>Video <em>Library</em></h1><p><span id="vid-count"></span> exercises coached by Dr. Jared</p></div>
+      </header>
       <button type="button" class="intro-btn" data-intro="library"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Start here: how to use the library</button>
       <div class="vid-filters">
       <input type="search" id="vid-search" class="search" placeholder="Search exercises" aria-label="Search exercises">
@@ -118,7 +135,9 @@
 
     <!-- ================= PAIN TOOL ================= -->
     <section class="view" id="view-pain" data-view="pain" hidden>
-      <h1 class="big plain">Pain Tool</h1>
+      <header class="hero">
+        <div><h1>Pain <em>Tool</em></h1><p>Find where your pain may be coming from.</p></div>
+      </header>
       <div class="info"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>Educational tool only. Not medical advice or diagnosis.</div>
       <button type="button" class="intro-btn" data-intro="pain"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Watch: how the pain tool works</button>
       <div class="seg" role="tablist"><button type="button" role="tab" data-side="front" aria-selected="true">Front</button><button type="button" role="tab" data-side="back" aria-selected="false">Back</button></div>
@@ -181,7 +200,7 @@
       </div>
 
       <div class="card install" id="install-card">
-        <div class="card-head"><span class="label gold">Get the app</span></div>
+        <div class="card-head"><span class="label accent">Get the app</span></div>
         <p class="small" id="install-text">Add MD Fit to your home screen for one-tap access.</p>
         <button type="button" class="btn-blue sm" id="install-btn" hidden>Install MD Fit</button>
       </div>
@@ -197,12 +216,12 @@
 
   <nav class="tabbar" aria-label="App">
     <a class="side-brand" href="/"><img src="assets/logo.webp" alt="" width="48" height="48"><span><b>MD Fit</b><small>Physical Rehabilitation &amp; Fitness</small></span></a>
-    <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg><span>Home</span></button>
-    <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><span>Generate</span></button>
-    <button type="button" data-tab="videos"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg><span>Videos</span></button>
-    <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg><span>Pain Tool</span></button>
-    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg><span>Profile</span></button>
-    <div class="side-foot"><a class="side-book" href="/book">Book a visit</a><a href="tel:+19413130562">941-313-0562</a></div>
+    <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg><span class="short">Home</span><span class="long">Dashboard</span></button>
+    <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><span class="short">Generate</span><span class="long">Workout Generator</span></button>
+    <button type="button" data-tab="videos"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg><span class="short">Videos</span><span class="long">Video Library</span></button>
+    <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg><span class="short">Pain Tool</span><span class="long">Pain Tool</span></button>
+    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg><span class="short">Profile</span><span class="long">My Profile</span></button>
+    <div class="side-foot"><p class="side-tag">Move better<br>Feel stronger<br>Live more</p><a class="side-book" href="/book">Book a visit</a><a href="tel:+19413130562">941-313-0562</a></div>
   </nav>
 
   <!-- Workout player -->
