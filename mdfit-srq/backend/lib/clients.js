@@ -9,6 +9,22 @@ const SESSION_DAYS = 30;
 const RESET_HOURS = 24;
 const GUIDE_IDS = ["posterior-neck", "scalenes", "rotator-cuff", "iliopsoas", "lateral-hip", "quads", "calf"];
 const PAIN_LOG_MAX = 1000;
+const WORKOUT_LOG_MAX = 2000;
+
+const addDay = (date, n) => new Date(Date.parse(date + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+// Streaks count calendar days (clinic time zone) with at least one completed workout.
+function workoutStats(log, today) {
+  const days = new Set(log.map((w) => w.date));
+  let streak = 0;
+  for (let d = days.has(today) ? today : addDay(today, -1); days.has(d); d = addDay(d, -1)) streak++;
+  let best = 0, run = 0, prev = null;
+  for (const d of [...days].sort()) { run = prev && addDay(prev, 1) === d ? run + 1 : 1; best = Math.max(best, run); prev = d; }
+  const dow = (new Date(today + "T12:00:00Z").getUTCDay() + 6) % 7; // Monday = 0
+  const monday = addDay(today, -dow);
+  const week = Array.from({ length: 7 }, (_, i) => days.has(addDay(monday, i)));
+  const minutes = log.reduce((n, w) => n + (w.minutes || 0), 0);
+  return { streak, bestStreak: best, workouts: log.length, hours: Math.round(minutes / 6) / 10, week, todayIndex: dow };
+}
 
 const fail = (msg) => { throw new ValidationError(msg); };
 function text(v, field, { max = 200, min = 0 } = {}) {
@@ -211,6 +227,27 @@ function mountClients(ctx) {
     res.json({ ok: true });
   });
 
+  // Completed workouts (from the app's workout generator)
+  me.post("/workouts", (req, res) => {
+    const b = req.body || {};
+    const minutes = Number(b.minutes);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 300) fail("Minutes must be 1 to 300.");
+    const exercises = Number(b.exercises || 0);
+    if (!Number.isInteger(exercises) || exercises < 0 || exercises > 50) fail("Exercise count is off.");
+    const entry = { id: id(), title: text(b.title, "Workout name", { min: 1, max: 80 }), goal: text(b.goal, "Goal", { max: 40 }),
+      minutes, exercises, date: today(), completedAt: new Date().toISOString() };
+    const list = clients();
+    const c = list.find((x) => x.id === req.client.id);
+    c.workouts = [...(c.workouts || []), entry].slice(-WORKOUT_LOG_MAX);
+    save(list);
+    res.status(201).json({ workout: entry, stats: workoutStats(c.workouts, today()) });
+  });
+
+  me.get("/stats", (req, res) => {
+    const log = req.client.workouts || [];
+    res.json({ ...workoutStats(log, today()), recent: log.slice(-10).reverse() });
+  });
+
   app.use("/api/me", me);
 
   // ================= Admin: clients =================
@@ -230,6 +267,7 @@ function mountClients(ctx) {
     const c = clients().find((x) => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: "Client not found." });
     res.json({ ...pub(c), lastLoginAt: c.lastLoginAt, painLog: c.painLog || [],
+      workouts: (c.workouts || []).slice(-50).reverse(), stats: workoutStats(c.workouts || [], today()),
       appointments: appointments().filter((a) => a.email === c.email).map(({ cancelToken, ...a }) => a).sort((a, b) => (a.date + a.time < b.date + b.time ? 1 : -1)) });
   });
 
@@ -268,4 +306,4 @@ function mountClients(ctx) {
   });
 }
 
-module.exports = { mountClients, GUIDE_IDS };
+module.exports = { mountClients, GUIDE_IDS, workoutStats };

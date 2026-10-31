@@ -2,112 +2,228 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
-  <title>My Account | MD Fit</title>
-  <meta name="theme-color" content="#0A1A2E">
+  <title>MD Fit</title>
+  <meta name="theme-color" content="#16171d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MD Fit">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="assets/icon-64.png" type="image/png">
-  <link rel="apple-touch-icon" href="assets/logo.webp">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="account.css">
+  <link rel="apple-touch-icon" href="assets/app-icon-192.png">
+  <link rel="stylesheet" href="app/app.css">
 </head>
-<body class="account-page">
-  <header class="nav">
-    <div class="wrap nav-inner">
-      <a href="/" class="brand" aria-label="MD Fit home">
-        <img class="brand-logo" src="assets/logo.webp" alt="MD Fit" width="160" height="160">
-        <span class="brand-text"><span class="brand-sub">My Account</span></span>
-      </a>
-      <div class="acct-nav">
-        <a href="/book" class="btn btn-sm">Book</a>
-        <button type="button" class="btn btn-ghost btn-sm" id="logout">Log out</button>
+<body class="mdapp">
+  <div class="app">
+
+    <!-- ================= HOME ================= -->
+    <section class="view" id="view-home" data-view="home">
+      <header class="app-top">
+        <img class="app-logo" src="assets/logo.webp" alt="MD Fit" width="160" height="160">
+        <button type="button" class="icon-btn bell" id="bell" aria-label="Notifications">
+          <svg viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>
+          <span class="dot" hidden></span>
+        </button>
+      </header>
+      <div class="notes-panel" id="notes" hidden></div>
+      <p class="hello">Welcome back</p>
+      <h1 class="name" id="hello-name">&nbsp;</h1>
+
+      <div class="streak card gold-edge">
+        <div class="streak-top">
+          <svg class="flame" viewBox="0 0 24 24"><path d="M13.5 1.5s.8 2.7.8 4.6c0 1.9-1.2 3.4-3.1 3.4-1.9 0-3.3-1.5-3.3-3.4l.03-.33C5.9 8 4.7 11.1 4.7 14.4 4.7 18.6 8 22 12 22s7.3-3.4 7.3-7.6c0-5.1-2.4-9.6-5.8-12.9zM11.7 19c-1.6 0-2.9-1.3-2.9-2.9 0-1.5 1-2.6 2.6-2.9 1.6-.3 3.3-1.1 4.2-2.4.4 1.2.6 2.5.6 3.8 0 2.4-2 4.4-4.5 4.4z"/></svg>
+          <div><b id="streak-n">0</b><span>day streak</span></div>
+        </div>
+        <ol class="week" id="week"></ol>
       </div>
-    </div>
-  </header>
 
-  <section class="acct-hero">
-    <div class="wrap">
-      <p class="eyebrow">MD Fit · Physical Rehabilitation &amp; Fitness</p>
-      <h1>Hi, <span id="first-name">there</span>.</h1>
-      <div class="next-card" id="next-card"><p class="muted">Loading your appointments…</p></div>
-    </div>
-  </section>
-
-  <main class="wrap acct-grid">
-    <section class="acct-card" id="appts-card">
-      <h2>Upcoming appointments</h2>
-      <div id="upcoming"></div>
-    </section>
-
-    <section class="acct-card" id="plan-card">
-      <h2>My plan</h2>
-      <div id="plan"></div>
-    </section>
-
-    <section class="acct-card acct-wide" id="pain-card">
-      <h2>Pain tracker</h2>
-      <p class="muted">Log how it feels. Dr. Jared sees your entries before each visit.</p>
-      <form id="pain-form" class="pain-form" novalidate>
-        <label>Where<select name="area" required></select></label>
-        <label class="pain-level"><span>Pain right now: <output>5</output> / 10</span>
-          <input type="range" name="level" min="0" max="10" step="1" value="5">
-        </label>
-        <label>Note (optional)<input name="note" maxlength="500" placeholder="e.g. better after stretches"></label>
-        <button class="btn" type="submit">Log it</button>
-        <p class="form-msg" role="status"></p>
-      </form>
-      <div class="chart-head">
-        <h3 id="chart-title">Pain over time</h3>
-        <label class="chart-filter">Area <select id="chart-area"></select></label>
+      <div class="tiles">
+        <div class="tile card"><svg viewBox="0 0 24 24" class="ic gold"><path d="M19 4h-2V2H7v2H5a2 2 0 0 0-2 2v1a5 5 0 0 0 4.4 4.96A5 5 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5 5 0 0 0 3.6-3.94A5 5 0 0 0 21 7V6a2 2 0 0 0-2-2zM5 7V6h2v3.8A3 3 0 0 1 5 7zm14 0a3 3 0 0 1-2 2.8V6h2z"/></svg><b id="best-n">0</b><span>Best Streak</span></div>
+        <div class="tile card"><svg viewBox="0 0 24 24" class="ic blue"><path d="M13.5 5.5a2 2 0 1 0-2-2 2 2 0 0 0 2 2zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2a5.2 5.2 0 0 1-4.5-2.5l-1-1.6a2 2 0 0 0-1.7-1 2 2 0 0 0-.8.2L6 8.3V13h2V9.6z"/></svg><b id="workouts-n">0</b><span>Workouts</span></div>
+        <div class="tile card"><svg viewBox="0 0 24 24" class="ic green"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7z"/></svg><b id="hours-n">0.0</b><span>Hours</span></div>
       </div>
-      <div class="chart" id="chart" aria-describedby="chart-title"></div>
-      <details class="entries">
-        <summary>All entries (<span id="entry-count">0</span>)</summary>
-        <div class="table-wrap"><table id="entries"></table></div>
-      </details>
+
+      <div class="card today" id="today-card">
+        <div class="today-head"><span class="label blue">Today's workout</span><span class="ready">Ready</span></div>
+        <div class="today-body">
+          <div class="today-icon"><svg viewBox="0 0 24 24"><path d="M12 5.5a2 2 0 1 0-2-2 2 2 0 0 0 2 2zM21 9h-2V7h-2v2H7V7H5v2H3v2h2v2h2v-2h3l-2 10h2l2-6 2 6h2l-2-10h3v2h2v-2h2z"/></svg></div>
+          <div><b id="today-title">Loading…</b><span id="today-meta"></span></div>
+        </div>
+        <button type="button" class="btn-blue" id="start-today"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Start Workout</button>
+        <button type="button" class="link" data-goto="generate">Change workout</button>
+      </div>
+
+      <h2 class="section-title">Quick actions</h2>
+      <div class="quick">
+        <button type="button" class="card q" data-goto="generate"><svg viewBox="0 0 24 24" class="ic blue"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><b>Generate Workout</b><span>Custom routine</span></button>
+        <button type="button" class="card q" data-goto="pain"><svg viewBox="0 0 24 24" class="ic orange"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg><b>Pain Tool</b><span>Find relief</span></button>
+        <button type="button" class="card q" data-goto="videos"><svg viewBox="0 0 24 24" class="ic purple"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 8.5v7l6-3.5z" fill="#fff"/></svg><b>Video Library</b><span id="lib-count">Exercises</span></button>
+        <a class="card q" href="/book"><svg viewBox="0 0 24 24" class="ic green"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14zM7 11h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2z"/></svg><b>Book a Visit</b><span>See Dr. Jared</span></a>
+      </div>
+
+      <div class="card plan" id="plan-card" hidden>
+        <div class="card-head"><span class="label gold">From Dr. Jared</span><span class="muted small" id="plan-date"></span></div>
+        <div id="plan"></div>
+      </div>
+
+      <div class="card list-card">
+        <div class="card-head"><span class="label">Upcoming events</span><a class="link-sm" href="/book">Book</a></div>
+        <ul class="events" id="events"><li class="muted small">Loading…</li></ul>
+      </div>
+
+      <div class="card list-card">
+        <div class="card-head"><span class="label">Recent activity</span></div>
+        <ul class="activity" id="activity"></ul>
+      </div>
     </section>
 
-    <section class="acct-card" id="history-card">
-      <h2>Visit history</h2>
-      <div id="history"></div>
+    <!-- ================= GENERATE ================= -->
+    <section class="view" id="view-generate" data-view="generate" hidden>
+      <h1 class="big">Workout <em>Generator</em></h1>
+      <p class="kicker">Customize every detail. Create a workout that fits you.</p>
+      <button type="button" class="intro-btn" data-intro="generator"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> How it works with Dr. Jared</button>
+      <div id="pickers"></div>
+      <button type="button" class="btn-gold" id="generate">Generate my workout</button>
+      <div id="generated" hidden>
+        <div class="card gen-card">
+          <div class="today-head"><span class="label gold" id="gen-title"></span><button type="button" class="link-sm" id="shuffle">Shuffle</button></div>
+          <p class="muted small" id="gen-meta"></p>
+          <ol class="ex-list" id="gen-list"></ol>
+          <button type="button" class="btn-blue" id="start-gen"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Start Workout</button>
+        </div>
+      </div>
     </section>
 
-    <section class="acct-card" id="profile-card">
-      <h2>Profile</h2>
-      <form id="profile-form" class="form flat" novalidate>
-        <label>Name<input name="name" required minlength="2" maxlength="100" autocomplete="name"></label>
-        <label>Email<input name="email" type="email" disabled></label>
-        <label>Mobile phone<input name="phone" type="tel" maxlength="30" autocomplete="tel"></label>
-        <button class="btn btn-sm" type="submit">Save</button>
-        <p class="form-msg" role="status"></p>
-      </form>
-      <details class="pw">
-        <summary>Change password</summary>
-        <form id="password-form" class="form flat" novalidate>
-          <label>Current password<input name="current" type="password" required autocomplete="current-password"></label>
-          <label>New password (8+ characters)<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
-          <button class="btn btn-sm" type="submit">Change password</button>
+    <!-- ================= VIDEOS ================= -->
+    <section class="view" id="view-videos" data-view="videos" hidden>
+      <h1 class="big">Video <em>Library</em></h1>
+      <p class="kicker"><span id="vid-count"></span> exercises coached by Dr. Jared</p>
+      <button type="button" class="intro-btn" data-intro="library"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Start here: how to use the library</button>
+      <input type="search" id="vid-search" class="search" placeholder="Search exercises" aria-label="Search exercises">
+      <div class="chips" id="vid-cats" role="tablist" aria-label="Category"></div>
+      <select id="vid-region" class="select" aria-label="Body area"></select>
+      <div class="vgrid" id="vgrid"></div>
+      <p class="muted small center" id="vid-empty" hidden>No exercises match. Try another filter.</p>
+    </section>
+
+    <!-- ================= PAIN TOOL ================= -->
+    <section class="view" id="view-pain" data-view="pain" hidden>
+      <h1 class="big plain">Pain Tool</h1>
+      <div class="info"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>Educational tool only. Not medical advice or diagnosis.</div>
+      <button type="button" class="intro-btn" data-intro="pain"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Watch: how the pain tool works</button>
+      <div class="seg" role="tablist"><button type="button" role="tab" data-side="front" aria-selected="true">Front</button><button type="button" role="tab" data-side="back" aria-selected="false">Back</button></div>
+      <p class="center muted">Select the area(s) where you feel discomfort</p>
+      <div class="areas" id="areas"></div>
+      <button type="button" class="btn-gold sticky-cta" id="pain-go" disabled>Select an area</button>
+      <div id="pain-results"></div>
+      <a class="link center block" href="/#pain-map">Open the interactive body map</a>
+    </section>
+
+    <!-- ================= PROFILE ================= -->
+    <section class="view" id="view-profile" data-view="profile" hidden>
+      <div class="profile-head">
+        <div class="avatar" id="avatar">?</div>
+        <div><h1 class="name sm" id="p-name"></h1><p class="muted small" id="p-email"></p></div>
+      </div>
+
+      <div class="card list-card">
+        <div class="card-head"><span class="label">My appointments</span><a class="link-sm" href="/book">Book</a></div>
+        <ul class="events" id="p-appts"></ul>
+        <details class="sub"><summary>Visit history</summary><ul class="events" id="p-history"></ul></details>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="label">Pain tracker</span><select id="chart-area" class="select sm" aria-label="Area"></select></div>
+        <div class="chart" id="chart"></div>
+        <form id="pain-form" class="mini-form" novalidate>
+          <select name="area" class="select" aria-label="Where"></select>
+          <label class="slider"><span>Pain now <output>5</output>/10</span><input type="range" name="level" min="0" max="10" value="5"></label>
+          <input name="note" class="input" maxlength="500" placeholder="Note (optional)">
+          <button class="btn-gold sm" type="submit">Log it</button>
           <p class="form-msg" role="status"></p>
         </form>
-      </details>
+        <details class="sub"><summary>All entries (<span id="entry-count">0</span>)</summary><table class="tbl" id="entries"></table></details>
+      </div>
+
+      <div class="card list-card">
+        <div class="card-head"><span class="label">Workout history</span></div>
+        <ul class="activity" id="p-workouts"></ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="label">Profile</span></div>
+        <form id="profile-form" class="stack-form" novalidate>
+          <label>Name<input name="name" class="input" required minlength="2" maxlength="100" autocomplete="name"></label>
+          <label>Email<input name="email" class="input" disabled></label>
+          <label>Mobile phone<input name="phone" class="input" type="tel" maxlength="30" autocomplete="tel"></label>
+          <button class="btn-gold sm" type="submit">Save</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+        <details class="sub"><summary>Change password</summary>
+          <form id="password-form" class="stack-form" novalidate>
+            <label>Current password<input name="current" class="input" type="password" required autocomplete="current-password"></label>
+            <label>New password (8+ characters)<input name="password" class="input" type="password" required minlength="8" autocomplete="new-password"></label>
+            <button class="btn-gold sm" type="submit">Change password</button>
+            <p class="form-msg" role="status"></p>
+          </form>
+        </details>
+      </div>
+
+      <div class="card install" id="install-card">
+        <div class="card-head"><span class="label gold">Get the app</span></div>
+        <p class="small" id="install-text">Add MD Fit to your home screen for one-tap access.</p>
+        <button type="button" class="btn-blue sm" id="install-btn" hidden>Install MD Fit</button>
+      </div>
+
+      <div class="profile-links">
+        <a href="/">mdfitsrq.com</a><a href="tel:+19413130562">Call 941-313-0562</a>
+        <button type="button" class="link danger" id="logout">Log out</button>
+      </div>
+      <p class="muted tiny center">Guides and tracking are educational and don't replace an in-person evaluation. In an emergency, call 911.</p>
     </section>
-  </main>
+  </div>
 
-  <footer class="acct-foot wrap">
-    <p>Questions? Call <a href="tel:+19413130562">941-313-0562</a> · 3214 Clark Road, Sarasota, FL 34231</p>
-    <p>Guides and pain tracking are educational and don't replace an in-person evaluation. In an emergency, call 911.</p>
-  </footer>
+  <nav class="tabbar" aria-label="App">
+    <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>Home</button>
+    <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg>Generate</button>
+    <button type="button" data-tab="videos"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg>Videos</button>
+    <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg>Pain Tool</button>
+    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg>Profile</button>
+  </nav>
 
-  <dialog id="guide-dialog" class="guide-dialog">
-    <div class="guide-head"><h3></h3><a class="guide-full" target="_blank" rel="noopener">Open full size</a><button type="button" class="close" aria-label="Close">&times;</button></div>
-    <img alt="">
+  <!-- Workout player -->
+  <div class="player" id="player" hidden role="dialog" aria-modal="true" aria-label="Workout">
+    <header class="player-top">
+      <button type="button" class="icon-btn" id="p-close" aria-label="End workout"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button>
+      <div class="player-progress"><span id="p-step"></span><div class="bar"><i id="p-bar"></i></div></div>
+      <span class="timer" id="p-timer">0:00</span>
+    </header>
+    <div class="player-body" id="p-body"></div>
+    <footer class="player-foot">
+      <button type="button" class="btn-ghost" id="p-prev">Back</button>
+      <button type="button" class="btn-gold" id="p-next">Next</button>
+    </footer>
+  </div>
+
+  <dialog class="sheet" id="video-dialog">
+    <div class="sheet-head"><b id="vd-title"></b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="frame"><iframe id="vd-frame" title="Exercise video" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
+    <p class="muted small" id="vd-meta"></p>
   </dialog>
+
+  <dialog class="sheet" id="guide-dialog">
+    <div class="sheet-head"><b id="gd-title"></b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <img id="gd-img" alt="">
+  </dialog>
+
+  <div class="toast" id="toast" hidden></div>
 
   <script src="config.js"></script>
   <script src="common.js"></script>
+  <script src="app/exercises.js"></script>
+  <script src="app/generator.js"></script>
   <script src="account.js"></script>
 </body>
 </html>
