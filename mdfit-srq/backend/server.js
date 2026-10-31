@@ -34,6 +34,7 @@ function loadConfig() {
     calWebhookSecret: env("CAL_WEBHOOK_SECRET"),
     googleKey: env("GOOGLE_PLACES_API_KEY"),
     googleUrl: env("GOOGLE_PLACES_URL", "https://places.googleapis.com/v1"),
+    googleLegacyUrl: env("GOOGLE_PLACES_LEGACY_URL", "https://maps.googleapis.com/maps/api/place"),
     googlePlaceId: env("GOOGLE_PLACE_ID"),
     googleQuery: env("GOOGLE_PLACE_QUERY", "MD Fit, 3214 Clark Road, Sarasota, FL 34231"),
     now: () => new Date()
@@ -87,7 +88,7 @@ function createApp(cfg = loadConfig()) {
   const store = createStore(cfg.dataDir);
   const notify = createNotifier({ apiKey: cfg.resendKey, from: cfg.notifyFrom, ownerEmail: cfg.notifyEmail || cfg.adminEmail, apiUrl: cfg.resendUrl });
   const cal = createCal({ apiKey: cfg.calKey, apiUrl: cfg.calUrl });
-  const places = createPlaces({ apiKey: cfg.googleKey, baseUrl: cfg.googleUrl });
+  const places = createPlaces({ apiKey: cfg.googleKey, baseUrl: cfg.googleUrl, legacyUrl: cfg.googleLegacyUrl });
 
   // ---- Google reviews: refreshed every 6 hours, last good copy kept on disk so the site
   // still shows them if Google is briefly unreachable. Failed fetches are retried after 10 minutes.
@@ -558,7 +559,7 @@ function createApp(cfg = loadConfig()) {
     if (!places.enabled) return res.status(503).json({ error: "Add GOOGLE_PLACES_API_KEY in Railway to show Google reviews." });
     try {
       const g = await googleReviews({ fresh: true });
-      res.json({ ok: true, name: g.name, rating: g.rating, count: g.count, reviews: g.reviews.length, fetchedAt: g.fetchedAt });
+      res.json({ ok: true, api: places.mode, name: g.name, rating: g.rating, count: g.count, reviews: g.reviews.length, fetchedAt: g.fetchedAt });
     } catch (err) { res.status(502).json({ error: err.message }); }
   });
 

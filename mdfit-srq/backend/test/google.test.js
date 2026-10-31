@@ -23,6 +23,14 @@ function fakeGoogle() {
       calls.push({ method: req.method, url: req.url, key: req.headers["x-goog-api-key"], mask: req.headers["x-goog-fieldmask"], body: body && JSON.parse(body) });
       const send = (code, data) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(data)); };
       if (state.down) return send(503, { error: { message: "unavailable" } });
+      if (state.newDisabled && req.url.startsWith("/v1/")) return send(403, { error: { message: "Places API (New) has not been used in project 123 before or it is disabled." } });
+      const u = new URL(req.url, "http://x");
+      if (u.pathname.startsWith("/legacy/")) {
+        if (u.searchParams.get("key") !== KEY) return send(200, { status: "REQUEST_DENIED", error_message: "The provided API key is invalid." });
+        if (u.pathname === "/legacy/findplacefromtext/json") return send(200, { status: "OK", candidates: [{ place_id: "ChIJmdfit", name: "MD Fit", formatted_address: "3214 Clark Rd" }] });
+        if (u.pathname === "/legacy/details/json") return send(200, { status: "OK", result: { place_id: "ChIJmdfit", name: "MD Fit", rating: 4.8, user_ratings_total: 70, url: "https://maps.google.com/?cid=2",
+          reviews: [{ author_name: "Jo R.", author_url: "https://www.google.com/maps/contrib/9", profile_photo_url: "https://lh3.googleusercontent.com/a/9", rating: 5, relative_time_description: "a week ago", text: "Back pain gone.", time: 1790000000 }, { author_name: "Empty", rating: 5, text: "" }] } });
+      }
       if (req.headers["x-goog-api-key"] !== KEY) return send(403, { error: { message: "API key not valid" } });
       if (req.method === "POST" && req.url === "/v1/places:searchText")
         return send(200, { places: [{ id: "ChIJmdfit", displayName: { text: "MD Fit" }, formattedAddress: "3214 Clark Rd, Sarasota, FL 34231" }] });
@@ -39,7 +47,7 @@ function fakeGoogle() {
       send(404, { error: { message: "not found" } });
     });
   }).listen(0);
-  return { server, calls, state, url: () => `http://127.0.0.1:${server.address().port}/v1` };
+  return { server, calls, state, url: () => `http://127.0.0.1:${server.address().port}/v1`, legacy: () => `http://127.0.0.1:${server.address().port}/legacy` };
 }
 
 async function start(extra) {
@@ -123,4 +131,20 @@ test("fixed GOOGLE_PLACE_ID skips the search; bad key is reported", async (t) =>
   assert.equal(r.status, 502);
   assert.match(r.body.error, /API key not valid/);
   assert.deepEqual((await bad.call("GET", "/api/reviews")).body, { source: "none" });
+});
+
+test("falls back to the legacy Places API when Places API (New) isn't enabled for the key", async (t) => {
+  const g = fakeGoogle(); g.state.newDisabled = true; t.after(() => g.server.close());
+  const s = await start({ googleKey: KEY, googleUrl: g.url(), googleLegacyUrl: g.legacy() }); t.after(s.close);
+  const r = (await s.call("GET", "/api/reviews")).body;
+  assert.equal(r.source, "google");
+  assert.equal(r.rating, 4.8);
+  assert.equal(r.count, 70);
+  assert.equal(r.url, "https://maps.google.com/?cid=2");
+  assert.deepEqual(r.reviews, [{ author: "Jo R.", authorUrl: "https://www.google.com/maps/contrib/9", photo: "https://lh3.googleusercontent.com/a/9", rating: 5, text: "Back pain gone.", relativeTime: "a week ago", publishTime: new Date(1790000000 * 1000).toISOString() }]);
+  await s.login();
+  assert.equal((await s.call("POST", "/api/admin/reviews/refresh")).body.api, "legacy");
+  const newCalls = g.calls.filter((c) => c.url.startsWith("/v1/")).length;
+  await s.call("POST", "/api/admin/reviews/refresh");
+  assert.equal(g.calls.filter((c) => c.url.startsWith("/v1/")).length, newCalls, "stays on legacy once detected");
 });
