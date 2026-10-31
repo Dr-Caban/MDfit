@@ -178,7 +178,7 @@ a { color: inherit; }
 .coach { display: grid; grid-template-columns: minmax(0, 400px) 1fr; gap: 56px; align-items: center; }
 .coach-photo-wrap { position: relative; }
 .coach-photo, .coach-placeholder { width: 100%; aspect-ratio: 4/5; border-radius: 20px; object-fit: cover; }
-.coach-placeholder { background: radial-gradient(400px 300px at 70% 20%, rgba(200,167,99,.28), transparent 60%), var(--ink); display: grid; place-items: center; }
+.coach-placeholder { background: var(--ink); display: grid; place-items: center; overflow: hidden; }
 .coach-photo:not([hidden]) + .coach-placeholder { display: none; }
 .coach-title { font-weight: 600; color: var(--accent-text); margin: 0 0 18px; }
 .coach-bio p { color: var(--muted); font-size: 17px; margin: 0 0 14px; }
@@ -337,7 +337,7 @@ dialog .book-when { margin: -6px 0 4px; }
 .brand-logo { height: 52px; width: auto; display: block; }
 .brand-word { font: 700 19px/1 var(--display); letter-spacing: .02em; color: #fff; }
 .footer .brand-logo { height: 60px; }
-.coach-placeholder img { width: 160px; height: auto; }
+.coach-placeholder img { width: 100%; height: 100%; object-fit: cover; }
 .nav .btn-ghost { color: #fff; }
 .nav-inner { height: 74px; }
 .nav .brand-logo { height: 62px; }
