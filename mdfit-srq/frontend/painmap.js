@@ -122,13 +122,9 @@
     if (a) $$("#lead-form [name=areas]").forEach((i) => { if (i.value === a.dataset.area) i.checked = true; });
   });
 
-  // Guide viewer
+  // Guide viewer — opens HTML guide pages
   function openGuide(g) {
-    $("img", dlg).src = `assets/pain/guide-${g}.webp`;
-    $("img", dlg).alt = GUIDES[g].title + " by Dr. Jared Caban, MD Fit";
-    $("h3", dlg).textContent = GUIDES[g].title;
-    $(".guide-full", dlg).href = `assets/pain/guide-${g}.webp`;
-    dlg.showModal();
+    window.open(`guides/${g}.html`, '_blank');
   }
   document.addEventListener("click", (e) => {
     const c = e.target.closest("[data-guide]");
