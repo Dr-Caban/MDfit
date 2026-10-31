@@ -1,3 +1,4 @@
 mdfit_videos/raw/
 mdfit_videos/output/
 *.part.mp4
+__pycache__/
