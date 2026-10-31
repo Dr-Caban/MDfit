@@ -2,11 +2,16 @@ name: MD Fit video branding
 
 # Runs the branding pipeline on GitHub's runners, which can reach Google Drive
 # and Groq. Edit mdfit-video/batch.json (Drive file ID + name) to pick videos.
-# Captions need a GROQ_API_KEY repo secret; without it videos render uncaptioned.
+# Captions need a Groq key: the GROQ_API_KEY repo secret, or the groq_api_key
+# input on a manual run. Without one, videos render uncaptioned.
 on:
   push:
-    paths: ["mdfit-video/**", ".github/workflows/mdfit-video.yml"]
+    paths: ["mdfit-video/batch.json", "mdfit-video/mdfit_brand_videos.py"]
   workflow_dispatch:
+    inputs:
+      groq_api_key:
+        description: "Groq API key for captions (overrides the repo secret)"
+        required: false
 
 jobs:
   plan:
@@ -29,9 +34,17 @@ jobs:
     defaults:
       run:
         working-directory: mdfit-video
-    env:
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
     steps:
+      - name: Groq key
+        env:
+          INPUT_KEY: ${{ inputs.groq_api_key }}
+          SECRET_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          key="${INPUT_KEY:-$SECRET_KEY}"
+          if [ -n "$key" ]; then
+            echo "::add-mask::$key"
+            echo "GROQ_API_KEY=$key" >> "$GITHUB_ENV"
+          fi
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg fontconfig fonts-liberation
       - run: pip install Pillow gdown
