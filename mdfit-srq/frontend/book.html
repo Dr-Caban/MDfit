@@ -92,6 +92,7 @@
         if (b.phone) $$("[data-phone-link]").forEach((a) => (a.href = telHref(b.phone)));
         $$("[data-maps]").forEach((a) => (a.href = b.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}`));
         $("#rating").hidden = !(s.rating.score && s.rating.count);
+        window.MDFit.loadGoogleReviews().then((g) => g && window.MDFit.applyGoogleRating(g));
         mountBooker($(".booker"), data, {
           type: params.get("type"),
           onTypeChange: (t) => history.replaceState(null, "", `?type=${encodeURIComponent(t.id)}`),

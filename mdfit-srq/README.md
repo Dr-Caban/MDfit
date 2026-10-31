@@ -35,6 +35,9 @@ What you get:
 
 Switch back to **MD Fit built-in** any time in the same place.
 
+## Google reviews
+With `GOOGLE_PLACES_API_KEY` set on Railway (Places API (New) enabled on that key), the site shows MD Fit's live Google rating, review count and up to 5 recent Google reviews with names, photos and a "See all on Google" link. They refresh every 6 hours; the last good copy is kept if Google is unreachable, and the hand-entered testimonials in Settings are shown only when Google isn't available. The place is found by name and address; set `GOOGLE_PLACE_ID` to pin it.
+
 ## What it does
 
 **For clients (website)**

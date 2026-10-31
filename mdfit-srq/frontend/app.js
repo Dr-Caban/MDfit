@@ -1,6 +1,6 @@
 // MD Fit homepage: content, booking widget, class booking, intake and newsletter, all from the Railway API.
 (() => {
-  const { $, $$, esc, get, api, fmtTime, fmtDate, todayInTz, addDays, telHref, wire, AREAS, areaChips, loadSite, mountBooker } = window.MDFit;
+  const { GOOGLE_G, loadGoogleReviews, applyGoogleRating, $, $$, esc, get, api, fmtTime, fmtDate, todayInTz, addDays, telHref, wire, AREAS, areaChips, loadSite, mountBooker } = window.MDFit;
 
   $("#year").textContent = new Date().getFullYear();
 
@@ -81,6 +81,34 @@
       .map((k) => `<a href="${esc(b[k])}" target="_blank" rel="noopener" aria-label="${k}"><svg viewBox="0 0 24 24">${SOCIAL_ICONS[k]}</svg></a>`).join("");
 
     mountBooker($(".booker"), data);
+    loadGoogleReviews().then((g) => g && renderGoogleReviews(g));
+  }
+
+  // Real Google reviews replace the hand-entered testimonials when the backend can reach Google.
+  const starsFor = (n) => "★".repeat(Math.round(n)) + "☆".repeat(5 - Math.round(n));
+  function renderGoogleReviews(g) {
+    applyGoogleRating(g);
+    $("#reviews").hidden = false;
+    $(".review-sum").innerHTML = `${GOOGLE_G}<span class="stars" aria-hidden="true">★★★★★</span> <strong>${g.rating.toFixed(1)} out of 5</strong> from ${g.count} Google reviews` +
+      (g.url ? ` · <a href="${esc(g.url)}" target="_blank" rel="noopener">See all on Google</a>` : "");
+    if (!g.reviews.length) return;
+    $(".quotes").innerHTML = g.reviews.map((r) => `
+      <blockquote class="quote g-review">
+        <header>
+          ${r.photo ? `<img src="${esc(r.photo)}" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer">` : `<span class="g-initial">${esc(r.author.charAt(0))}</span>`}
+          <div><cite>${r.authorUrl ? `<a href="${esc(r.authorUrl)}" target="_blank" rel="noopener">${esc(r.author)}</a>` : esc(r.author)}</cite>
+            <small>${esc(r.relativeTime)}</small></div>
+          ${GOOGLE_G}
+        </header>
+        <span class="stars" aria-label="${r.rating} out of 5 stars">${starsFor(r.rating)}</span>
+        <p>${esc(r.text)}</p>
+        <button type="button" class="more" hidden>Read more</button>
+      </blockquote>`).join("");
+    $$(".g-review").forEach((q) => {
+      const p = $("p", q), more = $(".more", q);
+      if (p.scrollHeight > p.clientHeight + 4) more.hidden = false;
+      more.addEventListener("click", () => { q.classList.add("open"); more.hidden = true; });
+    });
   }
 
   // ================= Group classes =================

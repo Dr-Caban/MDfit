@@ -8,6 +8,7 @@ const { createStore } = require("./lib/store");
 const { verifyPassword, isValidHash, signToken, verifyToken } = require("./lib/auth");
 const { createNotifier } = require("./lib/notify");
 const { createCal, verifySignature, normaliseBooking } = require("./lib/cal");
+const { createPlaces } = require("./lib/google");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings, EMAIL_RE
@@ -31,6 +32,10 @@ function loadConfig() {
     calKey: env("CAL_API_KEY"),
     calUrl: env("CAL_API_URL", "https://api.cal.com/v2"),
     calWebhookSecret: env("CAL_WEBHOOK_SECRET"),
+    googleKey: env("GOOGLE_PLACES_API_KEY"),
+    googleUrl: env("GOOGLE_PLACES_URL", "https://places.googleapis.com/v1"),
+    googlePlaceId: env("GOOGLE_PLACE_ID"),
+    googleQuery: env("GOOGLE_PLACE_QUERY", "MD Fit, 3214 Clark Road, Sarasota, FL 34231"),
     now: () => new Date()
   };
 }
@@ -38,6 +43,8 @@ function loadConfig() {
 const SESSION_HOURS = 12;
 const CLASS_BOOK_AHEAD_DAYS = 14;
 const CAL_CACHE_MS = 5 * 60 * 1000;
+const REVIEWS_CACHE_MS = 6 * 60 * 60 * 1000;
+const REVIEWS_RETRY_MS = 10 * 60 * 1000;
 const ACTIVITY_MAX = 500;
 
 // Starter group-class schedule, written on first boot only. Edit or delete in the admin portal.
@@ -80,6 +87,39 @@ function createApp(cfg = loadConfig()) {
   const store = createStore(cfg.dataDir);
   const notify = createNotifier({ apiKey: cfg.resendKey, from: cfg.notifyFrom, ownerEmail: cfg.notifyEmail || cfg.adminEmail, apiUrl: cfg.resendUrl });
   const cal = createCal({ apiKey: cfg.calKey, apiUrl: cfg.calUrl });
+  const places = createPlaces({ apiKey: cfg.googleKey, baseUrl: cfg.googleUrl });
+
+  // ---- Google reviews: refreshed every 6 hours, last good copy kept on disk so the site
+  // still shows them if Google is briefly unreachable. Failed fetches are retried after 10 minutes.
+  let reviewsMem = { at: 0, data: null, error: "" };
+  let reviewsInflight = null;
+  async function googleReviews({ fresh = false } = {}) {
+    if (!places.enabled) return null;
+    const age = Date.now() - reviewsMem.at;
+    if (!fresh && reviewsMem.at && age < (reviewsMem.data ? REVIEWS_CACHE_MS : REVIEWS_RETRY_MS)) return reviewsMem.data || store.read("googleReviews", null);
+    if (reviewsInflight) return reviewsInflight;
+    reviewsInflight = (async () => {
+      try {
+        let placeId = cfg.googlePlaceId || store.read("googlePlace", {}).id;
+        if (!placeId) {
+          const found = await places.findPlaceId(cfg.googleQuery);
+          store.write("googlePlace", found);
+          logger.info("google_place_found", { name: found.name, address: found.address });
+          placeId = found.id;
+        }
+        const data = { ...(await places.details(placeId)), fetchedAt: new Date().toISOString() };
+        store.write("googleReviews", data);
+        reviewsMem = { at: Date.now(), data, error: "" };
+        return data;
+      } catch (err) {
+        logger.warn("google_reviews_failed", { error: err.message });
+        reviewsMem = { at: Date.now(), data: null, error: err.message };
+        if (fresh) throw err;
+        return store.read("googleReviews", null);
+      } finally { reviewsInflight = null; }
+    })();
+    return reviewsInflight;
+  }
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
@@ -275,6 +315,14 @@ function createApp(cfg = loadConfig()) {
   // ================= Public =================
   app.get("/", (req, res) => res.json({ name: "MD Fit API", ok: true }));
   app.get("/api/health", (req, res) => res.json({ ok: true }));
+
+  app.get("/api/reviews", async (req, res) => {
+    const g = await googleReviews();
+    res.set("Cache-Control", "public, max-age=300");
+    if (!g) return res.json({ source: "none" });
+    const { placeId, fetchedAt, ...pub } = g;
+    res.json({ source: "google", ...pub });
+  });
 
   app.get("/api/site", async (req, res) => {
     const s = settings();
@@ -503,6 +551,15 @@ function createApp(cfg = loadConfig()) {
     store.write("settings", s);
     activity("settings", { sections: Object.keys(req.body) });
     res.json(s);
+  });
+
+  // Google reviews
+  admin.post("/reviews/refresh", async (req, res) => {
+    if (!places.enabled) return res.status(503).json({ error: "Add GOOGLE_PLACES_API_KEY in Railway to show Google reviews." });
+    try {
+      const g = await googleReviews({ fresh: true });
+      res.json({ ok: true, name: g.name, rating: g.rating, count: g.count, reviews: g.reviews.length, fetchedAt: g.fetchedAt });
+    } catch (err) { res.status(502).json({ error: err.message }); }
   });
 
   // Cal.com

@@ -342,3 +342,18 @@ dialog .book-when { margin: -6px 0 4px; }
 .nav-inner { height: 74px; }
 .nav .brand-logo { height: 62px; }
 @media (max-width: 960px) { .nav nav { top: 74px; } }
+
+/* Google reviews */
+.g-mark { width: 18px; height: 18px; flex: 0 0 auto; vertical-align: -3px; }
+.rating .g-mark { width: 20px; height: 20px; background: #fff; border-radius: 50%; padding: 2px; }
+.review-sum .g-mark { width: 22px; height: 22px; }
+.g-review header { display: flex; align-items: center; gap: 12px; }
+.g-review header > div { flex: 1; min-width: 0; display: grid; }
+.g-review header img, .g-initial { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.g-initial { display: grid; place-items: center; background: var(--ink); color: #fff; font-weight: 700; }
+.g-review cite { font-style: normal; font-weight: 600; color: var(--heading); font-size: 15px; }
+.g-review cite a { color: inherit; text-decoration: none; }
+.g-review small { color: var(--muted); font-size: 12.5px; }
+.g-review p { font-family: var(--body); font-size: 15px; line-height: 1.6; color: var(--text); display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.g-review.open p { display: block; -webkit-line-clamp: unset; }
+.g-review .more { background: none; border: 0; padding: 0; color: var(--accent-text); font: 600 14px var(--body); cursor: pointer; align-self: flex-start; }
