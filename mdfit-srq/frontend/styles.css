@@ -365,12 +365,16 @@ dialog .book-when { margin: -6px 0 4px; }
 .painmap-section .sub { color: rgba(255,255,255,.75); }
 .painmap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 .painmap-figure { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: 0 30px 60px -30px rgba(0,0,0,.7); }
-.painmap-figure img { width: 100%; height: auto; }
+.bodymap { width: 100%; height: auto; display: block; }
+.bm-fig { fill: #ECE6D8; }
+.bm-limbs { stroke: #ECE6D8; }
+.bm-detail { fill: none; stroke: #0A1A2E; stroke-opacity: .28; stroke-width: 1.5; stroke-linecap: round; }
+.bm-view { fill: rgba(255,255,255,.6); font: 700 13px var(--body); letter-spacing: 3px; text-anchor: middle; }
 .hotspots { position: absolute; inset: 0; }
 .hotspot { position: absolute; width: 5.2%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; border: 0; background: transparent; cursor: pointer; padding: 0; }
-.hotspot span { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; transition: .15s; }
-.hotspot:hover span, .hotspot:focus-visible span { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,122,0,.35); }
-.hotspot[aria-pressed="true"] span { border-color: var(--accent); background: rgba(255,122,0,.35); box-shadow: 0 0 0 6px rgba(255,122,0,.3); animation: pm-pulse 1.6s ease-out infinite; }
+.hotspot span { position: absolute; inset: 22%; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 4px rgba(255,122,0,.25); transition: .15s; }
+.hotspot:hover span, .hotspot:focus-visible span { inset: 14%; box-shadow: 0 0 0 6px rgba(255,122,0,.35); }
+.hotspot[aria-pressed="true"] span { inset: 12%; background: var(--accent); box-shadow: 0 0 0 6px rgba(255,122,0,.3); animation: pm-pulse 1.6s ease-out infinite; }
 @keyframes pm-pulse { 0% { box-shadow: 0 0 0 0 rgba(255,122,0,.55); } 100% { box-shadow: 0 0 0 14px rgba(255,122,0,0); } }
 .painmap-panel { background: var(--paper); color: var(--text); border-radius: var(--radius); padding: 24px; display: grid; gap: 12px; scroll-margin-top: 90px; }
 .painmap-panel .eyebrow { color: var(--accent-text); margin: 0; }
@@ -401,4 +405,4 @@ dialog .book-when { margin: -6px 0 4px; }
 .guide-head .close { position: static; color: #fff; }
 .guide-dialog img { width: 100%; height: auto; display: block; }
 @media (max-width: 960px) { .painmap { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .hotspot { width: 8%; } .painmap-panel { padding: 18px; } }
+@media (max-width: 600px) { .hotspot { width: 7%; } .painmap-panel { padding: 18px; } }
