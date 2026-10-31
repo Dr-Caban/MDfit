@@ -194,3 +194,50 @@ test("log workouts and read stats", async (t) => {
   assert.equal(d.workouts.length, 1);
   assert.equal(d.stats.streak, 1);
 });
+
+test("rewards math: XP, streak bonus, levels and badge dates", () => {
+  const { rewards } = require("../lib/rewards");
+  const w = (date, minutes, goal = "Full Body") => ({ date, minutes, goal, completedAt: date + "T15:00:00Z" });
+  const r = rewards({
+    workouts: [w("2026-03-02", 30), w("2026-03-03", 60), w("2026-03-04", 20, "Upper Body")],
+    painLog: [{ date: "2026-03-02", area: "Knee", level: 7 }, { date: "2026-03-04", area: "Knee", level: 3 }],
+    visits: [{ date: "2026-03-05" }]
+  }, "2026-03-05");
+  // 35 + (50+4) + (30+6) workouts, 10 pain, 50 visit
+  assert.equal(r.xp, 185);
+  assert.equal(r.level, 2);
+  assert.equal(r.todayXp, 50);
+  const b = Object.fromEntries(r.badges.map((x) => [x.id, x]));
+  assert.equal(b["first-workout"].earnedOn, "2026-03-02");
+  assert.equal(b["streak-3"].earnedOn, "2026-03-04");
+  assert.equal(b["pain-down"].earned, true);
+  assert.equal(b["first-visit"].earnedOn, "2026-03-05");
+  assert.equal(b["explorer"].progress, 2);
+  assert.equal(b["streak-7"].earned, false);
+});
+
+test("library: favorites and programs persist on the account", async (t) => {
+  const s = await start(); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  assert.equal((await s.call("PUT", "/api/me/favorites/bad%20id", undefined, tok)).status, 400);
+  let lib = (await s.call("PUT", "/api/me/favorites/108rqCigYY-88hJo3QQTANQtb9qcalFYG", undefined, tok)).body;
+  assert.deepEqual(lib.favorites, ["108rqCigYY-88hJo3QQTANQtb9qcalFYG"]);
+  const workout = { title: "Core Strength", goal: "Core & Spine", goalId: "core", location: "home", level: "intermediate", levelLabel: "Intermediate",
+    rounds: 3, restEx: 15, restRound: 30, minutes: 15, warmup: [{ id: "108rqCigYY-88hJo3QQTANQtb9qcalFYG", sets: "45 sec" }], circuit: [], cooldown: [] };
+  assert.equal((await s.call("POST", "/api/me/programs", { name: "", workout }, tok)).status, 400);
+  lib = (await s.call("POST", "/api/me/programs", { name: "Monday core", workout }, tok)).body;
+  assert.equal(lib.programs[0].name, "Monday core");
+  assert.equal(lib.programs[0].workout.warmup[0].sets, "45 sec");
+  lib = (await s.call("GET", "/api/me/library", undefined, tok)).body;
+  assert.equal(lib.favorites.length, 1);
+  lib = (await s.call("DELETE", `/api/me/programs/${lib.programs[0].id}`, undefined, tok)).body;
+  assert.equal(lib.programs.length, 0);
+  lib = (await s.call("DELETE", "/api/me/favorites/108rqCigYY-88hJo3QQTANQtb9qcalFYG", undefined, tok)).body;
+  assert.equal(lib.favorites.length, 0);
+  // rewards endpoint
+  await s.call("POST", "/api/me/workouts", { title: "Core", goal: "Core & Spine", minutes: 20, exercises: 6 }, tok);
+  const r = (await s.call("GET", "/api/me/rewards", undefined, tok)).body;
+  assert.equal(r.xp, 30);
+  assert.equal(r.badges.find((b) => b.id === "first-workout").earned, true);
+  assert.equal((await s.call("GET", "/api/me/workouts", undefined, tok)).body.length, 1);
+});

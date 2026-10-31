@@ -16,21 +16,23 @@
     get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
   };
-  let client = auth.client(), stats = null, appts = { upcoming: [], past: [] }, painLog = [], classes = [];
+  let client = auth.client(), stats = null, appts = { upcoming: [], past: [] }, painLog = [], classes = [], allWorkouts = [], reward = null;
+  let lib = { favorites: [], programs: [] };
 
   function toast(msg) {
     const t = $("#toast");
-    t.textContent = msg; t.hidden = false;
+    t.textContent = msg; t.hidden = false; t.classList.remove("celebrate");
     clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3200);
   }
 
   // ================= Tabs (hash routing so the back button and refresh work)
-  const TABS = ["home", "generate", "videos", "pain", "profile"];
+  const TABS = ["home", "generate", "videos", "pain", "progress", "profile"];
   function show(tab) {
     if (!TABS.includes(tab)) tab = "home";
     $$("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== tab));
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
     if (tab === "videos") renderVideos();
+    if (tab === "progress") renderCalendar();
     window.scrollTo(0, 0);
   }
   const go = (tab) => { if (location.hash !== "#" + tab) history.pushState(null, "", "#" + tab); show(tab); };
@@ -286,8 +288,53 @@
   $("#start-gen").addEventListener("click", () => current && startPlayer(current));
   renderChoices();
 
+  // ---- My programs: saved workouts, kept on the account
+  const compact = (arr) => arr.map((e) => ({ id: e.id, sets: e.sets }));
+  const expand = (arr, block) => arr.map((x) => byId.get(x.id) && { ...byId.get(x.id), sets: x.sets, block }).filter(Boolean);
+  function programWorkout(p) {
+    const w = p.workout, warmup = expand(w.warmup, "Warm-up"), circuit = expand(w.circuit, "Circuit"), cooldown = expand(w.cooldown, "Cool-down");
+    return { ...w, title: p.name, warmup, circuit, cooldown, exercises: [...warmup, ...circuit, ...cooldown], perRound: circuit.length };
+  }
+  const programLi = (p, del) => {
+    const w = p.workout;
+    return `<li class="program" data-program="${p.id}"><span class="pg-ic"><svg viewBox="0 0 24 24"><path d="M15 6H3v2h12zm0 4H3v2h12zM3 16h8v-2H3zM17 6v8.2A3 3 0 1 0 19 17V8h3V6z"/></svg></span>
+      <div><b>${esc(p.name)}</b><span>${esc(w.goal)} · ${w.circuit.length} × ${w.rounds} rounds · about ${w.minutes} min</span></div>
+      <button type="button" class="ev-act" data-play>Start</button>${del ? `<button type="button" class="icon-btn pg-del" data-del-program aria-label="Delete ${esc(p.name)}"><svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></svg></button>` : ""}</li>`;
+  };
+  function renderPrograms() {
+    const ps = lib.programs;
+    $("#my-programs").hidden = !ps.length;
+    $("#program-count").textContent = ps.length ? `${ps.length} saved` : "";
+    $("#program-list").innerHTML = ps.map((p) => programLi(p, true)).join("");
+    $("#home-programs").hidden = !ps.length;
+    $("#home-program-list").innerHTML = ps.slice(0, 3).map((p) => programLi(p, false)).join("");
+  }
+  document.addEventListener("click", async (e) => {
+    const li = e.target.closest("[data-program]");
+    if (!li) return;
+    const p = lib.programs.find((x) => x.id === li.dataset.program);
+    if (!p) return;
+    if (e.target.closest("[data-play]")) return startPlayer(programWorkout(p));
+    if (e.target.closest("[data-del-program]") && confirm(`Delete "${p.name}" from My Programs?`)) {
+      try { lib = await apiAuth("DELETE", `/api/me/programs/${p.id}`); renderPrograms(); } catch (err) { toast(err.message); }
+    }
+  });
+  $("#save-program").addEventListener("click", async () => {
+    if (!current) return;
+    const name = prompt("Name this program", current.title);
+    if (!name || !name.trim()) return;
+    const w = current;
+    try {
+      lib = await apiAuth("POST", "/api/me/programs", { name: name.trim().slice(0, 60), workout: {
+        title: w.title, goal: w.goal, goalId: w.goalId, location: w.location, level: w.level, levelLabel: w.levelLabel,
+        rounds: w.rounds, restEx: w.restEx, restRound: w.restRound, minutes: w.minutes,
+        warmup: compact(w.warmup), circuit: compact(w.circuit), cooldown: compact(w.cooldown) } });
+      renderPrograms(); toast(`Saved "${name.trim()}" to My Programs.`);
+    } catch (err) { toast(err.message); }
+  });
+
   // ================= Videos
-  const CATS = ["All", ...["Strength", "Mobility", "Activation", "Rehab", "Power", "Neuroglide", "Posture", "Lifestyle", "Desk & posture"].filter((c) => EX.some((e) => e.cat === c))];
+  const CATS = ["All", "♥ Favorites", ...["Strength", "Mobility", "Activation", "Rehab", "Power", "Neuroglide", "Posture", "Lifestyle", "Desk & posture"].filter((c) => EX.some((e) => e.cat === c))];
   const REGIONS = [...new Set(EX.map((e) => e.region))].sort();
   const vf = { q: "", cat: "All", region: "" };
   $("#vid-count").textContent = EX.length;
@@ -303,13 +350,27 @@
   });
   $("#vid-region").addEventListener("change", (e) => { vf.region = e.target.value; renderVideos(); });
   $("#vid-search").addEventListener("input", (e) => { vf.q = e.target.value.trim().toLowerCase(); renderVideos(); });
-  const vcard = (e) => `<button type="button" class="vcard" data-video="${e.id}">${thumbImg(e.id)}<div><b>${esc(e.name)}</b><span>${esc(e.region)} · L${e.level}</span></div></button>`;
+  const isFav = (id) => lib.favorites.includes(id);
+  const heart = (id) => `<button type="button" class="heart" data-fav="${id}" aria-pressed="${isFav(id)}" aria-label="${isFav(id) ? "Remove from" : "Add to"} favorites"><svg viewBox="0 0 24 24"><path d="M12 21 10.6 19.7C5.4 15 2 11.9 2 8.1 2 5 4.4 2.6 7.5 2.6c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1C19.6 2.6 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z"/></svg></button>`;
+  const vcard = (e) => `<div class="vwrap"><button type="button" class="vcard" data-video="${e.id}">${thumbImg(e.id)}<div><b>${esc(e.name)}</b><span>${esc(e.region)} · L${e.level}</span></div></button>${heart(e.id)}</div>`;
+  // Favorites live on the account (not the phone), so they follow the client to any device
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-fav]");
+    if (!b) return;
+    const id = b.dataset.fav, on = !isFav(id);
+    lib.favorites = on ? [id, ...lib.favorites] : lib.favorites.filter((x) => x !== id);
+    $$(`[data-fav="${id}"]`).forEach((x) => { x.setAttribute("aria-pressed", on); x.setAttribute("aria-label", `${on ? "Remove from" : "Add to"} favorites`); });
+    if (vf.cat === "♥ Favorites") renderVideos();
+    try { lib = await apiAuth(on ? "PUT" : "DELETE", `/api/me/favorites/${encodeURIComponent(id)}`); if (on) toast("Saved to your favorites."); }
+    catch (err) { toast(err.message); }
+  });
   function renderVideos() {
-    const list = EX.filter((e) => (vf.cat === "All" || e.cat === vf.cat) && (!vf.region || e.region === vf.region)
+    const list = EX.filter((e) => (vf.cat === "All" || (vf.cat === "♥ Favorites" ? isFav(e.id) : e.cat === vf.cat)) && (!vf.region || e.region === vf.region)
       && (!vf.q || (e.name + " " + e.region + " " + e.cat).toLowerCase().includes(vf.q)))
       .sort((a, b) => a.region.localeCompare(b.region) || a.level - b.level || a.name.localeCompare(b.name));
     $("#vgrid").innerHTML = list.map(vcard).join("");
     $("#vid-empty").hidden = list.length > 0;
+    $("#vid-empty").textContent = vf.cat === "♥ Favorites" && !lib.favorites.length ? "Tap the heart on any video to save it here." : "No exercises match. Try another filter.";
   }
 
   // ================= Pain tool
@@ -407,6 +468,7 @@
       await apiAuth("POST", "/api/me/pain", { area: b.dataset.log, level: Number($("input", row).value), note: a.label });
       await loadPain();
       b.textContent = "Logged"; toast("Saved to your pain tracker.");
+      loadRewards(true);
     } catch (err) { toast(err.message); b.disabled = false; }
   });
 
@@ -454,6 +516,7 @@
     $("#chart-area").value = d.area;
     await loadPain();
     pf.note.value = "";
+    loadRewards(true);
     return { message: "Logged." };
   }, { reset: false });
   $("#chart-area").addEventListener("change", renderChart);
@@ -471,6 +534,7 @@
       : `<tr><td colspan="5" class="muted">No entries yet.</td></tr>`}</tbody>`;
     renderChart();
     renderActivity();
+    renderCalendar();
   }
   $("#entries").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-del]");
@@ -608,7 +672,9 @@
       const r = await apiAuth("POST", "/api/me/workouts", { title: P.w.title.slice(0, 80), goal: P.w.goal, minutes, exercises: Math.min(50, P.w.exercises.length) });
       stats = { ...r.stats, recent: [r.workout, ...((stats && stats.recent) || [])].slice(0, 10) };
       $("#done-msg").outerHTML = `<div class="stats3"><div><b>${r.stats.streak}</b><span>Day streak</span></div><div><b>${minutes}</b><span>Minutes</span></div><div><b>${r.stats.workouts}</b><span>Workouts</span></div></div>`;
-      renderStats(); renderActivity(); renderNotes();
+      allWorkouts.push(r.workout);
+      renderStats(); renderActivity(); renderNotes(); renderCalendar();
+      loadRewards(true);
     } catch (err) { $("#done-msg").textContent = "Couldn't save this workout: " + err.message; }
   }
   $("#p-next").addEventListener("click", () => { if (P.done) return closePlayer(); P.i++; renderStep(); });
@@ -620,6 +686,104 @@
   });
   $("#p-close").addEventListener("click", () => { if (P.done || confirm("End this workout? It won't be saved.")) closePlayer(); });
 
+  // ================= Progress: rewards (XP, levels, badges), calendar, pain tracker
+  const BADGE_IC = {
+    bolt: '<path d="M7 2v11h3v9l7-12h-4l4-8z"/>', dumbbell: '<path d="M20.6 14.9 22 13.4 20.6 12l-3.6 3.6L8.4 7l3.6-3.6L10.6 2 9.1 3.4 7.7 2 5.6 4.1 4.1 2.6 2.7 4.1l1.4 1.4L2 7.7l1.4 1.4L2 10.6 3.4 12 7 8.4l8.6 8.6-3.6 3.6 1.4 1.4 1.4-1.4 1.4 1.4 2.1-2.1 1.5 1.4 1.4-1.4-1.4-1.4 2.1-2.1z"/>',
+    trophy: '<path d="M19 4h-2V2H7v2H5a2 2 0 0 0-2 2v1a5 5 0 0 0 4.4 4.96A5 5 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5 5 0 0 0 3.6-3.94A5 5 0 0 0 21 7V6a2 2 0 0 0-2-2zM5 7V6h2v3.8A3 3 0 0 1 5 7zm14 0a3 3 0 0 1-2 2.8V6h2z"/>',
+    flame: '<path d="M13.5 1.5s.8 2.7.8 4.6c0 1.9-1.2 3.4-3.1 3.4-1.9 0-3.3-1.5-3.3-3.4l.03-.33C5.9 8 4.7 11.1 4.7 14.4 4.7 18.6 8 22 12 22s7.3-3.4 7.3-7.6c0-5.1-2.4-9.6-5.8-12.9z"/>',
+    calendar: '<path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14z"/>',
+    clock: '<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7z"/>',
+    compass: '<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm2.2 12.2L6.5 17.5l3.3-7.7 7.7-3.3z"/>',
+    pulse: '<path d="M3 13h4l2-6 4 12 2-6h6v-2h-4.6L14 5l-4 12-2-6H3z"/>',
+    heart: '<path d="M12 21 10.6 19.7C5.4 15 2 11.9 2 8.1 2 5 4.4 2.6 7.5 2.6c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1C19.6 2.6 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z"/>',
+    star: '<path d="m12 17.3 6.2 3.7-1.6-7 5.4-4.7-7.2-.6L12 2 9.2 8.7 2 9.3l5.4 4.7-1.6 7z"/>'
+  };
+  function renderRewards() {
+    const r = reward;
+    if (!r) return;
+    $("#chip-lv").textContent = `Lv ${r.level}`;
+    $("#chip-xp").textContent = `${r.xp.toLocaleString()} XP`;
+    $("#lv-n").textContent = r.level;
+    $("#lv-title").textContent = r.title;
+    $("#lv-xp").textContent = `${r.xp.toLocaleString()} XP total`;
+    const pct = Math.round(((r.xp - r.levelStart) / (r.nextLevel - r.levelStart)) * 100);
+    $("#lv-bar").style.width = pct + "%";
+    $("#lv-bar-wrap").setAttribute("aria-valuenow", pct);
+    $("#lv-next").textContent = `${(r.nextLevel - r.xp).toLocaleString()} XP to level ${r.level + 1}`;
+    // Daily goal ring
+    const g = Math.min(1, r.todayXp / r.dailyGoal), C = 2 * Math.PI * 26;
+    $("#goal-ring").innerHTML = `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" class="ring-bg"/><circle cx="32" cy="32" r="26" class="ring-fg" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - g)}" transform="rotate(-90 32 32)"/></svg>
+      <span><b>${r.todayXp}</b>/${r.dailyGoal}</span><small>${g >= 1 ? "Goal met!" : "Today's goal"}</small>`;
+    $("#goal-ring").setAttribute("aria-label", `Today's goal: ${r.todayXp} of ${r.dailyGoal} XP`);
+    // This week's XP: single-series bars, today highlighted, values on hover/focus via title
+    const max = Math.max(r.dailyGoal, ...r.week.map((d) => d.xp)), t = todayInTz();
+    $("#xp-week").innerHTML = r.week.map((d) => `<div class="xw ${d.date === t ? "today" : ""} ${d.date > t ? "future" : ""}" title="${fmtDate(d.date, { weekday: "long" })}: ${d.xp} XP" tabindex="0">
+      <span class="xw-val">${d.xp || ""}</span><i style="height:${Math.max(4, (d.xp / max) * 100)}%"></i><small>${fmtDate(d.date, { weekday: "narrow" })}</small></div>`).join("");
+    const earned = r.badges.filter((b) => b.earned).length;
+    $("#badge-count").textContent = `${earned} of ${r.badges.length}`;
+    $("#badges").innerHTML = r.badges.slice().sort((a, b) => Number(b.earned) - Number(a.earned)).map((b) => `
+      <li class="badge ${b.earned ? "earned" : ""}" title="${esc(b.desc)}">
+        <span class="b-ic"><svg viewBox="0 0 24 24">${BADGE_IC[b.icon] || BADGE_IC.star}</svg></span>
+        <b>${esc(b.title)}</b><small>${b.earned ? `Earned ${shortDate(b.earnedOn)}` : esc(b.desc)}</small>
+        ${b.earned ? "" : `<span class="b-prog"><i style="width:${Math.round((b.progress / b.target) * 100)}%"></i></span>`}
+      </li>`).join("");
+  }
+  // celebrate = compare with the previous totals and announce XP and new badges
+  async function loadRewards(celebrate = false) {
+    try {
+      const prev = reward, next = await apiAuth("GET", "/api/me/rewards");
+      reward = next; renderRewards();
+      if (!celebrate || !prev) return;
+      const gained = next.xp - prev.xp, newBadges = next.badges.filter((b) => b.earned && !prev.badges.find((x) => x.id === b.id).earned);
+      const msgs = [];
+      if (gained > 0) msgs.push(`+${gained} XP`);
+      if (next.level > prev.level) msgs.push(`Level up! You're now level ${next.level}: ${next.title}`);
+      newBadges.forEach((b) => msgs.push(`Badge unlocked: ${b.title}`));
+      if (prev.todayXp < prev.dailyGoal && next.todayXp >= next.dailyGoal) msgs.push("Daily goal reached!");
+      if (msgs.length) celebrateToast(msgs);
+    } catch {}
+  }
+  function celebrateToast(msgs) {
+    const t = $("#toast");
+    t.innerHTML = msgs.map((m, i) => `<div class="${i ? "" : "xp-gain"}">${esc(m)}</div>`).join("");
+    t.hidden = false; t.classList.add("celebrate");
+    clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; t.classList.remove("celebrate"); }, 4200);
+  }
+
+  // Calendar: workouts, visits and pain logs by day, Monday first
+  let calMonth = todayInTz().slice(0, 7), calPick = null;
+  const monthAdd = (m, n) => { const [y, mo] = m.split("-").map(Number); const d = new Date(Date.UTC(y, mo - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+  function dayItems(d) {
+    return [
+      ...allWorkouts.filter((w) => w.date === d).map((w) => ({ k: "workout", t: w.title, s: `${w.minutes} min · ${w.exercises} exercises` })),
+      ...[...appts.upcoming, ...appts.past].filter((a) => a.date === d && a.status !== "cancelled").map((a) => ({ k: "visit", t: a.typeName, s: `${fmtTime(a.time)} · ${a.minutes} min${a.status === "booked" && d >= todayInTz() ? " · upcoming" : ""}` })),
+      ...painLog.filter((p) => p.date === d).map((p) => ({ k: "pain", t: `${p.area} pain ${p.level}/10`, s: p.note || "Pain log" }))
+    ];
+  }
+  function renderCalendar() {
+    const [y, m] = calMonth.split("-").map(Number), first = `${calMonth}-01`, t = todayInTz();
+    const days = new Date(Date.UTC(y, m, 0)).getUTCDate(), lead = (new Date(first + "T12:00:00Z").getUTCDay() + 6) % 7;
+    $("#cal-title").textContent = fmtDate(first, { month: "long", year: "numeric" });
+    const cells = ["M", "T", "W", "T", "F", "S", "S"].map((d) => `<span class="cal-h">${d}</span>`);
+    for (let i = 0; i < lead; i++) cells.push("<span></span>");
+    for (let n = 1; n <= days; n++) {
+      const d = `${calMonth}-${String(n).padStart(2, "0")}`, kinds = [...new Set(dayItems(d).map((x) => x.k))];
+      cells.push(`<button type="button" class="cal-d ${d === t ? "today" : ""} ${d === calPick ? "picked" : ""} ${kinds.includes("workout") ? "has-workout" : ""}" data-day="${d}" aria-label="${fmtDate(d, { weekday: "long", month: "long", day: "numeric" })}${kinds.length ? ": " + kinds.join(", ") : ""}">
+        <span>${n}</span><em>${kinds.map((k) => `<i class="k-${k}"></i>`).join("")}</em></button>`);
+    }
+    $("#cal").innerHTML = cells.join("");
+    renderCalDay();
+  }
+  function renderCalDay() {
+    const d = calPick || todayInTz(), items = dayItems(d);
+    $("#cal-day").innerHTML = `<p class="label">${d === todayInTz() ? "Today" : fmtDate(d, { weekday: "long", month: "short", day: "numeric" })}</p>` + (items.length
+      ? `<ul class="activity">${items.map((x) => `<li class="act"><span class="check k-bg-${x.k}"></span><div><b>${esc(x.t)}</b><span>${esc(x.s)}</span></div></li>`).join("")}</ul>`
+      : `<p class="muted small">Nothing logged. ${d === todayInTz() ? "A quick workout keeps your streak alive." : ""}</p>`);
+  }
+  $("#cal").addEventListener("click", (e) => { const b = e.target.closest("[data-day]"); if (b) { calPick = b.dataset.day; renderCalendar(); } });
+  $("#cal-prev").addEventListener("click", () => { calMonth = monthAdd(calMonth, -1); renderCalendar(); });
+  $("#cal-next").addEventListener("click", () => { calMonth = monthAdd(calMonth, 1); renderCalendar(); });
+
   // ================= Load
   show(location.hash.slice(1) || "home");
   renderProfile(); renderStats(); renderToday(); renderAreas(); renderPlan();
@@ -629,12 +793,15 @@
       client = r.client; auth.set({ ...auth.get(), client });
       renderProfile(); renderPlan();
     } catch (err) { toast("Couldn't reach MD Fit right now. Call 941-313-0562 if you need help."); return; }
-    const [s, , , sched] = await Promise.allSettled([
-      apiAuth("GET", "/api/me/stats"), loadAppointments(), loadPain(), api("/api/schedule?days=14")
+    const [s, , , sched, wl, lb] = await Promise.allSettled([
+      apiAuth("GET", "/api/me/stats"), loadAppointments(), loadPain(), api("/api/schedule?days=14"), apiAuth("GET", "/api/me/workouts"), apiAuth("GET", "/api/me/library")
     ]);
     if (s.status === "fulfilled") stats = s.value;
     if (sched.status === "fulfilled") classes = sched.value.sessions || [];
-    renderStats(); renderEvents(); renderActivity(); renderNotes();
+    if (wl.status === "fulfilled") allWorkouts = wl.value;
+    if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }
+    renderStats(); renderEvents(); renderActivity(); renderNotes(); renderCalendar();
+    loadRewards();
     loadSite().catch(() => {});
   })();
 })();
