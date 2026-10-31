@@ -37,7 +37,12 @@ Switch back to **MD Fit built-in** any time in the same place.
 
 ## Client accounts & dashboard
 - **`/login`**: clients create an account or log in (email + password, scrypt-hashed). Forgot password emails a reset link when email is set up; otherwise admin → Clients → **Copy password-reset link** and text it to them. 10 wrong passwords lock that device out for 15 minutes.
-- **`/account`**: next-visit card (add to calendar, directions), upcoming appointments with online cancel, **My plan** (notes, home exercises and guides Dr. Jared assigns), **pain tracker** (log pain by body area, trend chart + table), visit history, profile and password.
+- **`/account`** is the MD Fit app (installable to the home screen; dark theme with bottom tabs, matching the iOS app):
+  - **Home**: day streak with week dots, best streak / workouts / hours, today's workout with one-tap start, Dr. Jared's plan, upcoming visits and classes (one-tap class reserve), recent activity, notifications.
+  - **Generate**: goal, location, difficulty and length carousels → a warm-up / main / cool-down session built from the 153-video Drive library (`app/generator.js`, sets and reps in `PRESCRIBE`). The workout player steps through each video with a timer and logs the session.
+  - **Videos**: the full exercise library with search, category and body-area filters (`app/exercises.js`, Drive previews).
+  - **Pain Tool**: front/back areas → likely referral sources, Dr. Jared's guides, gentle relief videos, a quick pain log and booking.
+  - **Profile**: appointments (cancel, add to calendar), visit history, pain tracker chart, workout history, profile, password, install.
 - Appointments match by email, so bookings made before signing up appear automatically. Logged-in clients get their details pre-filled on `/book`.
 - **Admin → Clients**: every account with next visit and latest pain entry; open one to see appointments and the pain log, write their plan (notes, exercises, guides), copy a reset link or delete the account.
 - Sessions last 30 days; changing or resetting a password signs out other devices. Client tokens can't open admin routes and vice versa.

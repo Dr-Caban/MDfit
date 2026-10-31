@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { createApp } = require("../server");
+const { workoutStats } = require("../lib/clients");
 const { hashPassword } = require("../lib/auth");
 const { logger } = require("../lib/logger");
 
@@ -161,4 +162,35 @@ test("login lockout after 10 wrong passwords", async (t) => {
   await signup(s);
   for (let i = 0; i < 10; i++) await s.call("POST", "/api/clients/login", { email: "pat@example.com", password: "nope-nope" });
   assert.equal((await s.call("POST", "/api/clients/login", { email: "pat@example.com", password: "pat-pass-123" })).status, 429);
+});
+
+test("streak math: consecutive days, yesterday counts, best streak, this week", () => {
+  const log = ["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-30", "2026-10-31", "2026-11-01", "2026-11-01"].map((date) => ({ date, minutes: 30 }));
+  const s = workoutStats(log, "2026-11-02"); // Monday; nothing logged today yet
+  assert.equal(s.streak, 3, "Oct 30, 31, Nov 1 (today not done yet still counts)");
+  assert.equal(s.bestStreak, 3);
+  assert.equal(s.workouts, 7);
+  assert.equal(s.hours, 3.5);
+  assert.equal(s.todayIndex, 0);
+  assert.deepEqual(s.week, [false, false, false, false, false, false, false]);
+  assert.equal(workoutStats(log, "2026-11-03").streak, 0, "a missed day resets it");
+  assert.deepEqual(workoutStats([{ date: "2026-11-04", minutes: 10 }], "2026-11-04").week, [false, false, true, false, false, false, false]);
+});
+
+test("log workouts and read stats", async (t) => {
+  const s = await start(); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  assert.equal((await s.call("POST", "/api/me/workouts", { title: "Full Body Power", minutes: 0 }, tok)).status, 400);
+  const r = await s.call("POST", "/api/me/workouts", { title: "Full Body Power", goal: "Full Body", minutes: 42, exercises: 8 }, tok);
+  assert.equal(r.status, 201);
+  assert.equal(r.body.stats.streak, 1);
+  assert.equal(r.body.stats.workouts, 1);
+  const st = (await s.call("GET", "/api/me/stats", undefined, tok)).body;
+  assert.equal(st.hours, 0.7);
+  assert.equal(st.recent[0].title, "Full Body Power");
+  const admin = await s.adminToken();
+  const cid = (await s.call("GET", "/api/admin/clients", undefined, admin)).body[0].id;
+  const d = (await s.call("GET", `/api/admin/clients/${cid}`, undefined, admin)).body;
+  assert.equal(d.workouts.length, 1);
+  assert.equal(d.stats.streak, 1);
 });
