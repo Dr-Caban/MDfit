@@ -83,13 +83,13 @@
 
   const root = $("#pain-map");
   if (!root) return;
-  const panel = $(".painmap-panel", root), dlg = $("#guide-dialog");
+  const panel = $(".painmap-panel", root);
 
   $(".hotspots", root).innerHTML = SPOTS.map((s) =>
     `<button type="button" class="hotspot" data-spot="${s.id}" style="left:${s.x}%;top:${s.y}%" aria-label="${esc(s.label)} (${s.view} view)"><span></span></button>`).join("");
 
   const guideCard = (g) => `<button type="button" class="guide-card" data-guide="${g}">
-      <img src="assets/pain/guide-${g}-thumb.webp" alt="" width="120" height="180" loading="lazy">
+      <img src="assets/guides/${g}-thumb.webp" alt="" width="120" height="120" loading="lazy">
       <span><b>${esc(GUIDES[g].title)}</b><small>${esc(GUIDES[g].sub)}</small><i>Open guide →</i></span>
     </button>`;
 
@@ -122,16 +122,11 @@
     if (a) $$("#lead-form [name=areas]").forEach((i) => { if (i.value === a.dataset.area) i.checked = true; });
   });
 
-  // Guide viewer — opens HTML guide pages
-  function openGuide(g) {
-    window.open(`guides/${g}.html`, '_blank');
-  }
+  // Guide viewer: native MD Fit guide pages (guides.js)
   document.addEventListener("click", (e) => {
     const c = e.target.closest("[data-guide]");
-    if (c) openGuide(c.dataset.guide);
+    if (c) window.MDFitGuides.open(c.dataset.guide);
   });
-  $(".close", dlg).addEventListener("click", () => dlg.close());
-  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
 
   // Guide library under the map
   $(".guide-library", root).innerHTML = Object.keys(GUIDES).map(guideCard).join("");

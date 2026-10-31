@@ -41,7 +41,7 @@
   document.addEventListener("click", (e) => { const g = e.target.closest("[data-goto]"); if (g) go(g.dataset.goto); });
 
   // ================= Dialogs: exercise videos, guides, intros
-  const vd = $("#video-dialog"), gd = $("#guide-dialog");
+  const vd = $("#video-dialog");
   $$("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
   $$("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
   vd.addEventListener("close", () => ($("#vd-frame").src = "about:blank"));
@@ -59,12 +59,7 @@
     const i = e.target.closest("[data-intro]");
     if (i && INTROS[i.dataset.intro]) { playVideo(INTROS[i.dataset.intro], i.textContent.trim()); return; }
     const g = e.target.closest("[data-guide]");
-    if (g && GUIDES[g.dataset.guide]) {
-      $("#gd-title").textContent = GUIDES[g.dataset.guide];
-      $("#gd-img").src = `assets/pain/guide-${g.dataset.guide}.webp`;
-      $("#gd-img").alt = GUIDES[g.dataset.guide];
-      gd.showModal();
-    }
+    if (g) window.MDFitGuides.open(g.dataset.guide);
   });
 
   // ================= Home
@@ -108,7 +103,7 @@
       ${p.notes ? `<p class="plan-notes">${esc(p.notes).replace(/\n/g, "<br>")}</p>` : ""}
       ${p.exercises.length ? `<ul class="plan-ex">${p.exercises.map((x) => `<li><b>${esc(x.name)}</b>${x.detail ? `<span>${esc(x.detail)}</span>` : ""}</li>`).join("")}</ul>` : ""}
       ${p.guides.length ? `<div class="guides">${p.guides.filter((g) => GUIDES[g]).map((g) => `
-        <button type="button" class="guide" data-guide="${g}"><img src="assets/pain/guide-${g}-thumb.webp" alt="" width="52" height="78" loading="lazy">
+        <button type="button" class="guide" data-guide="${g}"><img src="assets/guides/${g}-thumb.webp" alt="" width="52" height="52" loading="lazy">
         <span><b>${esc(GUIDES[g])}</b><span>Open guide</span></span></button>`).join("")}</div>` : ""}`;
   }
 
@@ -450,7 +445,7 @@
         <span class="label gold">Possible sources</span>
         <h3>${esc(a.label)}</h3>
         <ul class="src">${a.sources.map(([t, d]) => `<li><b>${esc(t)}</b>${esc(d)}</li>`).join("")}</ul>
-        ${a.guides.length ? `<div class="guides">${a.guides.map((g) => `<button type="button" class="guide" data-guide="${g}"><img src="assets/pain/guide-${g}-thumb.webp" alt="" width="52" height="78" loading="lazy"><span><b>${esc(GUIDES[g])}</b><span>Open Dr. Jared's guide</span></span></button>`).join("")}</div>` : ""}
+        ${a.guides.length ? `<div class="guides">${a.guides.map((g) => `<button type="button" class="guide" data-guide="${g}"><img src="assets/guides/${g}-thumb.webp" alt="" width="52" height="52" loading="lazy"><span><b>${esc(GUIDES[g])}</b><span>Open Dr. Jared's guide</span></span></button>`).join("")}</div>` : ""}
         <p class="label" style="margin-top:16px">Gentle relief videos</p>
         <div class="mini-vids">${gentleFor(a.rc, 3).map(vcard).join("")}</div>
         <div class="log-row"><label>Pain now: <output>5</output>/10<input type="range" min="0" max="10" value="5" aria-label="Pain level for ${esc(a.label)}"></label><button type="button" class="btn-gold sm" data-log="${esc(a.area)}">Log it</button></div>
