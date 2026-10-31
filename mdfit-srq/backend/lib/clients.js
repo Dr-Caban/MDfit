@@ -4,12 +4,16 @@ const express = require("express");
 const crypto = require("crypto");
 const { hashPassword, verifyPassword, signToken, verifyToken } = require("./auth");
 const { ValidationError, EMAIL_RE, AREAS } = require("./validate");
+const { rewards } = require("./rewards");
 
 const SESSION_DAYS = 30;
 const RESET_HOURS = 24;
 const GUIDE_IDS = ["posterior-neck", "scalenes", "rotator-cuff", "iliopsoas", "lateral-hip", "quads", "calf"];
 const PAIN_LOG_MAX = 1000;
 const WORKOUT_LOG_MAX = 2000;
+const FAVORITES_MAX = 500;
+const PROGRAMS_MAX = 50;
+const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 
 const addDay = (date, n) => new Date(Date.parse(date + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 // Streaks count calendar days (clinic time zone) with at least one completed workout.
@@ -248,6 +252,70 @@ function mountClients(ctx) {
     res.json({ ...workoutStats(log, today()), recent: log.slice(-10).reverse() });
   });
 
+  // Full log, for the calendar
+  me.get("/workouts", (req, res) => res.json(req.client.workouts || []));
+
+  // XP, level, badges and daily goal, recomputed from history every time
+  const visitsOf = (c) => appointments().filter((a) => a.email === c.email && a.status === "completed");
+  me.get("/rewards", (req, res) => {
+    const c = req.client;
+    res.json(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c) }, today()));
+  });
+
+  // ---- Library (Spotify-style): favorite videos and saved programs, kept on the server so they follow the client
+  const update = (req, fn) => { const list = clients(); const c = list.find((x) => x.id === req.client.id); const out = fn(c); save(list); return out; };
+  const libraryOf = (c) => ({ favorites: c.favorites || [], programs: c.programs || [] });
+  me.get("/library", (req, res) => res.json(libraryOf(req.client)));
+
+  me.put("/favorites/:id", (req, res) => {
+    if (!ID_RE.test(req.params.id)) fail("That video id isn't valid.");
+    res.json(update(req, (c) => {
+      const f = (c.favorites || []).filter((x) => x !== req.params.id);
+      if (f.length >= FAVORITES_MAX) fail(`You can keep up to ${FAVORITES_MAX} favorites.`);
+      c.favorites = [req.params.id, ...f];
+      return libraryOf(c);
+    }));
+  });
+  me.delete("/favorites/:id", (req, res) => res.json(update(req, (c) => { c.favorites = (c.favorites || []).filter((x) => x !== req.params.id); return libraryOf(c); })));
+
+  // A program is a saved workout: name + the generator settings + the exact exercises (ids, prescriptions)
+  function programInput(b) {
+    if (!b || typeof b !== "object") fail("Program is missing.");
+    const w = b.workout;
+    if (!w || typeof w !== "object") fail("Workout is missing.");
+    const ex = (arr, label) => {
+      if (!Array.isArray(arr) || arr.length > 20) fail(`${label} list is off.`);
+      return arr.map((e) => {
+        if (!e || !ID_RE.test(e.id)) fail("Exercise id isn't valid.");
+        return { id: e.id, sets: text(e.sets, "Sets", { max: 30 }) };
+      });
+    };
+    const num = (v, lo, hi) => { const n = Number(v); if (!Number.isInteger(n) || n < lo || n > hi) fail("Workout settings are off."); return n; };
+    return {
+      name: text(b.name, "Program name", { min: 1, max: 60 }),
+      workout: {
+        title: text(w.title, "Title", { min: 1, max: 80 }), goal: text(w.goal, "Goal", { max: 40 }), goalId: text(w.goalId, "Goal", { max: 20 }),
+        location: text(w.location, "Location", { max: 20 }), level: text(w.level, "Level", { max: 20 }), levelLabel: text(w.levelLabel, "Level", { max: 20 }),
+        rounds: num(w.rounds, 1, 10), restEx: num(w.restEx, 0, 300), restRound: num(w.restRound, 0, 600), minutes: num(w.minutes, 1, 300),
+        warmup: ex(w.warmup || [], "Warm-up"), circuit: ex(w.circuit || [], "Circuit"), cooldown: ex(w.cooldown || [], "Cool-down")
+      }
+    };
+  }
+  me.post("/programs", (req, res) => {
+    const p = programInput(req.body);
+    res.status(201).json(update(req, (c) => {
+      if ((c.programs || []).length >= PROGRAMS_MAX) fail(`You can save up to ${PROGRAMS_MAX} programs. Delete one first.`);
+      c.programs = [{ id: id(), ...p, createdAt: new Date().toISOString() }, ...(c.programs || [])];
+      return libraryOf(c);
+    }));
+  });
+  me.delete("/programs/:id", (req, res) => res.json(update(req, (c) => {
+    const before = (c.programs || []).length;
+    c.programs = (c.programs || []).filter((x) => x.id !== req.params.id);
+    if (c.programs.length === before) fail("Program not found.");
+    return libraryOf(c);
+  })));
+
   app.use("/api/me", me);
 
   // ================= Admin: clients =================
@@ -268,6 +336,7 @@ function mountClients(ctx) {
     if (!c) return res.status(404).json({ error: "Client not found." });
     res.json({ ...pub(c), lastLoginAt: c.lastLoginAt, painLog: c.painLog || [],
       workouts: (c.workouts || []).slice(-50).reverse(), stats: workoutStats(c.workouts || [], today()),
+      rewards: (({ xp, level, title, badges }) => ({ xp, level, title, badges: badges.filter((b) => b.earned).map((b) => b.title) }))(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c) }, today())),
       appointments: appointments().filter((a) => a.email === c.email).map(({ cancelToken, ...a }) => a).sort((a, b) => (a.date + a.time < b.date + b.time ? 1 : -1)) });
   });
 

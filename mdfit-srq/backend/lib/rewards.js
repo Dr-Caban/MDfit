@@ -1,0 +1,93 @@
+// Rewards (Duolingo-style): XP, levels and badges, always recomputed from the client's real history
+// (workouts, pain log, visits), so progress can't be lost, reset or gamed by editing a counter.
+const addDay = (date, n) => new Date(Date.parse(date + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+const mondayOf = (d) => addDay(d, -((new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7));
+
+const XP = {
+  workout: (w) => 20 + Math.round(Math.min(w.minutes || 0, 60) / 2), // 20 to 50 per workout
+  streakBonus: (day) => Math.min(day, 10) * 2,                       // day 2 of a streak +4 ... capped at +20
+  pain: 5,                                                            // first 3 pain logs a day
+  visit: 50                                                           // completed visit with Dr. Jared
+};
+const PAIN_XP_PER_DAY = 3;
+const DAILY_GOAL = 30;
+
+// Level n starts at 50·n·(n-1) XP: 0, 100, 300, 600, 1000, 1500 ...
+const levelStart = (n) => 50 * n * (n - 1);
+const TITLES = ["Starter", "Mover", "Builder", "Strong", "Athlete", "Performer", "Elite", "Champion", "Legend"];
+
+const BADGES = [
+  { id: "first-workout", title: "First Rep", desc: "Finish your first workout", icon: "bolt", kind: "workouts", target: 1 },
+  { id: "workouts-10", title: "Ten Strong", desc: "Finish 10 workouts", icon: "dumbbell", kind: "workouts", target: 10 },
+  { id: "workouts-50", title: "Half Century", desc: "Finish 50 workouts", icon: "dumbbell", kind: "workouts", target: 50 },
+  { id: "workouts-100", title: "Century Club", desc: "Finish 100 workouts", icon: "trophy", kind: "workouts", target: 100 },
+  { id: "streak-3", title: "On a Roll", desc: "Work out 3 days in a row", icon: "flame", kind: "streak", target: 3 },
+  { id: "streak-7", title: "Week Warrior", desc: "Work out 7 days in a row", icon: "flame", kind: "streak", target: 7 },
+  { id: "streak-30", title: "Unbreakable", desc: "Work out 30 days in a row", icon: "flame", kind: "streak", target: 30 },
+  { id: "week-3", title: "Three-a-Week", desc: "3 workouts in one week (Mon to Sun)", icon: "calendar", kind: "week", target: 3 },
+  { id: "hours-10", title: "Ten Hours In", desc: "Train for 10 hours total", icon: "clock", kind: "minutes", target: 600 },
+  { id: "explorer", title: "Explorer", desc: "Try all 5 workout goals", icon: "compass", kind: "goals", target: 5 },
+  { id: "pain-5", title: "Listening to Your Body", desc: "Log your pain 5 times", icon: "pulse", kind: "pain", target: 5 },
+  { id: "pain-down", title: "Feeling Better", desc: "Drop pain 3+ points in one area", icon: "heart", kind: "painDrop", target: 3 },
+  { id: "first-visit", title: "Team MD Fit", desc: "Complete a visit with Dr. Jared", icon: "star", kind: "visits", target: 1 }
+];
+
+// events: [{ date, type, xp, ... }] in date order; returns totals plus per-badge progress with the day it was earned
+function rewards({ workouts = [], painLog = [], visits = [] }, today) {
+  const events = [];
+  const workoutDays = [...new Set(workouts.map((w) => w.date))].sort();
+  const streakOn = new Map(); // date -> streak length ending that day
+  workoutDays.forEach((d, i) => streakOn.set(d, i && workoutDays[i - 1] === addDay(d, -1) ? streakOn.get(workoutDays[i - 1]) + 1 : 1));
+  const firstOfDay = new Set();
+  for (const w of [...workouts].sort((a, b) => (a.completedAt < b.completedAt ? -1 : 1))) {
+    let xp = XP.workout(w);
+    if (!firstOfDay.has(w.date)) { firstOfDay.add(w.date); xp += streakOn.get(w.date) > 1 ? XP.streakBonus(streakOn.get(w.date)) : 0; }
+    events.push({ date: w.date, type: "workout", xp, w });
+  }
+  const painPerDay = new Map();
+  for (const p of painLog) {
+    const n = (painPerDay.get(p.date) || 0) + 1;
+    painPerDay.set(p.date, n);
+    events.push({ date: p.date, type: "pain", xp: n <= PAIN_XP_PER_DAY ? XP.pain : 0, p });
+  }
+  for (const v of visits) events.push({ date: v.date, type: "visit", xp: XP.visit });
+  events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  // Walk history once, recording the day each badge was first earned
+  const state = { workouts: 0, streak: 0, week: 0, minutes: 0, goals: new Set(), pain: 0, painDrop: 0, visits: 0 };
+  const firstPain = new Map(), weekCount = new Map();
+  const earnedOn = {};
+  let xp = 0;
+  const byDay = new Map();
+  for (const e of events) {
+    xp += e.xp;
+    byDay.set(e.date, (byDay.get(e.date) || 0) + e.xp);
+    if (e.type === "workout") {
+      state.workouts++; state.minutes += e.w.minutes || 0;
+      state.streak = Math.max(state.streak, streakOn.get(e.date));
+      const wk = mondayOf(e.date); weekCount.set(wk, (weekCount.get(wk) || 0) + 1);
+      state.week = Math.max(state.week, weekCount.get(wk));
+      if (e.w.goal) state.goals.add(e.w.goal);
+    } else if (e.type === "pain") {
+      state.pain++;
+      if (!firstPain.has(e.p.area)) firstPain.set(e.p.area, e.p.level);
+      state.painDrop = Math.max(state.painDrop, firstPain.get(e.p.area) - e.p.level);
+    } else state.visits++;
+    for (const b of BADGES) {
+      const v = b.kind === "goals" ? state.goals.size : state[b.kind];
+      if (!earnedOn[b.id] && v >= b.target) earnedOn[b.id] = e.date;
+    }
+  }
+  const progress = { ...state, goals: state.goals.size };
+  let level = 1;
+  while (xp >= levelStart(level + 1)) level++;
+  const week = Array.from({ length: 7 }, (_, i) => { const d = addDay(mondayOf(today), i); return { date: d, xp: byDay.get(d) || 0 }; });
+  return {
+    xp, level, title: TITLES[Math.min(level, TITLES.length) - 1],
+    levelStart: levelStart(level), nextLevel: levelStart(level + 1),
+    todayXp: byDay.get(today) || 0, dailyGoal: DAILY_GOAL, week,
+    badges: BADGES.map((b) => ({ ...b, progress: Math.min(b.target, b.kind === "goals" ? progress.goals : progress[b.kind]), earned: Boolean(earnedOn[b.id]), earnedOn: earnedOn[b.id] || null }))
+  };
+}
+
+module.exports = { rewards, BADGES, XP, levelStart };

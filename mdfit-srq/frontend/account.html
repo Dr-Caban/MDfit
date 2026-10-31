@@ -31,7 +31,7 @@
         </button>
       </header>
       <div class="notes-panel" id="notes" hidden></div>
-      <p class="hello">Welcome back</p>
+      <div class="hello-row"><p class="hello">Welcome back</p><button type="button" class="xp-chip" data-goto="progress" id="xp-chip"><b id="chip-lv">Lv 1</b><span id="chip-xp">0 XP</span></button></div>
       <h1 class="name" id="hello-name">&nbsp;</h1>
 
       <div class="home-grid"><div class="col-main">
@@ -68,6 +68,10 @@
       </div>
 
       </div><div class="col-side">
+      <div class="card" id="home-programs" hidden>
+        <div class="card-head"><span class="label accent">My programs</span><button type="button" class="link-sm" data-goto="generate">See all</button></div>
+        <ul class="programs" id="home-program-list"></ul>
+      </div>
       <div class="card plan" id="plan-card" hidden>
         <div class="card-head"><span class="label accent">From Dr. Jared</span><span class="muted small" id="plan-date"></span></div>
         <div id="plan"></div>
@@ -92,6 +96,10 @@
         <p class="hero-tag">Any goal<br>Any environment<br>Any level<br><b>Your workout</b></p>
       </header>
       <button type="button" class="intro-btn" data-intro="generator"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> How it works with Dr. Jared</button>
+      <div class="card" id="my-programs" hidden>
+        <div class="card-head"><span class="label accent">My programs</span><span class="muted small" id="program-count"></span></div>
+        <ul class="programs" id="program-list"></ul>
+      </div>
       <div class="gen-layout">
         <div class="gen-steps" id="steps"></div>
         <aside class="gen-side">
@@ -113,6 +121,7 @@
           <div class="today-head"><span class="label accent" id="gen-title"></span><button type="button" class="link-sm" id="shuffle">Shuffle exercises</button></div>
           <p class="muted small" id="gen-meta"></p>
           <ol class="ex-list" id="gen-list"></ol>
+          <div class="row2"><button type="button" class="btn-ghost" id="save-program"><svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7zm-5 16a3 3 0 1 1 3-3 3 3 0 0 1-3 3zm3-10H5V5h10z"/></svg> Save to My Programs</button></div>
           <button type="button" class="btn-blue" id="start-gen"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Start workout</button>
         </div>
       </div>
@@ -148,6 +157,54 @@
       <a class="link center block" href="/#pain-map">Open the interactive body map</a>
     </section>
 
+    <!-- ================= PROGRESS ================= -->
+    <section class="view" id="view-progress" data-view="progress" hidden>
+      <header class="hero">
+        <div><h1>Your <em>Progress</em></h1><p>Every rep, every visit, every win. Saved to your account.</p></div>
+      </header>
+      <div class="progress-grid">
+        <div class="col-main">
+          <div class="card level-card" id="level-card">
+            <div class="level-top">
+              <div class="level-badge"><small>Level</small><b id="lv-n">1</b></div>
+              <div class="level-info"><b id="lv-title">Starter</b><span id="lv-xp">0 XP</span>
+                <div class="xpbar" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100" id="lv-bar-wrap"><i id="lv-bar"></i></div>
+                <small id="lv-next"></small></div>
+              <div class="goal-ring" id="goal-ring" aria-label="Today's goal"></div>
+            </div>
+            <div class="xp-week" id="xp-week"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="label accent">Calendar</span>
+              <div class="cal-nav"><button type="button" class="icon-btn" id="cal-prev" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4-4.6-4.6z"/></svg></button><b id="cal-title"></b><button type="button" class="icon-btn" id="cal-next" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z"/></svg></button></div>
+            </div>
+            <div class="cal" id="cal"></div>
+            <ul class="cal-legend"><li><i class="k-workout"></i>Workout</li><li><i class="k-visit"></i>Visit</li><li><i class="k-pain"></i>Pain log</li></ul>
+            <div class="cal-day" id="cal-day"></div>
+          </div>
+        </div>
+        <div class="col-side">
+          <div class="card">
+        <div class="card-head"><span class="label accent">Pain tracker</span><select id="chart-area" class="select sm" aria-label="Area"></select></div>
+        <div class="chart" id="chart"></div>
+        <form id="pain-form" class="mini-form" novalidate>
+          <select name="area" class="select" aria-label="Where"></select>
+          <label class="slider"><span>Pain now <output>5</output>/10</span><input type="range" name="level" min="0" max="10" value="5"></label>
+          <input name="note" class="input" maxlength="500" placeholder="Note (optional)">
+          <button class="btn-gold sm" type="submit">Log it</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+        <details class="sub"><summary>All entries (<span id="entry-count">0</span>)</summary><table class="tbl" id="entries"></table></details>
+      </div>
+
+          <div class="card">
+            <div class="card-head"><span class="label accent">Badges</span><span class="muted small" id="badge-count"></span></div>
+            <ul class="badges" id="badges"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ================= PROFILE ================= -->
     <section class="view" id="view-profile" data-view="profile" hidden>
       <div class="profile-head">
@@ -160,19 +217,6 @@
         <div class="card-head"><span class="label">My appointments</span><a class="link-sm" href="/book">Book</a></div>
         <ul class="events" id="p-appts"></ul>
         <details class="sub"><summary>Visit history</summary><ul class="events" id="p-history"></ul></details>
-      </div>
-
-      <div class="card">
-        <div class="card-head"><span class="label">Pain tracker</span><select id="chart-area" class="select sm" aria-label="Area"></select></div>
-        <div class="chart" id="chart"></div>
-        <form id="pain-form" class="mini-form" novalidate>
-          <select name="area" class="select" aria-label="Where"></select>
-          <label class="slider"><span>Pain now <output>5</output>/10</span><input type="range" name="level" min="0" max="10" value="5"></label>
-          <input name="note" class="input" maxlength="500" placeholder="Note (optional)">
-          <button class="btn-gold sm" type="submit">Log it</button>
-          <p class="form-msg" role="status"></p>
-        </form>
-        <details class="sub"><summary>All entries (<span id="entry-count">0</span>)</summary><table class="tbl" id="entries"></table></details>
       </div>
 
       <div class="card list-card">
@@ -217,9 +261,10 @@
   <nav class="tabbar" aria-label="App">
     <a class="side-brand" href="/"><img src="assets/logo.webp" alt="" width="48" height="48"><span><b>MD Fit</b><small>Physical Rehabilitation &amp; Fitness</small></span></a>
     <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg><span class="short">Home</span><span class="long">Dashboard</span></button>
-    <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><span class="short">Generate</span><span class="long">Workout Generator</span></button>
+    <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><span class="short">Workout</span><span class="long">Workout Generator</span></button>
     <button type="button" data-tab="videos"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg><span class="short">Videos</span><span class="long">Video Library</span></button>
-    <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg><span class="short">Pain Tool</span><span class="long">Pain Tool</span></button>
+    <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg><span class="short">Pain</span><span class="long">Pain Tool</span></button>
+    <button type="button" data-tab="progress"><svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg><span class="short">Progress</span><span class="long">Progress Tracking</span></button>
     <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg><span class="short">Profile</span><span class="long">My Profile</span></button>
     <div class="side-foot"><p class="side-tag">Move better<br>Feel stronger<br>Live more</p><a class="side-book" href="/book">Book a visit</a><a href="tel:+19413130562">941-313-0562</a></div>
   </nav>
