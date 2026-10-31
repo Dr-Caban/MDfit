@@ -32,6 +32,7 @@
         <nav class="tabs" role="tablist">
           <button data-tab="dash" aria-selected="true">Dashboard</button>
           <button data-tab="appts">Appointments</button>
+          <button data-tab="clients">Clients</button>
           <button data-tab="leads">Leads</button>
           <button data-tab="classes">Classes</button>
           <button data-tab="bookings">Bookings</button>
@@ -108,6 +109,14 @@
           <button class="btn" type="submit">Save hours</button>
           <p class="form-msg" role="status"></p>
         </form>
+      </section>
+
+      <section data-panel="clients" hidden>
+        <div id="clients-list">
+          <div class="bar"><input id="client-search" type="search" placeholder="Search name, email or phone" aria-label="Search clients"></div>
+          <div class="table-wrap"><table id="clients-table"></table></div>
+        </div>
+        <div id="client-detail" hidden></div>
       </section>
 
       <section data-panel="leads" hidden>

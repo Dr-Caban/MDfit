@@ -35,6 +35,13 @@ What you get:
 
 Switch back to **MD Fit built-in** any time in the same place.
 
+## Client accounts & dashboard
+- **`/login`**: clients create an account or log in (email + password, scrypt-hashed). Forgot password emails a reset link when email is set up; otherwise admin → Clients → **Copy password-reset link** and text it to them. 10 wrong passwords lock that device out for 15 minutes.
+- **`/account`**: next-visit card (add to calendar, directions), upcoming appointments with online cancel, **My plan** (notes, home exercises and guides Dr. Jared assigns), **pain tracker** (log pain by body area, trend chart + table), visit history, profile and password.
+- Appointments match by email, so bookings made before signing up appear automatically. Logged-in clients get their details pre-filled on `/book`.
+- **Admin → Clients**: every account with next visit and latest pain entry; open one to see appointments and the pain log, write their plan (notes, exercises, guides), copy a reset link or delete the account.
+- Sessions last 30 days; changing or resetting a password signs out other devices. Client tokens can't open admin routes and vice versa.
+
 ## Pain map ("Find the source")
 Homepage section built from Dr. Jared's own materials (MDFIT IMAGES Drive folder): his front/back body chart with 16 tappable points, each listing the muscles that commonly refer pain there and linking to his referred-pain guides (iliopsoas, lateral hip, quads, calf, rotator cuff, scalenes, posterior neck). Images are in `frontend/assets/pain/` (converted to WebP); hotspot text and guide links live in `frontend/painmap.js`.
 

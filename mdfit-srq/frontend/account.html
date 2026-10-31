@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>My Account | MD Fit</title>
+  <meta name="theme-color" content="#0A1A2E">
+  <link rel="icon" href="assets/icon-64.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/logo.webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="account.css">
+</head>
+<body class="account-page">
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a href="/" class="brand" aria-label="MD Fit home">
+        <img class="brand-logo" src="assets/logo.webp" alt="MD Fit" width="160" height="160">
+        <span class="brand-text"><span class="brand-sub">My Account</span></span>
+      </a>
+      <div class="acct-nav">
+        <a href="/book" class="btn btn-sm">Book</a>
+        <button type="button" class="btn btn-ghost btn-sm" id="logout">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="acct-hero">
+    <div class="wrap">
+      <p class="eyebrow">MD Fit · Physical Rehabilitation &amp; Fitness</p>
+      <h1>Hi, <span id="first-name">there</span>.</h1>
+      <div class="next-card" id="next-card"><p class="muted">Loading your appointments…</p></div>
+    </div>
+  </section>
+
+  <main class="wrap acct-grid">
+    <section class="acct-card" id="appts-card">
+      <h2>Upcoming appointments</h2>
+      <div id="upcoming"></div>
+    </section>
+
+    <section class="acct-card" id="plan-card">
+      <h2>My plan</h2>
+      <div id="plan"></div>
+    </section>
+
+    <section class="acct-card acct-wide" id="pain-card">
+      <h2>Pain tracker</h2>
+      <p class="muted">Log how it feels. Dr. Jared sees your entries before each visit.</p>
+      <form id="pain-form" class="pain-form" novalidate>
+        <label>Where<select name="area" required></select></label>
+        <label class="pain-level"><span>Pain right now: <output>5</output> / 10</span>
+          <input type="range" name="level" min="0" max="10" step="1" value="5">
+        </label>
+        <label>Note (optional)<input name="note" maxlength="500" placeholder="e.g. better after stretches"></label>
+        <button class="btn" type="submit">Log it</button>
+        <p class="form-msg" role="status"></p>
+      </form>
+      <div class="chart-head">
+        <h3 id="chart-title">Pain over time</h3>
+        <label class="chart-filter">Area <select id="chart-area"></select></label>
+      </div>
+      <div class="chart" id="chart" aria-describedby="chart-title"></div>
+      <details class="entries">
+        <summary>All entries (<span id="entry-count">0</span>)</summary>
+        <div class="table-wrap"><table id="entries"></table></div>
+      </details>
+    </section>
+
+    <section class="acct-card" id="history-card">
+      <h2>Visit history</h2>
+      <div id="history"></div>
+    </section>
+
+    <section class="acct-card" id="profile-card">
+      <h2>Profile</h2>
+      <form id="profile-form" class="form flat" novalidate>
+        <label>Name<input name="name" required minlength="2" maxlength="100" autocomplete="name"></label>
+        <label>Email<input name="email" type="email" disabled></label>
+        <label>Mobile phone<input name="phone" type="tel" maxlength="30" autocomplete="tel"></label>
+        <button class="btn btn-sm" type="submit">Save</button>
+        <p class="form-msg" role="status"></p>
+      </form>
+      <details class="pw">
+        <summary>Change password</summary>
+        <form id="password-form" class="form flat" novalidate>
+          <label>Current password<input name="current" type="password" required autocomplete="current-password"></label>
+          <label>New password (8+ characters)<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+          <button class="btn btn-sm" type="submit">Change password</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+      </details>
+    </section>
+  </main>
+
+  <footer class="acct-foot wrap">
+    <p>Questions? Call <a href="tel:+19413130562">941-313-0562</a> · 3214 Clark Road, Sarasota, FL 34231</p>
+    <p>Guides and pain tracking are educational and don't replace an in-person evaluation. In an emergency, call 911.</p>
+  </footer>
+
+  <dialog id="guide-dialog" class="guide-dialog">
+    <div class="guide-head"><h3></h3><a class="guide-full" target="_blank" rel="noopener">Open full size</a><button type="button" class="close" aria-label="Close">&times;</button></div>
+    <img alt="">
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+  <script src="account.js"></script>
+</body>
+</html>

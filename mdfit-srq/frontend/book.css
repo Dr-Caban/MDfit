@@ -39,3 +39,4 @@
 @media (max-width: 600px) {
   .hide-sm { display: none; }
 }
+.book-account { color: #fff; text-decoration: none; font-weight: 600; font-size: 15px; }

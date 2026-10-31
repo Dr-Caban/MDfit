@@ -68,6 +68,11 @@
       </div>`;
 
     const form = $(".booker-form", root), bookedBox = $(".booked", root);
+    const me = window.MDFit.auth.client();
+    if (me) {
+      for (const k of ["name", "email", "phone"]) if (me[k]) $(`[name=${k}]`, form).value = me[k];
+      $(".booked-actions", bookedBox).insertAdjacentHTML("beforeend", `<a class="btn btn-line" href="/account">My account</a>`);
+    }
     const pain = $("[name=painLevel]", form), painOut = $(".pain output", form);
     pain.addEventListener("input", () => { delete pain.dataset.untouched; painOut.textContent = `${pain.value} / 10`; });
     form.addEventListener("reset", () => setTimeout(() => { pain.dataset.untouched = ""; painOut.textContent = "–"; }));

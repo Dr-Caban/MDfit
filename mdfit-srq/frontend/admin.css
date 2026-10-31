@@ -99,3 +99,14 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .brand.dark .brand-word { color: var(--heading); }
 .admin { background: var(--cream); }
 .login h1, .panel-wrap h2, .stat strong { color: var(--heading); }
+.click-row { cursor: pointer; }
+.click-row:hover td { background: var(--cream); }
+#client-search { max-width: 360px; }
+.client-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: flex-start; margin: 14px 0 6px; }
+.client-head h2 { margin: 0 0 4px !important; font-size: 26px !important; }
+.client-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.client-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.guide-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 14px; font-weight: 500; }
+@media (max-width: 860px) { .client-grid { grid-template-columns: 1fr; } .guide-picks { grid-template-columns: 1fr; } }
+.guide-picks label.check { display: flex; gap: 8px; align-items: center; font-weight: 500; }
+.guide-picks label.check input { width: auto; margin: 0; }

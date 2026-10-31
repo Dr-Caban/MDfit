@@ -82,5 +82,35 @@
     });
   }
 
-  window.MDFit = { GOOGLE_G, loadGoogleReviews, applyGoogleRating, API, $, $$, esc, get, api, fmtTime, fmtDate, todayInTz, addDays, zonedToUtc, icsStamp, telHref, formData, wire, AREAS, areaChips, loadSite };
+  // ---- Client accounts: session kept in this browser (localStorage), sent as a Bearer token.
+  const KEY = "mdfit_client";
+  const auth = {
+    get() { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); return s && Date.parse(s.expiresAt) > Date.now() ? s : null; } catch { return null; } },
+    set(sess) { try { localStorage.setItem(KEY, JSON.stringify(sess)); } catch {} },
+    clear() { try { localStorage.removeItem(KEY); } catch {} },
+    client() { const s = auth.get(); return s ? s.client : null; }
+  };
+  async function apiAuth(method, path, body) {
+    const sess = auth.get();
+    const res = await fetch(API + path, {
+      method,
+      headers: { "Content-Type": "application/json", ...(sess ? { Authorization: "Bearer " + sess.token } : {}) },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) { auth.clear(); location.href = "/login?next=" + encodeURIComponent(location.pathname); throw new Error("Please log in again."); }
+    if (!res.ok) throw Object.assign(new Error(data.error || "Something went wrong. Try again."), { status: res.status });
+    return data;
+  }
+  // Header link: "Log in" or "My account"
+  function accountLinks() {
+    const c = auth.client();
+    $$("[data-account-link]").forEach((a) => {
+      a.href = c ? "/account" : "/login";
+      a.textContent = c ? "My account" : "Log in";
+    });
+  }
+  document.addEventListener("DOMContentLoaded", accountLinks);
+
+  window.MDFit = { auth, apiAuth, accountLinks, GOOGLE_G, loadGoogleReviews, applyGoogleRating, API, $, $$, esc, get, api, fmtTime, fmtDate, todayInTz, addDays, zonedToUtc, icsStamp, telHref, formData, wire, AREAS, areaChips, loadSite };
 })();

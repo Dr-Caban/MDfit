@@ -51,7 +51,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, settings: loadSettings };
+  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, settings: loadSettings };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -204,6 +204,87 @@
       msg.className = "form-msg ok"; msg.textContent = "Saved. Online booking uses the new hours right away.";
     } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
   }));
+
+  // ---- Clients (accounts created at /login)
+  const GUIDES = { "posterior-neck": "Posterior Neck Power Grid", "scalenes": "Scalenes & Intercostals", "rotator-cuff": "Rotator Cuff",
+    "iliopsoas": "Iliopsoas Complex", "lateral-hip": "Lateral Hip Powerhouse", "quads": "Tight Quads", "calf": "Calf Complex" };
+  let clientList = [];
+  async function loadClients() {
+    $("#client-detail").hidden = true; $("#clients-list").hidden = false;
+    clientList = await api("GET", "/api/admin/clients");
+    renderClients();
+  }
+  function renderClients() {
+    const q = $("#client-search").value.trim().toLowerCase();
+    const rows = clientList.filter((c) => !q || [c.name, c.email, c.phone].join(" ").toLowerCase().includes(q));
+    table($("#clients-table"), ["Client", "Phone", "Next visit", "Last pain log", "Plan", "Joined"], rows.map((c) => `
+      <tr data-id="${c.id}" class="click-row"><td><b>${esc(c.name)}</b><br><span class="muted">${esc(c.email)}</span></td><td>${esc(c.phone)}</td>
+        <td>${c.next ? `${fmtDate(c.next.date)} · ${fmtTime(c.next.time)}` : "—"}</td>
+        <td>${c.lastPain ? `${esc(c.lastPain.area)} ${c.lastPain.level}/10 · ${fmtDate(c.lastPain.date)}` : "—"}</td>
+        <td>${c.hasPlan ? "✓" : "—"}</td><td>${when(c.createdAt)}</td></tr>`),
+      "No client accounts yet. Clients sign up at /login.");
+  }
+  $("#client-search").addEventListener("input", renderClients);
+  $("#clients-table").addEventListener("click", run(async (e) => {
+    const row = e.target.closest("tr[data-id]");
+    if (row) openClient(row.dataset.id);
+  }));
+
+  async function openClient(id) {
+    const c = await api("GET", `/api/admin/clients/${id}`);
+    const box = $("#client-detail");
+    const p = c.plan;
+    box.innerHTML = `
+      <button type="button" class="mini" data-back>← All clients</button>
+      <div class="client-head"><div><h2>${esc(c.name)}</h2>
+        <p class="muted"><a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.phone ? ` · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ""} · joined ${when(c.createdAt)}${c.lastLoginAt ? ` · last login ${when(c.lastLoginAt)}` : ""}</p></div>
+        <div class="client-actions"><button type="button" class="mini" data-reset>Copy password-reset link</button><button type="button" class="mini danger" data-delete>Delete account</button></div></div>
+      <div class="client-grid">
+        <form class="form" id="plan-form" novalidate>
+          <h2>Plan</h2>
+          <label>Notes for ${esc(c.name.split(" ")[0])}<textarea name="notes" rows="4" maxlength="3000">${esc(p.notes)}</textarea></label>
+          <label>Home exercises, one per line: <code>Name | sets, reps, cues</code><textarea name="exercises" rows="6">${esc(p.exercises.map((x) => x.detail ? `${x.name} | ${x.detail}` : x.name).join("\n"))}</textarea></label>
+          <fieldset><legend>Guides to share</legend><div class="guide-picks">${Object.entries(GUIDES).map(([k, v]) =>
+            `<label class="check"><input type="checkbox" name="guides" value="${k}" ${p.guides.includes(k) ? "checked" : ""}> ${esc(v)}</label>`).join("")}</div></fieldset>
+          <button class="btn btn-sm" type="submit">Save plan</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+        <div>
+          <h2>Appointments</h2>
+          <div class="table-wrap"><table id="client-appts"></table></div>
+          <h2>Pain log</h2>
+          <div class="table-wrap"><table id="client-pain"></table></div>
+        </div>
+      </div>`;
+    table($("#client-appts"), ["When", "Type", "Status"], c.appointments.map((a) => `<tr><td>${fmtDate(a.date)} · ${fmtTime(a.time)}</td><td>${esc(a.typeName)}</td><td><span class="badge ${a.status}">${a.status}</span></td></tr>`), "No appointments under this email yet.");
+    table($("#client-pain"), ["Date", "Area", "Pain", "Note"], c.painLog.slice().reverse().slice(0, 50).map((e) => `<tr><td>${fmtDate(e.date)}</td><td>${esc(e.area)}</td><td>${e.level}/10</td><td>${esc(e.note)}</td></tr>`), "No entries yet.");
+    $("#clients-list").hidden = true; box.hidden = false;
+
+    $("[data-back]", box).addEventListener("click", run(loadClients));
+    $("[data-reset]", box).addEventListener("click", run(async () => {
+      const r = await api("POST", `/api/admin/clients/${id}/reset-link`);
+      try { await navigator.clipboard.writeText(r.url); toast(`Reset link copied (works for ${r.hours} hours). Text it to the client.`); }
+      catch { prompt("Send this link to the client:", r.url); }
+    }));
+    $("[data-delete]", box).addEventListener("click", run(async () => {
+      if (!confirm(`Delete ${c.name}'s account? Their appointments stay; their plan and pain log are removed.`)) return;
+      await api("DELETE", `/api/admin/clients/${id}`); toast("Account deleted."); loadClients();
+    }));
+    const pfm = $("#plan-form", box);
+    pfm.addEventListener("submit", run(async (e) => {
+      e.preventDefault();
+      const msg = $(".form-msg", pfm);
+      msg.className = "form-msg"; msg.textContent = "";
+      try {
+        await api("PUT", `/api/admin/clients/${id}/plan`, {
+          notes: pfm.notes.value,
+          exercises: pfm.exercises.value.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const i = l.indexOf("|"); return i < 0 ? { name: l, detail: "" } : { name: l.slice(0, i).trim(), detail: l.slice(i + 1).trim() }; }),
+          guides: $$("[name=guides]:checked", pfm).map((x) => x.value)
+        });
+        msg.className = "form-msg ok"; msg.textContent = "Saved. It's on their dashboard now.";
+      } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+    }));
+  }
 
   // ---- Leads
   async function loadLeads() {

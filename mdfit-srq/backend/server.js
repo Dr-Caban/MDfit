@@ -9,6 +9,7 @@ const { verifyPassword, isValidHash, signToken, verifyToken } = require("./lib/a
 const { createNotifier } = require("./lib/notify");
 const { createCal, verifySignature, normaliseBooking } = require("./lib/cal");
 const { createPlaces } = require("./lib/google");
+const { mountClients } = require("./lib/clients");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings, EMAIL_RE
@@ -712,6 +713,8 @@ function createApp(cfg = loadConfig()) {
   });
 
   admin.get("/activity", (req, res) => res.json(store.read("activity", []).slice(0, 200)));
+
+  mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime });
 
   app.use("/api/admin", admin);
 
