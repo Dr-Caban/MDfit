@@ -1,0 +1,55 @@
+name: MD Fit video branding
+
+# Runs the branding pipeline on GitHub's runners, which can reach Google Drive
+# and Groq. Edit mdfit-video/batch.json (Drive file ID + name) to pick videos.
+# Captions need a GROQ_API_KEY repo secret; without it videos render uncaptioned.
+on:
+  push:
+    paths: ["mdfit-video/**", ".github/workflows/mdfit-video.yml"]
+  workflow_dispatch:
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      videos: ${{ steps.batch.outputs.videos }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: batch
+        run: echo "videos=$(jq -c . mdfit-video/batch.json)" >> "$GITHUB_OUTPUT"
+
+  brand:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        video: ${{ fromJSON(needs.plan.outputs.videos) }}
+    defaults:
+      run:
+        working-directory: mdfit-video
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg fontconfig fonts-liberation
+      - run: pip install Pillow gdown
+      - name: Download from Drive
+        run: |
+          mkdir -p mdfit_videos/raw
+          gdown "${{ matrix.video.id }}" -O "mdfit_videos/raw/${{ matrix.video.name }}.mp4"
+      - name: Brand
+        run: |
+          flags=""
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "::warning::GROQ_API_KEY secret not set; rendering without captions"
+            flags="--no-captions"
+          fi
+          python3 mdfit_brand_videos.py --local mdfit_videos/raw --output mdfit_videos/output $flags
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MDFIT_${{ matrix.video.name }}
+          path: mdfit-video/mdfit_videos/output/*.mp4
+          compression-level: 0
+          retention-days: 14
