@@ -111,6 +111,7 @@
         <div><strong>${esc(a.name)}</strong> · <a href="tel:${esc(a.phone)}">${esc(a.phone)}</a> · <a href="mailto:${esc(a.email)}">${esc(a.email)}</a></div>
         <div class="intake">${[...(a.areas || []), a.painLevel != null && `Pain ${a.painLevel}/10`].filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join("")}</div>
         ${a.notes ? `<p class="msg">${esc(a.notes)}</p>` : ""}
+        ${["massage", "massage90"].includes(a.typeId) ? (a.intakeAt ? `<p><button class="mini" data-intake>View massage intake</button> <span class="meta">received ${when(a.intakeAt)}</span></p><div class="intake-view" hidden></div>` : `<p class="meta">Massage intake not received yet</p>`) : ""}
         <textarea rows="2" placeholder="Session notes (private)" data-notes>${esc(a.adminNotes)}</textarea>
         <div class="actions">
           <select data-status>${APPT_STATUSES.map((x) => `<option ${x === a.status ? "selected" : ""}>${x}</option>`).join("")}</select>
@@ -121,6 +122,16 @@
   $("#appts-all").addEventListener("change", run(loadAppts));
   $("#appts-list").addEventListener("click", run(async (e) => {
     const card = e.target.closest(".appt");
+    if (card && e.target.matches("[data-intake]")) {
+      const box = $(".intake-view", card);
+      if (!box.hidden) { box.hidden = true; return; }
+      const d = await api("GET", `/api/admin/appointments/${card.dataset.id}/intake`);
+      const row = (k, v) => v ? `<div><b>${k}</b><span>${esc(v)}</span></div>` : "";
+      box.innerHTML = row("Focus", d.focus) + row("Pain", d.painLevel != null ? `${d.painLevel}/10` : "") + row("Pressure", d.pressure) + row("Goals", d.goals)
+        + row("Conditions", (d.conditions || []).join(", ") || "None checked") + row("Medications", d.medications) + row("Allergies", d.allergies) + row("Other", d.other)
+        + row("Emergency contact", [d.emergencyName, d.emergencyPhone].filter(Boolean).join(" · ")) + row("Signed", `${d.signature} · ${when(d.consentAt)}`);
+      box.hidden = false; return;
+    }
     if (!card || !e.target.matches("[data-save]")) return;
     const status = $("[data-status]", card).value;
     if (status === "cancelled" && !confirm("Cancel this appointment? The time opens up for booking again.")) return;

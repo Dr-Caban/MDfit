@@ -204,27 +204,29 @@ test("appointments: availability, notice window, overlap, cancel, admin status",
   const av = (await s.call("GET", "/api/availability?type=eval&days=3")).body;
   assert.equal(av.type.id, "eval");
   const byDate = Object.fromEntries(av.days.map((d) => [d.date, d.slots]));
-  assert.deepEqual(byDate["2026-11-02"], []); // Monday 05:00 + 12h notice: nothing left today
-  assert.equal(byDate["2026-11-03"][0], "09:00");
-  assert.equal(byDate["2026-11-03"].at(-1), "16:00"); // 60-min eval must end by 17:00
-  assert.equal(byDate["2026-11-03"].length, 15);
+  assert.deepEqual(byDate["2026-11-02"], []); // Monday 05:00 + 24h notice: nothing today
+  assert.equal(byDate["2026-11-03"][0], "08:00"); // earliest start 8 AM
+  assert.equal(byDate["2026-11-03"].at(-1), "16:00"); // latest start 4 PM (the 90-min eval runs to 5:30)
+  assert.equal(byDate["2026-11-03"].length, 17);
+  assert.equal(av.type.minutes, 90);
 
   const book = (body) => s.call("POST", "/api/appointments", { typeId: "eval", date: "2026-11-03", time: "10:00", name: "Pat Doe", email: "pat@example.com", phone: "941-555-0100", ...body });
   assert.equal((await book({ phone: "" })).status, 400);
   assert.equal((await book({ typeId: "nope" })).status, 400);
-  assert.equal((await book({ time: "08:00" })).status, 409); // before opening
+  assert.equal((await book({ time: "07:30" })).status, 409); // before 8 AM
+  assert.equal((await book({ time: "16:30" })).status, 409); // after the 4 PM latest start
   assert.equal((await book({ date: "2026-11-02", time: "18:00" })).status, 409);
   assert.equal((await book({ areas: ["Tail"] })).status, 400);
   assert.equal((await book({ painLevel: 12 })).status, 400);
   const ok = await book({ areas: ["Knee"], painLevel: 5 });
   assert.equal(ok.status, 201);
-  assert.equal(ok.body.message, "You're booked: Initial Evaluation, Tue, Nov 3 at 10:00 AM.");
-  assert.equal((await book({ email: "b@example.com", time: "10:30" })).status, 409); // overlaps 10:00-11:00
+  assert.equal(ok.body.message, "You're booked: Evaluation, Tue, Nov 3 at 10:00 AM.");
+  assert.equal((await book({ email: "b@example.com", time: "11:00" })).status, 409); // overlaps 10:00-11:30
   assert.equal((await book({ email: "b@example.com", typeId: "call", time: "10:30" })).status, 409); // inside the eval
   const call = await book({ email: "b@example.com", typeId: "call", time: "09:30" }); // 09:30-09:45 fits before it
   assert.equal(call.status, 201);
   const slots = (await s.call("GET", "/api/availability?type=call&from=2026-11-03&days=1")).body.days[0].slots;
-  assert.ok(!slots.includes("09:30") && !slots.includes("10:00") && !slots.includes("10:30") && slots.includes("11:00"));
+  assert.ok(!slots.includes("09:30") && !slots.includes("10:00") && !slots.includes("11:00") && slots.includes("11:30"));
 
   const { id, cancelToken } = ok.body.appointment;
   assert.equal((await s.call("POST", `/api/appointments/${id}/cancel`, { token: "x" })).status, 404);
@@ -292,26 +294,32 @@ test("email notifications go to owner and client when configured", async (t) => 
   const owner = sent.filter((m) => m.to[0] === "owner@example.com");
   const client = sent.find((m) => m.to[0] === "pat@example.com");
   assert.equal(owner.length, 2);
-  assert.match(client.subject, /Initial Evaluation/);
+  assert.match(client.subject, /Evaluation/);
   assert.match(client.text, /https:\/\/mdfit\.example\.com\/cancel\?kind=appointment&id=/);
-  assert.ok(owner.some((m) => /Pain: 4\/10/.test(m.text)));
-  assert.ok(owner.some((m) => /Where: Shoulder/.test(m.text) && /Pain: 3\/10/.test(m.text)));
+  assert.ok(owner.some((m) => /Pain: 4\/10/.test(m.text))); // consult request (unchanged)
+  const bookingMail = owner.find((m) => /New booking/.test(m.subject));
+  assert.ok(!/Shoulder|Pain: 3/.test(bookingMail.text), "booking emails carry no health details");
+  assert.match(bookingMail.text, /Admin → Appointments/);
 });
 
 test("services, payment plans and Medical Massage are public and admin-editable", async (t) => {
   const s = await start(); t.after(s.close);
   const site = (await s.call("GET", "/api/site")).body;
   const svc = Object.fromEntries(site.settings.services.map((v) => [v.id, v]));
-  assert.equal(svc.eval.rate, 300); assert.equal(svc.followup.rate, 150); assert.equal(svc.massage.rate, 250);
-  assert.equal(site.settings.plans.gold, 20); assert.equal(site.settings.plans.silver, 10);
+  assert.equal(svc.eval.rate, 300); assert.equal(svc.followup.rate, 150); assert.equal(svc.massage.rate, 250); assert.equal(svc.massage90.rate, 300);
+  assert.equal(svc.followup.withEval, true);
+  assert.equal(site.settings.plans.gold, 20); assert.equal(site.settings.plans.silver, 0); assert.equal(site.settings.plans.silverPayments, 3);
   assert.equal(site.settings.plans.ext12, 5); assert.equal(site.settings.plans.ext24, 10); assert.equal(site.settings.plans.guaranteeMin, 12);
   assert.ok(site.settings.appointmentTypes.some((a) => a.id === "massage"));
   assert.ok(site.options.services.includes("Medical massage"));
+  assert.ok(!site.options.services.includes("Group classes"), "classes are off the public site for now");
+  const types = Object.fromEntries(site.settings.appointmentTypes.map((a) => [a.id, a.minutes]));
+  assert.deepEqual(types, { eval: 90, session: 60, massage: 60, massage90: 90, call: 15 });
   await s.login();
   const r = await s.call("PUT", "/api/admin/settings", { services: [...site.settings.services, { id: "dry-needling", name: "Dry Needling", rate: 180, protocol: true, description: "" }], plans: { gold: 25, participation: { creditPct: 15 } } });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const after = (await s.call("GET", "/api/site")).body.settings;
-  assert.equal(after.services.length, 4); assert.equal(after.plans.gold, 25); assert.equal(after.plans.participation.creditPct, 15); assert.equal(after.plans.participation.attendPct, 90);
+  assert.equal(after.services.length, 5); assert.equal(after.plans.gold, 25); assert.equal(after.plans.participation.creditPct, 15); assert.equal(after.plans.participation.attendPct, 90);
   assert.equal((await s.call("PUT", "/api/admin/settings", { services: [{ id: "Bad Id", name: "x", rate: 1 }] })).status, 400);
 });
 

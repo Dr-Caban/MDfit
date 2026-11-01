@@ -9,7 +9,7 @@ const API = "https://mdfit-api-production.up.railway.app";
 const ALLOWED = new Set(["US", "PR", "GU", "VI", "AS", "MP", "UM"]);
 const BAD_UA = /(curl|wget|python-requests|python-urllib|aiohttp|httpx|go-http-client|java\/|okhttp|libwww|scrapy|httpclient|node-fetch|axios|postman|insomnia|headless|phantomjs|selenium|puppeteer|playwright|crawler|spider|scraper|gptbot|chatgpt-user|oai-searchbot|ccbot|claudebot|claude-web|anthropic-ai|bytespider|petalbot|semrushbot|ahrefsbot|mj12bot|dotbot|dataforseo|amazonbot|perplexitybot|youbot|diffbot|imagesiftbot|omgili|zgrab|masscan|nmap|nikto|sqlmap|wpscan)/i;
 const SEARCH = /(googlebot|bingbot|duckduckbot|applebot)/i;
-const PRIVATE = /^\/(account|admin|api|login|cancel|book)/;
+const PRIVATE = /^\/(account|admin|api|login|cancel|book|intake)/;
 
 const page = (status, title, text) => new Response(
   `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title>` +

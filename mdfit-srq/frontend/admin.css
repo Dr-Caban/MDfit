@@ -156,3 +156,7 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .mfa-steps { display: grid; gap: 10px; padding-left: 20px; }
 .mfa-secret { font-size: 15px; background: #f6f4ee; padding: 3px 8px; border-radius: 6px; letter-spacing: 1px; }
 .mfa-recovery { background: #f6f4ee; padding: 12px; border-radius: 8px; font-size: 15px; letter-spacing: 1px; }
+.intake-view { display: grid; gap: 6px; padding: 12px 14px; margin: 6px 0 10px; background: #f6f4ee; border-radius: 10px; font-size: 14px; }
+.intake-view div { display: grid; grid-template-columns: 140px 1fr; gap: 10px; }
+.intake-view b { color: #0A1A2E; }
+@media (max-width: 600px) { .intake-view div { grid-template-columns: 1fr; gap: 2px; } }

@@ -12,6 +12,7 @@ const { createPlaces } = require("./lib/google");
 const { mountClients } = require("./lib/clients");
 const { mountContent } = require("./lib/content");
 const { mountMessages } = require("./lib/messages");
+const { mountIntake, MASSAGE_TYPES } = require("./lib/intake");
 const { mountPayments } = require("./lib/payments");
 const { createSecurity } = require("./lib/security");
 const { createCalSync } = require("./lib/calsync");
@@ -150,6 +151,22 @@ function createApp(cfg = loadConfig()) {
   app.set("trust proxy", 1);
 
   const authReady = Boolean(cfg.adminEmail && isValidHash(cfg.adminPasswordHash) && cfg.sessionSecret.length >= 32);
+
+  // One-time update of saved settings to the Nov 2026 services, prices, plans and booking rules.
+  // Saved settings override the defaults, so without this the live site would keep the old prices.
+  (function migrateSettings() {
+    const s = store.read("settings", null);
+    if (!s || s.version >= 2) return;
+    const d = defaultSettings();
+    s.services = d.services;
+    s.appointmentTypes = d.appointmentTypes;
+    s.plans = { ...(s.plans || {}), gold: d.plans.gold, silver: d.plans.silver, silverPayments: d.plans.silverPayments, ext12: d.plans.ext12, ext24: d.plans.ext24 };
+    s.scheduling = { ...(s.scheduling || {}), hours: d.scheduling.hours, lastStart: d.scheduling.lastStart, minNoticeHours: d.scheduling.minNoticeHours };
+    s.business = { ...(s.business || {}), hours: d.business.hours };
+    s.coach = { ...(s.coach || {}), title: d.coach.title };
+    s.version = 2;
+    store.write("settings", s);
+  })();
 
   const settings = () => {
     const d = defaultSettings(), s = store.read("settings", {});
@@ -308,6 +325,7 @@ function createApp(cfg = loadConfig()) {
     const slots = [];
     for (const [start, end] of sch.hours[weekday(date)] || []) {
       for (let m = toMin(start); m + type.minutes <= toMin(end); m += sch.slotStepMin) {
+        if (sch.lastStart && m > toMin(sch.lastStart)) break; // nothing starts after the latest start time
         const t = toTime(m);
         if (date + t <= cutoff.date + cutoff.time) continue;
         if (taken.some(([a, z]) => m < z && m + type.minutes > a)) continue;
@@ -435,13 +453,14 @@ function createApp(cfg = loadConfig()) {
 
   app.get("/api/site", async (req, res) => {
     const s = settings();
-    const { scheduling, booking, massageAdded, ...pub } = s;
+    const { scheduling, booking, massageAdded, version, ...pub } = s;
     const calData = booking.provider === "cal" ? await calInfo(s) : null;
     res.set("Cache-Control", "no-cache");
     res.json({
       settings: pub, timeZone: cfg.tz,
       booking: { provider: calData ? "cal" : "builtin", cal: calData },
-      options: { goals: GOALS, services: SERVICES, areas: AREAS, durations: DURATIONS, surgery: SURGERY },
+      // Small-group classes are off the public site for now
+      options: { goals: GOALS, services: SERVICES.filter((x) => x !== "Group classes"), areas: AREAS, durations: DURATIONS, surgery: SURGERY },
       // kept for older frontends
       goals: GOALS, services: SERVICES
     });
@@ -516,7 +535,7 @@ function createApp(cfg = loadConfig()) {
   app.get("/api/app/config", (req, res) => {
     res.set("Cache-Control", "no-cache");
     res.json({ apiVersion: 1, minIosBuild: Number(env("MIN_IOS_BUILD", "1")) || 1, timeZone: cfg.tz,
-      features: { payments: !!(cfg.stripeClient || process.env.STRIPE_SECRET_KEY), healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false } });
+      features: { payments: !!((cfg.stripeClient || process.env.STRIPE_SECRET_KEY) && (cfg.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET)), healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false } });
   });
 
   app.get("/api/availability", async (req, res) => {
@@ -565,19 +584,22 @@ function createApp(cfg = loadConfig()) {
 
     const when = `${prettyDate(a.date)} at ${prettyTime(a.time)}`;
     const biz = s.business;
+    const isMassage = MASSAGE_TYPES.includes(type.id);
+    const intakeUrl = isMassage && cfg.siteUrl ? `${cfg.siteUrl}/intake?id=${appt.id}&token=${appt.cancelToken}` : "";
+    // Health details (pain areas, pain level, notes) stay out of email; they're in Admin → Appointments.
     notify.owner(`New booking: ${type.name}, ${when}`,
       [`${a.name}\n${a.email}\n${a.phone}`, `${type.name} (${type.minutes} min)\n${when}`,
-        a.areas.length && `Where: ${a.areas.join(", ")}`, a.painLevel !== null && `Pain: ${a.painLevel}/10`, a.notes || "(no notes)"]
-        .filter(Boolean).join("\n\n"));
+        `Details are in Admin → Appointments:\n${cfg.siteUrl || ""}/admin`].join("\n\n"));
     const link = cancelLink("appointment", appt);
     notify.client(a.email, `You're booked: ${type.name}, ${when}`,
       `Hi ${a.name.split(" ")[0]},\n\nYou're booked at ${biz.name} for ${type.name} (${type.minutes} min) on ${when}.\n\n` +
-      `${biz.address}\n${biz.phone}\n\nPlease wear comfortable clothes you can move in.` +
-      (link ? `\n\nNeed to cancel? ${link}` : "") + `\n\n${biz.name}`);
+      `${biz.address}\n${biz.phone}\n\n` +
+      (isMassage ? `Before your massage, please fill out the short intake form (about 3 minutes):\n${intakeUrl}` : `Please wear comfortable clothes you can move in.`) +
+      (link ? `\n\nNeed to cancel? Please give at least 24 hours' notice: ${link}` : "") + `\n\n${biz.name}`);
 
     res.status(201).json({
       ok: true,
-      appointment: { id: appt.id, typeName: type.name, minutes: type.minutes, date: a.date, time: a.time, cancelToken: appt.cancelToken },
+      appointment: { id: appt.id, typeId: type.id, typeName: type.name, minutes: type.minutes, date: a.date, time: a.time, cancelToken: appt.cancelToken, intake: isMassage },
       message: `You're booked: ${type.name}, ${when}.`
     });
   });
@@ -978,6 +1000,7 @@ function createApp(cfg = loadConfig()) {
   const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings, onCancel: (a) => unsyncBooking(a) });
   mountContent({ app, admin, store, notify, activity, ...cl });
   mountMessages({ app, admin, store, notify, activity, cfg, limiter, ...cl });
+  mountIntake({ app, admin, store, cfg, notify, activity, limiter, appointments, tokenMatches, prettyDate, prettyTime });
   const pay = mountPayments({ app, admin, store, notify, activity, cfg, settings, logger, ...cl });
 
   app.use("/api/admin", admin);

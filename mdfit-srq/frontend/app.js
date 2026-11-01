@@ -144,7 +144,9 @@
     finally { btn.disabled = false; }
   });
 
-  // ================= Group classes =================
+  // ================= Group classes (section hidden from the site for now; this runs only if it's back) =================
+  let loadSchedule = () => {};
+  if ($("#classes")) {
   let sessions = [], activeDay = null;
   function renderSchedule() {
     const today = todayInTz();
@@ -169,7 +171,7 @@
     const t = e.target.closest(".day-tab");
     if (t) { activeDay = t.dataset.day; renderSchedule(); }
   });
-  const loadSchedule = () => api("/api/schedule?days=7")
+  loadSchedule = () => api("/api/schedule?days=7")
     .then((d) => { sessions = d.sessions; $("#classes").hidden = !sessions.length; if (sessions.length) renderSchedule(); })
     .catch(() => { $(".sessions").innerHTML = `<p class="muted">Class schedule is unavailable right now.</p>`; });
 
@@ -193,6 +195,8 @@
     loadSchedule();
     return out;
   });
+
+  }
 
   // ================= Intake + newsletter =================
   wire($("#lead-form"), (data) => {

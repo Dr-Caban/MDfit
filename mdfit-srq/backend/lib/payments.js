@@ -1,7 +1,7 @@
 // Stripe payments for MD Fit, following Stripe's integration best practices:
 // - Checkout Sessions (Stripe-hosted) for every payment; no payment_method_types (dynamic payment methods).
 // - Memberships = subscriptions, one Stripe Product per tier; review reward = a one-time % off coupon.
-// - Protocols: Gold / pay-as-you-go = one-time payments; Silver / 12-month / 24-month = monthly installments
+// - Protocols: Gold / Bronze (pay as you go) = one-time payments; Silver / Platinum 12- and 24-month = monthly installments
 //   that end on their own (subscription schedule with a fixed duration).
 // - Fulfillment only from verified webhooks (never the success page). Events resolve through the Stripe object
 //   graph (customer id -> our client); metadata is only a fallback. Processed event ids are remembered (idempotent).
@@ -18,15 +18,17 @@ const cents = (dollars) => Math.round(dollars * 100);
 const letters = () => Array.from(crypto.randomBytes(8), (b) => String.fromCharCode(97 + (b % 26))).join("");
 const isoDate = (unix) => (unix ? new Date(unix * 1000).toISOString().slice(0, 10) : "");
 
-// Same math as the pricing page (frontend/pricing.js), computed on the server so prices can't be changed in the browser
-function protocolQuote(svc, n, plans, plan) {
-  const base = svc.rate * n;
+// Same math as the pricing page (frontend/pricing.js), computed on the server so prices can't be changed in the browser.
+// Plans: Gold = evaluation + every visit paid upfront, % off. Silver = same total in N monthly payments.
+// Bronze = pay as you go, one visit at a time. Platinum = spread over 12 or 24 months for a small %.
+function protocolQuote(svc, n, plans, plan, evalRate = 0) {
+  const base = (svc.withEval ? evalRate : 0) + svc.rate * n;
   switch (plan) {
-    case "gold": return { mode: "payment", total: base * (1 - plans.gold / 100), payments: 1, label: `Gold, paid in full (${plans.gold}% off)` };
-    case "silver": return { mode: "installments", total: base * (1 - plans.silver / 100), payments: plans.silverPayments, label: `Silver, ${plans.silverPayments} monthly payments (${plans.silver}% off)` };
-    case "ext12": return { mode: "installments", total: base * (1 + plans.ext12 / 100), payments: 12, label: `12 monthly payments (+${plans.ext12}%)` };
-    case "ext24": return { mode: "installments", total: base * (1 + plans.ext24 / 100), payments: 24, label: `24 monthly payments (+${plans.ext24}%)` };
-    case "payg": return { mode: "payment", total: svc.rate, payments: 1, label: "Pay as you go: 1 visit", single: true };
+    case "gold": return { mode: "payment", total: base * (1 - plans.gold / 100), payments: 1, label: `Gold, paid in full${plans.gold ? ` (${plans.gold}% off)` : ""}` };
+    case "silver": return { mode: "installments", total: base * (1 - plans.silver / 100), payments: plans.silverPayments, label: `Silver, ${plans.silverPayments} monthly payments${plans.silver ? ` (${plans.silver}% off)` : ""}` };
+    case "ext12": return { mode: "installments", total: base * (1 + plans.ext12 / 100), payments: 12, label: `Platinum, 12 monthly payments (+${plans.ext12}%)` };
+    case "ext24": return { mode: "installments", total: base * (1 + plans.ext24 / 100), payments: 24, label: `Platinum, 24 monthly payments (+${plans.ext24}%)` };
+    case "payg": return { mode: "payment", total: svc.rate, payments: 1, label: "Bronze, pay as you go: 1 visit", single: true };
     default: fail("Pick a payment plan.");
   }
 }
@@ -35,7 +37,9 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
   const key = cfg.stripeSecretKey || process.env.STRIPE_SECRET_KEY || "";
   const whsec = cfg.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET || "";
   const stripe = cfg.stripeClient || (key ? new Stripe(key, { apiVersion: API_VERSION }) : null);
-  const enabled = () => !!stripe;
+  // Checkout only turns on when webhooks can confirm payments too: taking money that can't be fulfilled
+  // (no membership / plan granted) is worse than not offering checkout yet.
+  const enabled = () => !!stripe && !!whsec;
   const site = () => cfg.siteUrl || "";
   const content = () => ({ tiers: [], ...store.read("content", {}) });
   const tiers = () => { const t = content().tiers; return t && t.length ? t : require("./content").defaultContent().tiers; };
@@ -104,7 +108,8 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
     if (!svc) fail("Pick a service.");
     const n = Number(b.sessions);
     if (!(s.plans.packageSizes || []).includes(n)) fail("Pick a number of visits.");
-    const q = protocolQuote(svc, n, s.plans, b.plan);
+    const evalSvc = (s.services || []).find((x) => x.id === "eval");
+    const q = protocolQuote(svc, n, s.plans, b.plan, evalSvc ? evalSvc.rate : 0);
     const c = req.client, customer = await ensureCustomer(c.id);
     const visits = q.single ? 1 : n;
     const name = `${svc.name}: ${visits} visit${visits === 1 ? "" : "s"} · ${q.label}`;

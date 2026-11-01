@@ -34,5 +34,6 @@ Disallow: /admin
 Disallow: /api/
 Disallow: /login
 Disallow: /cancel
+Disallow: /intake
 Disallow: /data/
 Allow: /

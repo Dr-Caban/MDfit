@@ -451,11 +451,11 @@ test("stripe: membership + protocol checkout, verified webhooks drive access, id
   let acc = (await s.call("GET", "/api/me/access", undefined, tok)).body;
   assert.equal(acc.member, true); assert.equal(acc.tier, "premium");
   assert.equal((await send({ id: "evt_2", type: "customer.subscription.created", data: { object: {} } })).body.duplicate, true, "same event twice is ignored");
-  // protocol: Silver, 12 follow-ups = 1800 * 0.9 = 1620 over 3 months
+  // protocol: Silver, evaluation + 12 follow-ups = 300 + 1800 = 2100 over 3 months
   const pr = await s.call("POST", "/api/me/checkout/protocol", { service: "followup", sessions: 12, plan: "silver" }, tok);
   assert.equal(pr.status, 200);
   const ps = calls.filter((c) => c[0] === "session").pop()[1];
-  assert.equal(ps.mode, "subscription"); assert.equal(ps.line_items[0].price_data.unit_amount, 54000);
+  assert.equal(ps.mode, "subscription"); assert.equal(ps.line_items[0].price_data.unit_amount, 70000);
   assert.equal((await s.call("POST", "/api/me/checkout/protocol", { service: "followup", sessions: 7, plan: "gold" }, tok)).status, 400, "only offered package sizes");
   const pid = ps.metadata.protocolId;
   await send({ id: "evt_3", type: "checkout.session.completed", data: { object: { id: "cs_p", mode: "subscription", payment_status: "paid", customer: "cus_1", subscription: "sub_p", metadata: ps.metadata } } });
@@ -464,7 +464,7 @@ test("stripe: membership + protocol checkout, verified webhooks drive access, id
   await send({ id: "evt_4", type: "invoice.paid", data: { object: { id: "in_1", customer: "cus_1", parent: { subscription_details: { subscription: "sub_p" } } } } });
   let pays = (await s.call("GET", "/api/me/payments", undefined, tok)).body;
   const p = pays.protocols.find((x) => x.id === pid);
-  assert.deepEqual([p.status, p.paid, p.payments, p.total, p.guarantee], ["active", 1, 3, 1620, true]);
+  assert.deepEqual([p.status, p.paid, p.payments, p.total, p.guarantee], ["active", 1, 3, 2100, true]);
   // Gold is a one-time payment at 20% off
   await s.call("POST", "/api/me/checkout/protocol", { service: "massage", sessions: 6, plan: "gold" }, tok);
   assert.equal(calls.filter((c) => c[0] === "session").pop()[1].line_items[0].price_data.unit_amount, 120000);
@@ -476,4 +476,16 @@ test("stripe: membership + protocol checkout, verified webhooks drive access, id
   const adm = await s.adminToken();
   assert.equal((await s.call("POST", `/api/admin/clients/${me.id}/credit`, { amount: 162, note: "Participation credit" }, adm)).status, 201);
   assert.deepEqual(calls.find((c) => c[0] === "credit").slice(1), ["cus_1", { amount: -16200, currency: "usd", description: "Participation credit" }]);
+});
+
+test("stripe: a secret key without the webhook secret keeps checkout off (no unfulfillable payments)", async (t) => {
+  let created = 0;
+  const fake = { checkout: { sessions: { create: async () => { created++; return { id: "cs_x", url: "https://checkout.stripe.com/x" }; } } },
+    customers: { create: async () => ({ id: "cus_x" }) } };
+  const s = await start({ stripeClient: fake }); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  assert.equal((await s.call("GET", "/api/app/config")).body.features.payments, false);
+  const r = await s.call("POST", "/api/me/checkout/protocol", { service: "followup", sessions: 12, plan: "gold" }, tok);
+  assert.equal(r.status, 503);
+  assert.equal(created, 0, "no Stripe checkout was created");
 });

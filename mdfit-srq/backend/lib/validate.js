@@ -8,7 +8,7 @@ const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const SERVICES = ["Injury rehabilitation", "Post-surgical rehab", "Chronic pain", "Medical massage", "Functional mobility",
-  "Strength & performance training", "Group classes", "Not sure yet"];
+  "Strength & performance training", "Stability", "Cognitive fortitude", "Group classes", "Not sure yet"];
 const GOALS = ["Get out of pain", "Recover from surgery", "Move better", "Get stronger", "Return to sport", "Lose weight", "Other"];
 const AREAS = ["Neck", "Shoulder", "Upper back", "Lower back", "Hip", "Knee", "Ankle / foot", "Elbow / wrist / hand", "Other"];
 const DURATIONS = ["Less than 6 weeks", "6 weeks to 6 months", "More than 6 months", "No pain, performance goal"];
@@ -19,7 +19,8 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 
 // Defaults reflect MD Fit's public listings. Everything is editable in the admin portal.
 function defaultSettings() {
-  const weekday = [["09:00", "17:00"]];
+  // Appointments start 8 AM to 4 PM (scheduling.lastStart); the day runs to 5:30 so a 4 PM visit can finish
+  const weekday = [["08:00", "17:30"]];
   return {
     business: {
       name: "MD Fit",
@@ -28,15 +29,15 @@ function defaultSettings() {
       email: "",
       address: "3214 Clark Road, Sarasota, FL 34231",
       mapsUrl: "https://www.google.com/maps/search/?api=1&query=MD+Fit+3214+Clark+Road+Sarasota+FL+34231",
-      hours: "Mon–Fri, 9 AM – 5 PM",
+      hours: "Mon–Fri, appointments 8 AM – 4 PM",
       instagram: "", facebook: "https://www.facebook.com/MDFitSRQ/", tiktok: "",
       bookingNote: "Every plan starts with an evaluation so we treat the cause, not just the symptom."
     },
     rating: { score: "4.9", count: 61, source: "Birdeye", url: "https://reviews.birdeye.com/md-fit-168104670901999" },
     coach: {
       name: "Dr. Jared Caban",
-      title: "MD, MSc · Certified Clinical Exercise Physiologist",
-      bio: "Dr. Jared Caban completed his medical doctorate in 2017 and holds a Master's degree in performance. He is a certified Clinical Exercise Physiologist.\n\nMD Fit is his answer to the gap between the clinic and the gym: a hybrid of rehabilitation, performance and recovery. Instead of chasing symptoms, he finds the muscle at the source of the pain, corrects the movement pattern behind it, and builds the strength to keep it from coming back.",
+      title: "MD, MSc, CCEP, LMT · Certified Clinical Exercise Physiologist · Licensed Massage Therapist",
+      bio: "Dr. Jared Caban completed his medical doctorate in 2017 and holds a Master's degree in performance. He is a Certified Clinical Exercise Physiologist (CCEP) and a Licensed Massage Therapist (LMT).\n\nMD Fit is his answer to the gap between the clinic and the gym: a hybrid of rehabilitation, performance and recovery. Instead of chasing symptoms, he finds the muscle at the source of the pain, corrects the movement pattern behind it, and builds the strength to keep it from coming back.",
       photoUrl: ""
     },
     packages: [
@@ -49,23 +50,27 @@ function defaultSettings() {
       { name: "Client review", quote: "Jared takes his time to find the muscle that is the problem and gives stretching exercises to solve the pain." },
       { name: "Class review", quote: "Smart, practical, and focused on helping you actually move and feel better." }
     ],
-    // Services and pricing (admin-editable). rate = dollars per hour; protocol = sold in multi-session packages
+    // Services and pricing (admin-editable). rate = dollars per visit; protocol = sold in multi-visit plans;
+    // withEval = the plan total includes the evaluation (Gold pays for the evaluation and every visit upfront)
     services: [
-      { id: "eval", name: "Initial Evaluation", rate: 300, unit: "hour", protocol: false, description: "Full pain and movement assessment, hands-on treatment and your personal plan." },
-      { id: "followup", name: "Follow-up Visit", rate: 150, unit: "hour", protocol: true, description: "Treatment, movement correction and progression of your protocol." },
-      { id: "massage", name: "Medical Massage", rate: 250, unit: "hour", protocol: true, description: "Targeted soft-tissue treatment for the exact muscles driving your pain." }
+      { id: "eval", name: "Evaluation", rate: 300, unit: "90 minutes", protocol: false, description: "Rehabilitation, functional mobility, strength & performance, stability or cognitive fortitude: full assessment, hands-on treatment, your plan and your first homework." },
+      { id: "followup", name: "Follow-up Visit", rate: 150, unit: "60 minutes", protocol: true, withEval: true, description: "Treatment and progression. You leave with homework for the days before your next visit." },
+      { id: "massage", name: "Medical Massage", rate: 250, unit: "60 minutes", protocol: true, description: "Targeted soft-tissue treatment for the muscles driving your pain. No evaluation needed: just a short intake form." },
+      { id: "massage90", name: "Medical Massage, Extended", rate: 300, unit: "90 minutes", protocol: true, description: "More time on more areas, for widespread or stubborn pain." }
     ],
-    // Payment plans for protocol packages. Discounts and increases are percentages.
+    // Payment plans. Gold: everything upfront, % off. Silver: same total in N monthly payments, % off.
+    // Bronze: pay as you go. Platinum: spread over 12 or 24 months for +ext12% / +ext24%.
     plans: {
-      gold: 20, silver: 10, silverPayments: 3, ext12: 5, ext24: 10, packageSizes: [6, 12, 24], guaranteeMin: 12,
+      gold: 20, silver: 0, silverPayments: 3, ext12: 5, ext24: 10, packageSizes: [6, 12, 24], guaranteeMin: 12,
       // Participation credit: attend at least attendPct% of booked visits and log homePerWeek home sessions a week to earn creditPct% back
       participation: { creditPct: 10, attendPct: 90, homePerWeek: 3 },
       reviewDiscountPct: 30
     },
     appointmentTypes: [
-      { id: "eval", name: "Initial Evaluation", minutes: 60, description: "Full pain and movement assessment, hands-on treatment and a plan." },
-      { id: "massage", name: "Medical Massage", minutes: 60, description: "Targeted soft-tissue treatment for the muscles driving your pain." },
-      { id: "session", name: "Rehab / Training Session", minutes: 60, description: "For existing clients continuing their plan." },
+      { id: "eval", name: "Evaluation", minutes: 90, description: "Rehab, functional mobility, strength & performance, stability or cognitive fortitude. $300." },
+      { id: "session", name: "Follow-up / Training Session", minutes: 60, description: "For existing clients continuing their plan. $150." },
+      { id: "massage", name: "Medical Massage", minutes: 60, description: "No evaluation needed; you'll fill out a short intake form. $250." },
+      { id: "massage90", name: "Medical Massage, 90 min", minutes: 90, description: "Extended session for more areas. $300." },
       { id: "call", name: "Free 15-Minute Phone Consult", minutes: 15, description: "Not sure where to start? Talk it through with Dr. Jared." }
     ],
     // provider "builtin" = MD Fit's own scheduler; "cal" = Cal.com embed (needs CAL_API_KEY or a username)
@@ -73,7 +78,8 @@ function defaultSettings() {
     scheduling: {
       hours: [[], weekday, weekday, weekday, weekday, weekday, []],
       slotStepMin: 30,
-      minNoticeHours: 12,
+      lastStart: "16:00",
+      minNoticeHours: 24,
       daysAhead: 30,
       blockedDates: []
     }
@@ -283,8 +289,9 @@ function mergeSettings(current, body) {
       return {
         id, name: str(v.name, `Service ${i + 1} name`, { min: 1, max: 60 }),
         rate: int(v.rate, `Service ${i + 1} rate`, { min: 0, max: 10000 }),
-        unit: str(v.unit || "hour", `Service ${i + 1} unit`, { max: 20 }),
+        unit: str(v.unit || "visit", `Service ${i + 1} unit`, { max: 20 }),
         protocol: Boolean(v.protocol),
+        withEval: Boolean(v.withEval),
         description: str(v.description, `Service ${i + 1} description`, { max: 300 })
       };
     });
@@ -367,6 +374,11 @@ function mergeSettings(current, body) {
       });
     }
     if (b.slotStepMin !== undefined) s.scheduling.slotStepMin = oneOf(int(b.slotStepMin, "Slot step"), [10, 15, 20, 30, 60], "slot step");
+    if (b.lastStart !== undefined) {
+      const t = str(b.lastStart, "Latest start time", { max: 5 });
+      if (t && !/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) fail("Latest start time must look like 16:00.");
+      s.scheduling.lastStart = t;
+    }
     if (b.minNoticeHours !== undefined) s.scheduling.minNoticeHours = int(b.minNoticeHours, "Minimum notice (hours)", { min: 0, max: 168 });
     if (b.daysAhead !== undefined) s.scheduling.daysAhead = int(b.daysAhead, "Days ahead", { min: 1, max: 90 });
     if (b.blockedDates !== undefined) {
