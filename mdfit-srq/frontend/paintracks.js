@@ -20,7 +20,8 @@
         <div><p class="tk-eyebrow">Pain track · ${esc(t.region)}</p><h2>${esc(t.title)}</h2><p class="tk-note">${esc(t.note)}</p>
           ${startLabel ? `<button type="button" class="tk-start" data-track-start="${t.id}">${esc(startLabel)}</button>` : ""}</div>
       </header>
-      <div class="tk-frame" hidden><iframe title="Exercise video" allow="autoplay; fullscreen" allowfullscreen></iframe><p class="tk-now"></p></div>
+      <div class="tk-frame" hidden><div class="tk-screen"></div>
+        <div class="tk-ctrl"><p class="tk-now"></p><label class="tk-auto"><input type="checkbox" checked> Play the whole track</label></div></div>
       ${t.levels.map((l) => `<section class="tk-level"><h3>${esc(l.title)}</h3><ol>${l.videos.map((v) => {
         n++;
         return v.id
@@ -31,6 +32,31 @@
   }
 
   let dlg;
+  // Stream the Drive MP4 directly so it autoplays; each clip plays twice, then the next video in the track starts.
+  const LOOPS = 2;
+  const mp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
+  function play(btn) {
+    const f = dlg.querySelector(".tk-frame"), sc = f.querySelector(".tk-screen");
+    f.hidden = false;
+    const id = btn.dataset.vid;
+    sc.innerHTML = `<video playsinline muted autoplay controls preload="auto"></video>`;
+    const vid = sc.querySelector("video");
+    let plays = 0;
+    vid.addEventListener("error", () => { sc.innerHTML = `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="Exercise video" allow="autoplay; fullscreen" allowfullscreen></iframe>`; }, { once: true });
+    vid.addEventListener("ended", () => {
+      if (++plays < LOOPS) { vid.currentTime = 0; vid.play().catch(() => {}); return; }
+      if (!f.querySelector(".tk-auto input").checked) return;
+      const all = [...dlg.querySelectorAll("[data-vid]")], nx = all[all.indexOf(btn) + 1];
+      if (nx) play(nx); else f.querySelector(".tk-now").textContent = "Track complete. Nice work.";
+    });
+    vid.src = mp4(id);
+    vid.play().catch(() => {});
+    const all = [...dlg.querySelectorAll("[data-vid]")];
+    f.querySelector(".tk-now").innerHTML = `<b>${all.indexOf(btn) + 1} of ${all.length}</b> · ${btn.dataset.name.replace(/[<>&]/g, "")}`;
+    all.forEach((b) => b.classList.toggle("on", b === btn));
+    if (btn !== all[0]) btn.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
   function open(id, opts = {}) {
     const t = TRACKS.find((x) => x.id === id);
     if (!t) return;
@@ -43,18 +69,11 @@
       dlg.addEventListener("click", (e) => {
         if (e.target === dlg) return dlg.close();
         const v = e.target.closest("[data-vid]");
-        if (v) {
-          const f = dlg.querySelector(".tk-frame");
-          f.hidden = false;
-          f.querySelector("iframe").src = `https://drive.google.com/file/d/${encodeURIComponent(v.dataset.vid)}/preview`;
-          f.querySelector(".tk-now").textContent = "Now playing: " + v.dataset.name;
-          dlg.querySelectorAll("[data-vid]").forEach((b) => b.classList.toggle("on", b === v));
-          f.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        if (v) play(v);
         const s = e.target.closest("[data-track-start]");
         if (s && dlg._onStart) { dlg.close(); dlg._onStart(t); }
       });
-      dlg.addEventListener("close", () => { const f = dlg.querySelector("iframe"); if (f) f.src = "about:blank"; });
+      dlg.addEventListener("close", () => { const sc = dlg.querySelector(".tk-screen"); if (sc) sc.innerHTML = ""; });
     }
     dlg._onStart = opts.onStart || null;
     dlg.querySelector(".tk-body").innerHTML = render(t, opts);

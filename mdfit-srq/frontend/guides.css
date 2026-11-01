@@ -97,3 +97,7 @@
   .tk-imgs img { width: 96px; height: 120px; }
   .tk-level, .tk-frame, .tk-fine { margin-left: 12px; margin-right: 12px; }
 }
+.tk-screen video, .tk-screen iframe { width: 100%; aspect-ratio: 16/10; border: 0; border-radius: 14px; background: #000; display: block; }
+.tk-ctrl { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.tk-ctrl .tk-now { margin: 0; }
+.tk-auto { font-size: 13px; font-weight: 600; color: #0A1A2E; display: inline-flex; gap: 6px; align-items: center; }
