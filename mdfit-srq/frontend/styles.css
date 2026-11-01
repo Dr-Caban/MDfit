@@ -519,3 +519,6 @@ dialog .book-when { margin: -6px 0 4px; }
 .credit-tiers { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; }
 .credit-tiers li { display: flex; gap: 10px; align-items: baseline; background: #fff; border-radius: 10px; padding: 8px 12px; }
 .credit-tiers b { color: var(--ink); min-width: 84px; }
+.opt-buy { margin-top: 10px; font: 700 13.5px var(--body); border: 0; border-radius: 10px; padding: 9px 10px; background: var(--accent); color: var(--ink); cursor: pointer; }
+.opt-gold .opt-buy { background: var(--gold); }
+.opt-buy:disabled { opacity: .7; }

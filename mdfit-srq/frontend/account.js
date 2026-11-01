@@ -1327,7 +1327,8 @@
     const req = client && client.membershipRequest;
     $("#my-membership").innerHTML = cur && C.access !== "free"
       ? `<div class="card mem-on"><span class="label accent">Your membership</span><h2>${esc(cur.name)}</h2><p class="muted small">Member since ${esc(m.since)}${m.until ? ` · paid through ${esc(m.until)}` : ""}</p></div>`
-      : `<p class="muted mem-pitch">Pick a membership below and tap <b>Request</b>. Dr. Jared confirms it and sends payment details. Online checkout is coming soon.</p>`;
+      : payOn ? `<p class="muted mem-pitch">Pick a membership below. Secure checkout by Stripe; cancel any time from Manage billing.</p>`
+      : `<p class="muted mem-pitch">Pick a membership below and tap <b>Request</b>. Dr. Jared confirms it and sends payment details.</p>`;
     const rc = access.reviewCode || store.get("mdfit_review_code", null);
     if (rc && C.access === "free") $("#my-membership").insertAdjacentHTML("beforeend", `<div class="pw-applied">Your review code <b>${esc(rc)}</b> takes <b>30% off your first month</b>. It's applied automatically when you request a membership.</div>`);
     $("#tier-grid").innerHTML = C.tiers.map((t, i) => `<article class="tier${i === 1 ? " featured" : ""}${cur && cur.id === t.id ? " current" : ""}">
@@ -1335,8 +1336,9 @@
       <h3>${esc(t.name)}</h3><p class="tier-price"><b>${money(t.price)}</b>/month</p>${rc && C.access === "free" ? `<p class="tier-first">First month ${money(Math.round(t.price * 70) / 100)} with your review code</p>` : ""}
       ${t.meetings ? `<p class="tier-meet">${t.meetings} remote 1-on-1 sessions a month · ${t.meetingMinutes} min each</p>` : ""}
       <ul>${t.perks.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-      ${cur && cur.id === t.id ? `<span class="tier-cur">Your plan</span>` : `<button type="button" class="${i === 1 ? "btn-gold" : "btn-ghost"} sm" data-tier="${t.id}">Request ${esc(t.name)}</button>`}
+      ${cur && cur.id === t.id ? `<span class="tier-cur">Your plan</span>` : `<button type="button" class="${i === 1 ? "btn-gold" : "btn-ghost"} sm" data-tier="${t.id}">${payOn ? "Subscribe" : "Request"} ${esc(t.name)}</button>`}
     </article>`).join("");
+    renderPayments();
     const mc = $("#meetings-card");
     mc.hidden = C.access !== "premium";
     if (mc.hidden) return;
@@ -1346,9 +1348,34 @@
     $("#meet-list").innerHTML = d.meetings.map((x) => `<li><b>${esc(x.topic)}</b><span class="pill ${x.status}">${x.status}</span>
       <span class="muted small">${x.when ? esc(x.when) : `Asked for: ${esc(x.times)}`}</span>${x.link && x.status === "scheduled" ? `<a class="btn-gold sm" href="${esc(x.link)}" target="_blank" rel="noopener">Join</a>` : ""}</li>`).join("");
   }
+  let payOn = false, pays = null;
+  api("/api/app/config").then((c) => { payOn = !!(c.features && c.features.payments); }).catch(() => {});
+  if (new URLSearchParams(location.search).get("checkout") === "success") {
+    toast("Payment received. Thank you! Your account updates in a moment.");
+    history.replaceState(null, "", "/account" + location.hash);
+    setTimeout(() => apiAuth("GET", "/api/me/access").then((a) => { access = a; renderAccessBadge(); loadContent().then(() => renderContent("premium")); }).catch(() => {}), 4000);
+  }
+  async function renderPayments() {
+    const host = $("#my-payments"); if (!host) return;
+    pays = await apiAuth("GET", "/api/me/payments").catch(() => null);
+    if (!pays) return;
+    const pl = pays.protocols.filter((p) => p.status !== "pending");
+    host.innerHTML = (pays.hasBilling && pays.enabled ? `<button type="button" class="btn-ghost sm" id="manage-billing">Manage billing &amp; cards</button>` : "") +
+      (pl.length ? `<div class="card"><span class="label accent">Your protocol plans</span><ul class="proto-list">${pl.map((p) => `<li><b>${esc(p.serviceName)} · ${p.sessions} visit${p.sessions === 1 ? "" : "s"}</b><span>${esc(p.label)} · ${money(p.total)}${p.payments > 1 ? ` · ${p.paid} of ${p.payments} payments` : ""}</span><span class="pill ${p.status}">${esc(p.status)}</span>${p.guarantee ? `<small>Includes the money-back guarantee</small>` : ""}</li>`).join("")}</ul></div>` : "");
+  }
+  document.addEventListener("click", async (e) => {
+    if (!e.target.closest("#manage-billing")) return;
+    try { location.href = (await apiAuth("POST", "/api/me/billing-portal", {})).url; } catch (err) { toast(err.message); }
+  });
   $("#tier-grid").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-tier]"); if (!b) return;
     const t = C.tiers.find((x) => x.id === b.dataset.tier);
+    if (payOn) {
+      b.disabled = true;
+      try { location.href = (await apiAuth("POST", "/api/me/checkout/membership", { tier: t.id, rewardCode: access.reviewCode || store.get("mdfit_review_code", null) || undefined })).url; }
+      catch (err) { toast(err.message); b.disabled = false; }
+      return;
+    }
     const note = prompt(`Request ${t.name} (${money(t.price)}/month)?\nAdd a note for Dr. Jared (optional):`, "");
     if (note === null) return;
     try { await apiAuth("POST", "/api/me/membership/request", { tier: t.id, note }); b.outerHTML = `<span class="tier-cur">Requested. Dr. Jared will be in touch.</span>`; toast("Request sent to Dr. Jared."); }

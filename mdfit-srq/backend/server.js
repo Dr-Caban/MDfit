@@ -12,6 +12,7 @@ const { createPlaces } = require("./lib/google");
 const { mountClients } = require("./lib/clients");
 const { mountContent } = require("./lib/content");
 const { mountMessages } = require("./lib/messages");
+const { mountPayments } = require("./lib/payments");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
@@ -417,7 +418,7 @@ function createApp(cfg = loadConfig()) {
   app.get("/api/app/config", (req, res) => {
     res.set("Cache-Control", "no-cache");
     res.json({ apiVersion: 1, minIosBuild: Number(env("MIN_IOS_BUILD", "1")) || 1, timeZone: cfg.tz,
-      features: { payments: false, healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false } });
+      features: { payments: !!(cfg.stripeClient || process.env.STRIPE_SECRET_KEY), healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false } });
   });
 
   app.get("/api/availability", (req, res) => {
@@ -792,6 +793,7 @@ function createApp(cfg = loadConfig()) {
   const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings });
   mountContent({ app, admin, store, notify, activity, ...cl });
   mountMessages({ app, admin, store, notify, activity, cfg, limiter, ...cl });
+  const pay = mountPayments({ app, admin, store, notify, activity, cfg, settings, logger, ...cl });
 
   app.use("/api/admin", admin);
 

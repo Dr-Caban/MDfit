@@ -29,7 +29,7 @@ async function start(extra = {}) {
     return { status: res.status, body: await res.json().catch(() => undefined) };
   };
   const adminToken = async () => (await call("POST", "/api/admin/login", { email: "coach@example.com", password: "admin-pass-123" })).body.token;
-  return { call, adminToken, dataDir, close: () => { server.close(); fs.rmSync(dataDir, { recursive: true, force: true }); } };
+  return { call, adminToken, dataDir, base, close: () => { server.close(); fs.rmSync(dataDir, { recursive: true, force: true }); } };
 }
 
 const signup = (s, over = {}) => s.call("POST", "/api/clients/signup", { name: "Pat Doe", email: "Pat@Example.com", phone: "941-555-0100", password: "pat-pass-123", ...over });
@@ -404,4 +404,76 @@ test("messaging: members only, encrypted at rest, unread tracking both ways", as
   assert.deepEqual(mine.messages.map((x) => x.from), ["client", "doctor"]);
   await s.call("POST", "/api/me/messages/read", {}, tok);
   assert.equal((await s.call("GET", "/api/me/messages/unread-count", undefined, tok)).body.unread, 0);
+});
+
+test("stripe: membership + protocol checkout, verified webhooks drive access, idempotent", async (t) => {
+  const Stripe = require("stripe");
+  const real = new Stripe("sk_test_fake", { apiVersion: "2026-10-28.endive" });
+  const calls = [];
+  const fake = {
+    webhooks: real.webhooks,
+    customers: { create: async (p) => (calls.push(["customer", p]), { id: "cus_1" }), createBalanceTransaction: async (cu, p) => (calls.push(["credit", cu, p]), { id: "cbtxn_1" }) },
+    prices: { list: async () => ({ data: [] }), create: async (p) => (calls.push(["price", p]), { id: "price_member" }) },
+    products: { create: async (p) => (calls.push(["product", p]), { id: "prod_1" }) },
+    coupons: { retrieve: async () => { throw new Error("nope"); }, create: async (p) => (calls.push(["coupon", p]), { id: p.id }) },
+    checkout: { sessions: { create: async (p) => (calls.push(["session", p]), { id: "cs_" + calls.length, url: "https://checkout.stripe.com/c/pay/cs_test" }) } },
+    subscriptionSchedules: { create: async (p) => (calls.push(["schedule", p]), { id: "sub_sched_1", phases: [{ start_date: 1790000000, items: [{ price: "price_inst", quantity: 1 }] }] }), update: async (id, p) => (calls.push(["scheduleUpdate", p]), { id }) },
+    billingPortal: { sessions: { create: async () => ({ url: "https://billing.stripe.com/p/session" }) } }
+  };
+  const whsec = "whsec_test_secret";
+  const s = await start({ stripeClient: fake, stripeWebhookSecret: whsec }); t.after(s.close);
+  const send = async (ev) => {
+    const payload = JSON.stringify(ev);
+    const header = real.webhooks.generateTestHeaderString({ payload, secret: whsec });
+    const r = await fetch(s.base + "/api/stripe/webhook", { method: "POST", headers: { "content-type": "application/json", "stripe-signature": header }, body: payload });
+    return { status: r.status, body: await r.json() };
+  };
+  const tok = (await signup(s)).body.token;
+  assert.equal((await s.call("GET", "/api/app/config")).body.features.payments, true);
+  // review code -> coupon on the membership checkout
+  const rv = (await s.call("POST", "/api/feedback", { name: "Pat Doe", email: "pat@example.com", rating: 5, text: "Great care and a clear plan.", publish: true })).body;
+  const co = await s.call("POST", "/api/me/checkout/membership", { tier: "premium" }, tok);
+  assert.equal(co.body.url, "https://checkout.stripe.com/c/pay/cs_test");
+  const sess = calls.find((c) => c[0] === "session")[1];
+  assert.equal(sess.mode, "subscription"); assert.equal(sess.customer, "cus_1");
+  assert.deepEqual(sess.discounts, [{ coupon: "mdfit-review-30" }]);
+  assert.equal(sess.payment_method_types, undefined, "dynamic payment methods");
+  assert.match(sess.integration_identifier, /^mdfit_membership_[a-z]{8}$/);
+  assert.equal(calls.find((c) => c[0] === "price")[1].unit_amount, 34900);
+  // bad signature rejected
+  const bad = await fetch(s.base + "/api/stripe/webhook", { method: "POST", headers: { "content-type": "application/json", "stripe-signature": "t=1,v1=bad" }, body: "{}" });
+  assert.equal(bad.status, 400); await bad.text();
+  // checkout completed + subscription created -> member
+  const me = (await s.call("GET", "/api/me", undefined, tok)).body.client;
+  assert.equal((await send({ id: "evt_1", type: "checkout.session.completed", data: { object: { id: "cs_1", mode: "subscription", payment_status: "paid", customer: "cus_1", client_reference_id: me.id, metadata: { kind: "membership", tier: "premium", clientId: me.id, rewardCode: rv.rewardCode } } } })).status, 200);
+  assert.equal((await s.call("GET", `/api/feedback/reward/${rv.rewardCode}`)).body.used, true);
+  await send({ id: "evt_2", type: "customer.subscription.created", data: { object: { id: "sub_m", customer: "cus_1", status: "active", metadata: { kind: "membership", tier: "premium" }, items: { data: [{ current_period_end: 1795000000 }] } } } });
+  let acc = (await s.call("GET", "/api/me/access", undefined, tok)).body;
+  assert.equal(acc.member, true); assert.equal(acc.tier, "premium");
+  assert.equal((await send({ id: "evt_2", type: "customer.subscription.created", data: { object: {} } })).body.duplicate, true, "same event twice is ignored");
+  // protocol: Silver, 12 follow-ups = 1800 * 0.9 = 1620 over 3 months
+  const pr = await s.call("POST", "/api/me/checkout/protocol", { service: "followup", sessions: 12, plan: "silver" }, tok);
+  assert.equal(pr.status, 200);
+  const ps = calls.filter((c) => c[0] === "session").pop()[1];
+  assert.equal(ps.mode, "subscription"); assert.equal(ps.line_items[0].price_data.unit_amount, 54000);
+  assert.equal((await s.call("POST", "/api/me/checkout/protocol", { service: "followup", sessions: 7, plan: "gold" }, tok)).status, 400, "only offered package sizes");
+  const pid = ps.metadata.protocolId;
+  await send({ id: "evt_3", type: "checkout.session.completed", data: { object: { id: "cs_p", mode: "subscription", payment_status: "paid", customer: "cus_1", subscription: "sub_p", metadata: ps.metadata } } });
+  const upd = calls.find((c) => c[0] === "scheduleUpdate")[1];
+  assert.equal(upd.end_behavior, "cancel"); assert.deepEqual(upd.phases[0].duration, { interval: "month", interval_count: 3 });
+  await send({ id: "evt_4", type: "invoice.paid", data: { object: { id: "in_1", customer: "cus_1", parent: { subscription_details: { subscription: "sub_p" } } } } });
+  let pays = (await s.call("GET", "/api/me/payments", undefined, tok)).body;
+  const p = pays.protocols.find((x) => x.id === pid);
+  assert.deepEqual([p.status, p.paid, p.payments, p.total, p.guarantee], ["active", 1, 3, 1620, true]);
+  // Gold is a one-time payment at 20% off
+  await s.call("POST", "/api/me/checkout/protocol", { service: "massage", sessions: 6, plan: "gold" }, tok);
+  assert.equal(calls.filter((c) => c[0] === "session").pop()[1].line_items[0].price_data.unit_amount, 120000);
+  // cancelling the membership subscription removes access
+  await send({ id: "evt_5", type: "customer.subscription.deleted", data: { object: { id: "sub_m", customer: "cus_1", status: "canceled", metadata: { kind: "membership", tier: "premium" }, items: { data: [] } } } });
+  acc = (await s.call("GET", "/api/me/access", undefined, tok)).body;
+  assert.equal(acc.member, false);
+  // participation credit -> negative customer balance
+  const adm = await s.adminToken();
+  assert.equal((await s.call("POST", `/api/admin/clients/${me.id}/credit`, { amount: 162, note: "Participation credit" }, adm)).status, 201);
+  assert.deepEqual(calls.find((c) => c[0] === "credit").slice(1), ["cus_1", { amount: -16200, currency: "usd", description: "Participation credit" }]);
 });

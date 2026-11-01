@@ -25,6 +25,7 @@
     };
   }
 
+  let payOn = false;
   function mount(root, settings) {
     const services = settings.services || [], p = settings.plans;
     if (!root || !services.length || !p) return;
@@ -97,15 +98,27 @@
             ${o.save > 0 ? `<p class="opt-save">You save ${money(o.save)}</p>` : ""}
             ${q.guarantee ? `<p class="opt-g">✓ Money-back guarantee</p>` : ""}
             <p class="opt-credit">Earn up to ${money(q.credit(o.total))} back</p>
+            ${payOn ? `<button type="button" class="opt-buy" data-buy="${o.id}">Start this plan</button>` : ""}
           </div>`).join("")}
         </div>
         <p class="calc-note">${state.n} × ${money(svc.rate)} ${esc(svc.name)} visits = ${money(q.base)} at the standard rate.${q.guarantee ? "" : ` Choose ${p.guaranteeMin}+ visits to add the money-back guarantee.`} Your evaluation (${money((services.find((s) => !s.protocol) || svc).rate)}) is booked first and is not part of the protocol price.</p>`;
     };
-    root.addEventListener("click", (e) => {
+    root.addEventListener("click", async (e) => {
+      const buy = e.target.closest("[data-buy]");
+      if (buy) {
+        const M = window.MDFit, me = M && M.auth && M.auth.client && M.auth.client();
+        if (!me) { location.href = "/login?next=" + encodeURIComponent("/#pricing"); return; }
+        buy.disabled = true; buy.textContent = "Opening secure checkout…";
+        try { const r = await M.apiAuth("POST", "/api/me/checkout/protocol", { service: state.svc, sessions: state.n, plan: buy.dataset.buy }); location.href = r.url; }
+        catch (err) { buy.disabled = false; buy.textContent = "Start this plan"; alert(err.message); }
+        return;
+      }
       const b = e.target.closest(".chips button"); if (!b) return;
       const k = b.parentElement.dataset.k; state[k] = k === "n" ? Number(b.dataset.v) : b.dataset.v; draw();
     });
     draw();
+    const cfgUrl = (window.MDFIT_CONFIG || {}).apiUrl;
+    if (cfgUrl) fetch(cfgUrl + "/api/app/config").then((r) => r.json()).then((c) => { if (c.features && c.features.payments) { payOn = true; draw(); } }).catch(() => {});
   }
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   window.MDFitPricing = { quote, mount, money };
