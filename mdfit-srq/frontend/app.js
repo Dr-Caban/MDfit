@@ -60,7 +60,7 @@
     $(".review-sum").innerHTML = r.score && r.count
       ? `<span class="stars" aria-hidden="true">★★★★★</span> <strong>${esc(r.score)} out of 5</strong> from ${esc(r.count)} reviews${r.url ? ` · <a href="${esc(r.url)}" target="_blank" rel="noopener">Read them on ${esc(r.source || "our review page")}</a>` : ""}`
       : "";
-    $("#reviews").hidden = !s.testimonials.length;
+    $("#reviews").hidden = false;
     $(".quotes").innerHTML = s.testimonials.map((t) =>
       `<blockquote class="quote"><span class="stars" aria-hidden="true">★★★★★</span><p>&ldquo;${esc(t.quote)}&rdquo;</p><cite>${esc(t.name)}</cite></blockquote>`).join("");
 
@@ -74,7 +74,11 @@
       .map((k) => `<a href="${esc(b[k])}" target="_blank" rel="noopener" aria-label="${k}"><svg viewBox="0 0 24 24">${SOCIAL_ICONS[k]}</svg></a>`).join("");
 
     mountBooker($(".booker"), data);
-    loadGoogleReviews().then((g) => g && renderGoogleReviews(g));
+    site = data;
+    if (r.url) Object.assign($(".lr-google"), { hidden: false }).querySelector("a").href = r.url;
+    loadGoogleReviews().then((g) => { if (g) { renderGoogleReviews(g); if (g.url) Object.assign($(".lr-google"), { hidden: false }).querySelector("a").href = g.url; } }).finally(loadSiteReviews);
+    const code = new URLSearchParams(location.search).get("reward");
+    if (code) redeem(code);
   }
 
   // Real Google reviews replace the hand-entered testimonials when the backend can reach Google.
@@ -103,6 +107,42 @@
       more.addEventListener("click", () => { q.classList.add("open"); more.hidden = true; });
     });
   }
+
+  // ================= On-site reviews: easy form, reward for any rating, approved ones shown with a disclosure
+  let site = null;
+  async function loadSiteReviews() {
+    let d; try { d = await api("/api/feedback"); } catch { return; }
+    if (!d.reviews.length) return;
+    $(".quotes").insertAdjacentHTML("beforeend", d.reviews.map((r) => `
+      <blockquote class="quote site-review"><span class="stars" aria-label="${r.rating} out of 5 stars">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
+        <p>&ldquo;${esc(r.text)}&rdquo;</p><cite>${esc(r.name)}</cite><small class="disclose">MD Fit client. Received a free plan review for sharing feedback.</small></blockquote>`).join(""));
+  }
+  async function redeem(code) {
+    let r; try { r = await api(`/api/feedback/reward/${encodeURIComponent(code)}`); } catch { return; }
+    if (!r.valid) return;
+    mountBooker($(".booker"), site, { type: r.type.id, reward: { code, type: r.type } });
+    const f = $(".booker [name=email]"); if (f && !f.value) { f.value = r.email; $(".booker [name=name]").value = r.name; }
+    $("#book .sub").textContent = `Your free 30-minute plan review is unlocked. Pick a time below.`;
+    setTimeout(() => $("#book").scrollIntoView({ behavior: "smooth" }), 150);
+  }
+  $("#review-form").addEventListener("change", (e) => { if (e.target.name === "rating") $("#review-form .form-msg").textContent = ""; });
+  $("#review-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, msg = $(".form-msg", f);
+    msg.className = "form-msg"; msg.textContent = "";
+    const rating = Number((f.querySelector("[name=rating]:checked") || {}).value || 0);
+    if (!rating) { msg.className = "form-msg err"; msg.textContent = "Tap the stars to rate your experience."; return; }
+    if (!f.reportValidity()) return;
+    const btn = $("button[type=submit]", f); btn.disabled = true;
+    try {
+      const out = await api("/api/feedback", { name: f.name.value, email: f.email.value, rating, text: f.text.value, publish: f.publish.checked, company: f.company.value });
+      f.hidden = true;
+      const done = $(".lr-done"); done.hidden = false;
+      $(".lr-code", done).textContent = out.rewardCode;
+      $("#lr-book").onclick = () => redeem(out.rewardCode);
+    } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+    finally { btn.disabled = false; }
+  });
 
   // ================= Group classes =================
   let sessions = [], activeDay = null;
@@ -165,7 +205,7 @@
     // Backend unreachable: keep the static page usable and point people to the phone
     options($("#lead-form [name=service]"), ["Not sure yet"]);
     options($("#lead-form [name=goal]"), ["Other"]);
-    $(".pricing").innerHTML = `<p class="muted">Call 941-313-0562 for pricing.</p>`;
+    $(".pricing-app").innerHTML = `<p class="muted">Call 941-313-0562 for pricing.</p>`;
     $(".booker").innerHTML = `<div class="booker-step"><p>Online booking is unavailable right now. Call <a href="tel:+19413130562">941-313-0562</a> and we'll get you scheduled.</p></div>`;
     $("#reviews").hidden = true;
   });

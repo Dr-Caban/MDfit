@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=65f2e375">
-  <link rel="stylesheet" href="admin.css?v=6b97858e">
+  <link rel="stylesheet" href="styles.css?v=3c67b41b">
+  <link rel="stylesheet" href="admin.css?v=314387d8">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -37,6 +37,7 @@
           <button data-tab="classes">Classes</button>
           <button data-tab="bookings">Bookings</button>
           <button data-tab="subs">Subscribers</button>
+          <button data-tab="reviews">Reviews</button>
           <button data-tab="hours">Booking</button>
           <button data-tab="settings">Settings</button>
           <button id="logout" class="link">Log out</button>
@@ -155,6 +156,11 @@
         <div class="table-wrap"><table id="bookings-table"></table></div>
       </section>
 
+      <section data-panel="reviews" hidden>
+        <p class="muted">Reviews left on the website. Everyone who leaves one gets a free 30-minute plan review code, whatever their rating. Approve a review to show it on the homepage (only if they agreed).</p>
+        <div id="reviews-list" class="stack"></div>
+      </section>
+
       <section data-panel="subs" hidden>
         <div class="bar"><button class="btn btn-sm btn-line" data-csv="/api/admin/subscribers.csv">Download CSV</button></div>
         <div class="table-wrap"><table id="subs-table"></table></div>
@@ -218,6 +224,6 @@
   </div>
 
   <script src="config.js?v=f7c994b0"></script>
-  <script src="admin.js?v=2f651502"></script>
+  <script src="admin.js?v=f14daaa2"></script>
 </body>
 </html>

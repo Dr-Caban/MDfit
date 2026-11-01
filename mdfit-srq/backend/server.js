@@ -12,7 +12,7 @@ const { createPlaces } = require("./lib/google");
 const { mountClients } = require("./lib/clients");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
-  defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings, EMAIL_RE
+  defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
 } = require("./lib/validate");
 
 const env = (k, d = "") => (process.env[k] || d).trim();
@@ -70,6 +70,7 @@ const prettyDate = (date) => new Date(date + "T12:00:00Z").toLocaleDateString("e
 const prettyTime = (t) => { const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
 
 const id = () => crypto.randomBytes(6).toString("hex");
+const PLAN_REVIEW = { id: "plan-review", name: "Free 30-Minute Plan Review", minutes: 30, description: "Your reward for leaving a review: go over your plan and progress with Dr. Jared, and get direction on which programs to use next." };
 const newToken = () => crypto.randomBytes(16).toString("hex");
 const tokenMatches = (given, expected) => {
   const a = Buffer.from(String(given || "")), b = Buffer.from(String(expected || ""));
@@ -150,6 +151,7 @@ function createApp(cfg = loadConfig()) {
   };
   const bookings = () => store.read("bookings", []);
   const appointments = () => store.read("appointments", []);
+  const feedback = () => store.read("feedback", []);
   const leads = () => store.read("leads", []);
   const subscribers = () => store.read("subscribers", []);
   const cancelLink = (kind, rec) => cfg.siteUrl ? `${cfg.siteUrl}/cancel?kind=${kind}&id=${rec.id}&token=${rec.cancelToken}` : "";
@@ -373,9 +375,40 @@ function createApp(cfg = loadConfig()) {
     res.json({ ok: true });
   });
 
+  // ---- On-site reviews. Every review, whatever the rating, earns a free 30-minute plan review.
+  // (Google and the FTC don't allow rewards tied to public or positive reviews, so the reward is for honest feedback here.)
+  app.post("/api/feedback", formLimit.mw, honeypot, (req, res) => {
+    const f = feedbackInput(req.body);
+    const list = feedback();
+    const code = "MDFIT-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+    const entry = { id: id(), ...f, status: "pending", rewardCode: code, createdAt: new Date().toISOString() };
+    list.push(entry);
+    store.write("feedback", list);
+    activity("feedback", { email: f.email, rating: f.rating });
+    const biz = settings().business;
+    const bookUrl = `${cfg.siteUrl}/?reward=${encodeURIComponent(code)}#book`;
+    notify.owner(`New review: ${f.rating}/5 from ${f.name}`, `${f.name} <${f.email}>\n${"★".repeat(f.rating)}${"☆".repeat(5 - f.rating)}\n\n${f.text}\n\n${f.publish ? "OK to publish (approve it in Admin → Reviews)." : "Private: do not publish."}\nReward code: ${code}`);
+    notify.client(f.email, `Thank you! Your free 30-minute plan review`, `Hi ${f.name.split(" ")[0]},\n\nThank you for your feedback. As promised, you get a free 30-minute plan review with Dr. Jared to go over your progress and which programs to use next.\n\nYour code: ${code}\nBook it here: ${bookUrl}\n\n${biz.name}\n${biz.phone}`);
+    res.status(201).json({ ok: true, rewardCode: code, bookUrl, message: "Thank you! Your free 30-minute plan review code is below." });
+  });
+  app.get("/api/feedback", (req, res) => {
+    const pub = feedback().filter((f) => f.status === "approved" && f.publish)
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 30)
+      .map((f) => { const [first, last = ""] = f.name.split(/\s+/); return { name: first + (last ? ` ${last[0]}.` : ""), rating: f.rating, text: f.text, date: f.createdAt.slice(0, 10) }; });
+    const n = pub.length;
+    res.set("Cache-Control", "no-cache");
+    res.json({ reviews: pub, count: n, average: n ? Math.round((pub.reduce((s, f) => s + f.rating, 0) / n) * 10) / 10 : null,
+      reward: { title: PLAN_REVIEW.name, typeId: PLAN_REVIEW.id, minutes: PLAN_REVIEW.minutes } });
+  });
+  app.get("/api/feedback/reward/:code", (req, res) => {
+    const f = feedback().find((x) => x.rewardCode === String(req.params.code).toUpperCase());
+    if (!f) return res.status(404).json({ error: "That reward code isn't valid." });
+    res.json({ valid: !f.rewardUsedAt, used: !!f.rewardUsedAt, name: f.name, email: f.email, type: PLAN_REVIEW });
+  });
+
   app.get("/api/availability", (req, res) => {
     const s = settings();
-    const type = s.appointmentTypes.find((t) => t.id === req.query.type) || s.appointmentTypes[0];
+    const type = s.appointmentTypes.find((t) => t.id === req.query.type) || (req.query.type === PLAN_REVIEW.id ? PLAN_REVIEW : s.appointmentTypes[0]);
     const { date: today } = nowParts(cfg.tz, cfg.now());
     const from = /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || "") && req.query.from > today ? req.query.from : today;
     const days = Math.min(31, Math.max(1, Number.parseInt(req.query.days, 10) || 14));
@@ -391,14 +424,24 @@ function createApp(cfg = loadConfig()) {
   app.post("/api/appointments", formLimit.mw, honeypot, (req, res) => {
     const a = appointmentInput(req.body);
     const s = settings();
-    const type = s.appointmentTypes.find((t) => t.id === a.typeId);
+    const type = s.appointmentTypes.find((t) => t.id === a.typeId) || (a.typeId === PLAN_REVIEW.id ? PLAN_REVIEW : null);
     if (!type) return res.status(400).json({ error: "Pick an appointment type." });
+    // The free plan review is a reward: it needs an unused code from a submitted review
+    let reward = null;
+    const fb = type === PLAN_REVIEW ? feedback() : null;
+    if (fb) {
+      const code = String((req.body && req.body.rewardCode) || "").trim().toUpperCase();
+      reward = fb.find((f) => f.rewardCode === code);
+      if (!reward) return res.status(400).json({ error: "That reward code isn't valid. Check the email we sent you." });
+      if (reward.rewardUsedAt) return res.status(409).json({ error: "That reward code has already been used." });
+    }
     if (!openSlots(type, a.date, s).includes(a.time))
       return res.status(409).json({ error: "That time was just taken or isn't available. Pick another." });
     const appt = {
       id: id(), ...a, typeName: type.name, minutes: type.minutes, status: "booked", adminNotes: "",
       cancelToken: newToken(), createdAt: new Date().toISOString()
     };
+    if (reward) { reward.rewardUsedAt = new Date().toISOString(); appt.rewardCode = reward.rewardCode; store.write("feedback", fb); }
     const list = appointments();
     list.push(appt);
     store.write("appointments", list);
@@ -622,6 +665,20 @@ function createApp(cfg = loadConfig()) {
   admin.get("/appointments.csv", (req, res) => {
     res.type("text/csv").attachment("mdfit-appointments.csv")
       .send(toCsv(appointments(), ["date", "time", "typeName", "minutes", "name", "email", "phone", "areas", "painLevel", "notes", "status", "adminNotes", "createdAt"]));
+  });
+
+  // Reviews submitted on the site: approve to publish (only those who agreed), or hide
+  admin.get("/feedback", (req, res) => res.json([...feedback()].reverse()));
+  admin.patch("/feedback/:id", (req, res) => {
+    const list = feedback();
+    const f = list.find((x) => x.id === req.params.id);
+    if (!f) return res.status(404).json({ error: "Review not found." });
+    const st = req.body && req.body.status;
+    if (!["pending", "approved", "hidden"].includes(st)) return res.status(400).json({ error: "Status must be pending, approved or hidden." });
+    if (st === "approved" && !f.publish) return res.status(400).json({ error: "This person asked to keep their review private." });
+    f.status = st;
+    store.write("feedback", list);
+    res.json(f);
   });
 
   // Leads

@@ -191,6 +191,18 @@ function appointmentInput(b) {
   };
 }
 
+// On-site reviews: any rating earns the same reward, so the reward never depends on what people say
+function feedbackInput(b) {
+  obj(b, "Review");
+  return {
+    name: str(b.name, "Name", { min: 2, max: 80 }),
+    email: email(b.email),
+    rating: int(b.rating, "Star rating", { min: 1, max: 5 }),
+    text: str(b.text, "Your review", { min: 10, max: 2000 }),
+    publish: Boolean(b.publish)
+  };
+}
+
 function classInput(b, { partial = false } = {}) {
   obj(b, "Class");
   const c = {};
@@ -365,5 +377,5 @@ function mergeSettings(current, body) {
 
 module.exports = {
   ValidationError, EMAIL_RE, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, LEAD_STATUSES, APPT_STATUSES, DAYS,
-  defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings
+  defaultSettings, leadInput, bookingInput, appointmentInput, classInput, mergeSettings, feedbackInput
 };

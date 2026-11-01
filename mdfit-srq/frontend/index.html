@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=65f2e375">
+  <link rel="stylesheet" href="styles.css?v=3c67b41b">
   <link rel="stylesheet" href="guides.css?v=1b0dd001">
   <script type="application/ld+json">
   {
@@ -250,6 +250,39 @@
         <h2 class="h2">Real people. Real relief.</h2>
         <p class="sub review-sum"></p>
         <div class="grid quotes"></div>
+        <div class="leave-review" id="leave-review">
+          <div class="lr-pitch">
+            <span class="lr-gift" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 7h-2.2A3 3 0 0 0 12 3.8 3 3 0 0 0 6.2 7H4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zm-5-2a1 1 0 1 1 0 2h-2a2 2 0 0 1 2-2zM9 5a2 2 0 0 1 2 2H9a1 1 0 0 1 0-2zM5 9h6v2H5zm1 4h5v6H6zm7 6v-6h5v6zm6-8h-6V9h6z"/></svg></span>
+            <div>
+              <p class="eyebrow">Leave a review · get a gift</p>
+              <h3>Tell us how it's going. Get a free 30-minute plan review with Dr. Jared.</h3>
+              <p class="muted">Go over your progress, your plan, and which programs to use next. Every review earns it, good or bad. Honest feedback is what we want.</p>
+            </div>
+          </div>
+          <form id="review-form" class="form review-form" novalidate>
+            <fieldset class="stars-in" aria-label="Your rating">
+              <legend>Your rating</legend>
+              <div class="stars-pick"><input type="radio" name="rating" id="rate-5" value="5" required><label for="rate-5" title="5 stars">★</label><input type="radio" name="rating" id="rate-4" value="4"><label for="rate-4" title="4 stars">★</label><input type="radio" name="rating" id="rate-3" value="3"><label for="rate-3" title="3 stars">★</label><input type="radio" name="rating" id="rate-2" value="2"><label for="rate-2" title="2 stars">★</label><input type="radio" name="rating" id="rate-1" value="1"><label for="rate-1" title="1 star">★</label></div>
+            </fieldset>
+            <div class="row">
+              <label>Name<input name="name" required minlength="2" maxlength="80" autocomplete="name"></label>
+              <label>Email (for your gift)<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+            </div>
+            <label>Your review<textarea name="text" rows="4" required minlength="10" maxlength="2000" placeholder="What brought you in, and how do you feel now?"></textarea></label>
+            <label class="check"><input type="checkbox" name="publish" checked> You can show my review and first name on this website</label>
+            <input name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button class="btn btn-lg" type="submit">Send my review &amp; get my gift</button>
+            <p class="form-msg" role="status"></p>
+            <p class="fine lr-google" hidden>Also on Google? <a target="_blank" rel="noopener">Review us on Google</a>. Thank you either way.</p>
+          </form>
+          <div class="lr-done" hidden>
+            <h3>Thank you!</h3>
+            <p>Your free 30-minute plan review code:</p>
+            <p class="lr-code"></p>
+            <p class="muted small">We emailed it to you too.</p>
+            <button type="button" class="btn btn-lg" id="lr-book">Book my free plan review</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -378,9 +411,9 @@
 
   <script src="config.js?v=f7c994b0"></script>
   <script src="common.js?v=303aeac7"></script>
-  <script src="booking.js?v=68ec2207"></script>
+  <script src="booking.js?v=4bbf78e2"></script>
   <script src="pricing.js?v=59421d1d"></script>
-  <script src="app.js?v=1e064f54"></script>
+  <script src="app.js?v=56320fd1"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=59a63eff"></script>
   <script src="guides.js?v=3f48694d"></script>

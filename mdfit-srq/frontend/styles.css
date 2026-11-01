@@ -484,3 +484,28 @@ dialog .book-when { margin: -6px 0 4px; }
 .nav nav a { white-space: nowrap; }
 @media (min-width: 961px) and (max-width: 1440px) { .nav nav { gap: 16px; } .brand-sub { display: none; } }
 @media (min-width: 961px) and (max-width: 1200px) { .nav-phone { display: none; } .nav nav a { font-size: 13.5px; } .nav nav { gap: 13px; } }
+
+/* Leave a review */
+.leave-review { margin-top: 34px; display: grid; grid-template-columns: 1fr 1.15fr; gap: 28px; background: var(--paper); border: 1.5px solid var(--gold); border-radius: 22px; padding: 30px; box-shadow: var(--shadow); }
+.lr-pitch { display: flex; gap: 16px; align-items: flex-start; }
+.lr-pitch h3 { font: 700 24px/1.25 var(--display); color: var(--heading); margin: 4px 0 10px; }
+.lr-gift { flex: 0 0 56px; height: 56px; border-radius: 16px; background: var(--accent); display: grid; place-items: center; }
+.lr-gift svg { width: 30px; height: 30px; fill: #fff; }
+.review-form { display: grid; gap: 12px; }
+.stars-in { border: 0; padding: 0; margin: 0; }
+.stars-in legend { font-weight: 600; margin-bottom: 4px; }
+.stars-pick { display: inline-flex; flex-direction: row-reverse; gap: 4px; }
+.stars-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.stars-pick label { font-size: 38px; line-height: 1; color: #d8d2c4; cursor: pointer; transition: transform .1s; }
+.stars-pick label:hover, .stars-pick label:hover ~ label, .stars-pick input:checked ~ label { color: var(--star); }
+.stars-pick input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.stars-pick label:active { transform: scale(1.15); }
+.review-form .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.lr-done { text-align: center; align-self: center; }
+.lr-done h3 { font: 700 26px/1.2 var(--display); margin: 0 0 8px; color: var(--heading); }
+.lr-code { font: 700 30px/1.2 var(--display); letter-spacing: 2px; color: var(--ink); background: #fbf3e3; border: 2px dashed var(--gold); border-radius: 12px; padding: 12px; margin: 8px auto; max-width: 320px; }
+.site-review .disclose { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); }
+@media (max-width: 860px) { .leave-review { grid-template-columns: 1fr; padding: 22px; } }
+.stars-pick { justify-content: flex-end; }
+.review-form label.check { display: flex !important; flex-direction: row; grid-template-columns: none; gap: 10px; align-items: center; font-weight: 500; }
+.review-form label.check input { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; accent-color: var(--accent); }

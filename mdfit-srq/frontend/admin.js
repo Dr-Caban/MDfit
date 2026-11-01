@@ -51,7 +51,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, settings: loadSettings };
+  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, settings: loadSettings };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -388,6 +388,24 @@
     const row = e.target.closest("tr[data-email]");
     if (!row || !e.target.matches("[data-del]") || !confirm("Remove this subscriber?")) return;
     await api("DELETE", `/api/admin/subscribers/${encodeURIComponent(row.dataset.email)}`); toast("Removed."); loadSubs();
+  }));
+
+  // ---- Reviews from the website
+  async function loadReviews() {
+    const list = await api("GET", "/api/admin/feedback");
+    $("#reviews-list").innerHTML = list.length ? list.map((f) => `
+      <article class="item" data-id="${f.id}">
+        <div class="item-head"><b>${esc(f.name)}</b> <span class="stars">${"★".repeat(f.rating)}${"☆".repeat(5 - f.rating)}</span>
+          <span class="pill ${f.status}">${f.status}</span> <span class="muted">${when(f.createdAt)}</span></div>
+        <p>${esc(f.text)}</p>
+        <p class="muted small">${esc(f.email)} · ${f.publish ? "OK to publish" : "Private, do not publish"} · Reward ${esc(f.rewardCode)} ${f.rewardUsedAt ? `(booked ${when(f.rewardUsedAt)})` : "(not used yet)"}</p>
+        <div class="row-actions">${f.publish && f.status !== "approved" ? `<button class="mini" data-st="approved">Show on website</button>` : ""}
+          ${f.status !== "hidden" ? `<button class="mini danger" data-st="hidden">Hide</button>` : `<button class="mini" data-st="pending">Restore</button>`}</div>
+      </article>`).join("") : `<p class="muted">No reviews yet. The form is in the Reviews section of the homepage.</p>`;
+  }
+  $("#reviews-list").addEventListener("click", run(async (e) => {
+    const b = e.target.closest("[data-st]"); if (!b) return;
+    await api("PATCH", `/api/admin/feedback/${b.closest("[data-id]").dataset.id}`, { status: b.dataset.st }); toast("Updated."); loadReviews();
   }));
 
   // ---- CSV downloads (need the auth header, so fetch then save)

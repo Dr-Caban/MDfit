@@ -314,3 +314,34 @@ test("services, payment plans and Medical Massage are public and admin-editable"
   assert.equal(after.services.length, 4); assert.equal(after.plans.gold, 25); assert.equal(after.plans.participation.creditPct, 15); assert.equal(after.plans.participation.attendPct, 90);
   assert.equal((await s.call("PUT", "/api/admin/settings", { services: [{ id: "Bad Id", name: "x", rate: 1 }] })).status, 400);
 });
+
+test("reviews: any rating earns a one-time plan review code, admin publishes only consenting reviews", async (t) => {
+  const s = await start(); t.after(s.close);
+  assert.equal((await s.call("POST", "/api/feedback", { name: "Al", email: "a@x.com", rating: 6, text: "great great great" })).status, 400);
+  const low = await s.call("POST", "/api/feedback", { name: "Lou Low", email: "lou@example.com", rating: 2, text: "Helpful but slow progress so far.", publish: false });
+  assert.equal(low.status, 201);
+  assert.match(low.body.rewardCode, /^MDFIT-[0-9A-F]{6}$/, "a low rating still earns the reward");
+  const hi = await s.call("POST", "/api/feedback", { name: "Hana Hill", email: "hana@example.com", rating: 5, text: "My shoulder finally feels normal again.", publish: true });
+  assert.equal((await s.call("GET", "/api/feedback")).body.count, 0, "nothing public until approved");
+  await s.login();
+  const all = (await s.call("GET", "/api/admin/feedback")).body;
+  assert.equal(all.length, 2);
+  const lowId = all.find((f) => f.name === "Lou Low").id, hiId = all.find((f) => f.name === "Hana Hill").id;
+  assert.equal((await s.call("PATCH", `/api/admin/feedback/${lowId}`, { status: "approved" })).status, 400, "private stays private");
+  assert.equal((await s.call("PATCH", `/api/admin/feedback/${hiId}`, { status: "approved" })).status, 200);
+  const pub = (await s.call("GET", "/api/feedback")).body;
+  assert.deepEqual(pub.reviews.map((r) => r.name), ["Hana H."]);
+  assert.equal(pub.reward.typeId, "plan-review");
+  // redeem the code once
+  const code = hi.body.rewardCode;
+  assert.equal((await s.call("GET", `/api/feedback/reward/${code}`)).body.valid, true);
+  const av = (await s.call("GET", "/api/availability?type=plan-review&days=14")).body;
+  assert.equal(av.type.minutes, 30);
+  const day = av.days.find((d) => d.slots.length);
+  const book = (extra) => s.call("POST", "/api/appointments", { typeId: "plan-review", date: day.date, time: day.slots[0], name: "Hana Hill", email: "hana@example.com", phone: "941-555-0101", ...extra });
+  assert.equal((await book({ rewardCode: "MDFIT-000000" })).status, 400);
+  assert.equal((await book({ rewardCode: code.toLowerCase() })).status, 201);
+  assert.equal((await s.call("GET", `/api/feedback/reward/${code}`)).body.used, true);
+  const again = await s.call("POST", "/api/appointments", { typeId: "plan-review", date: day.date, time: day.slots[1], name: "Hana Hill", email: "hana@example.com", phone: "941-555-0101", rewardCode: code });
+  assert.equal(again.status, 409);
+});

@@ -4,8 +4,9 @@
   const { $, $$, esc, api, fmtTime, fmtDate, todayInTz, addDays, zonedToUtc, icsStamp, telHref, wire, areaChips } = window.MDFit;
 
   function mountBooker(root, site, opts = {}) {
-    if (site.booking && site.booking.provider === "cal" && site.booking.cal) return mountCal(root, site, opts);
-    const types = site.settings.appointmentTypes;
+    if (!opts.reward && site.booking && site.booking.provider === "cal" && site.booking.cal) return mountCal(root, site, opts);
+    // A review reward unlocks the free plan review type for this booking only
+    const types = opts.reward ? [opts.reward.type, ...site.settings.appointmentTypes] : site.settings.appointmentTypes;
     const biz = site.settings.business;
     const state = {
       type: types.find((t) => t.id === opts.type) || types[0],
@@ -153,7 +154,7 @@
     wire(form, async (data) => {
       if (pain.dataset.untouched !== undefined) delete data.painLevel;
       try {
-        const out = await api("/api/appointments", { ...data, typeId: state.type.id, date: state.date, time: state.time });
+        const out = await api("/api/appointments", { ...data, typeId: state.type.id, date: state.date, time: state.time, ...(opts.reward && state.type.id === opts.reward.type.id ? { rewardCode: opts.reward.code } : {}) });
         showBooked(out.appointment);
         return null;
       } catch (err) {
