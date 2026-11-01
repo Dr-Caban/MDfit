@@ -152,5 +152,30 @@
     return AREA_NAME[best] || "Other";
   }
 
-  window.MDFitMuscles = { MUSCLES: M, AGGRAVATORS, SPOTS, MAPS, rank, areaOf };
+  // Homepage pain map: generalized areas Dr. Jared placed on the figures (px of body-figures.webp, 1182×1073).
+  // spots: "area|spot label" keys from SPOTS; tapping a point ranks the muscles for those spots.
+  const all = (a) => (SPOTS[a] || []).map((s) => `${a}|${s[0]}`);
+  const AREA_POINTS = [
+    { id: "head", view: "front", x: 272, y: 48, label: "Head & face", spots: all("head") },
+    { id: "neck", view: "front", x: 222, y: 170, label: "Neck", spots: all("neck") },
+    { id: "shoulder", view: "front", x: 150, y: 222, label: "Shoulder", spots: all("shoulder") },
+    { id: "chest", view: "front", x: 226, y: 255, label: "Chest & ribs", spots: ["chest|Front of the chest", "chest|Side of the ribs", "chest|Along one rib"] },
+    { id: "abdomen", view: "front", x: 234, y: 374, label: "Abdomen", spots: ["chest|Belly or side of the abdomen"] },
+    { id: "forearm", view: "front", x: 104, y: 415, label: "Elbow & forearm", spots: all("elbow") },
+    { id: "hip-side", view: "front", x: 182, y: 462, label: "Side of the hip", spots: ["hip|Outside of the hip", "thigh|Outside of the thigh"] },
+    { id: "groin", view: "front", x: 232, y: 498, label: "Groin & front of hip", spots: ["hip|Groin", "hip|Front of the hip bone"] },
+    { id: "thigh", view: "front", x: 205, y: 588, label: "Thigh", spots: ["thigh|Front of the thigh", "thigh|Inner thigh"] },
+    { id: "knee", view: "front", x: 205, y: 741, label: "Knee", spots: ["knee|Kneecap or just below", "knee|Inside of the knee", "knee|Outside of the knee"] },
+    { id: "shin", view: "front", x: 196, y: 862, label: "Shin & ankle", spots: ["knee|Front of the shin", ...all("ankle")] },
+    { id: "head-b", view: "back", x: 908, y: 70, label: "Back of the head", spots: all("head-b") },
+    { id: "neck-b", view: "back", x: 876, y: 185, label: "Neck & upper traps", spots: all("neck-b") },
+    { id: "arm-b", view: "back", x: 774, y: 287, label: "Back of shoulder & arm", spots: all("shoulder-b") },
+    { id: "low-back", view: "back", x: 911, y: 441, label: "Low back", spots: all("low-back") },
+    { id: "hip-b", view: "back", x: 1011, y: 498, label: "Outer hip", spots: ["glute|Outer hip", "glute|Upper buttock, belt line"] },
+    { id: "glute", view: "back", x: 953, y: 562, label: "Glutes", spots: ["glute|Middle of the buttock", "glute|Pain down the leg (sciatica-like)", "hamstring|Buttock crease"] },
+    { id: "calf", view: "back", x: 844, y: 843, label: "Calf", spots: all("calf") },
+    { id: "heel", view: "back", x: 979, y: 958, label: "Heel & Achilles", spots: all("heel") }
+  ];
+
+  window.MDFitMuscles = { MUSCLES: M, AGGRAVATORS, SPOTS, MAPS, AREA_POINTS, rank, areaOf };
 })();

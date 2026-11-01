@@ -522,3 +522,12 @@ dialog .book-when { margin: -6px 0 4px; }
 .opt-buy { margin-top: 10px; font: 700 13.5px var(--body); border: 0; border-radius: 10px; padding: 9px 10px; background: var(--accent); color: var(--ink); cursor: pointer; }
 .opt-gold .opt-buy { background: var(--gold); }
 .opt-buy:disabled { opacity: .7; }
+/* Pain map: area → muscle list */
+.pm-muscles { display: grid; gap: 8px; }
+.pm-muscle { text-align: left; display: grid; gap: 3px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--cream); color: inherit; font: inherit; cursor: pointer; transition: .15s; }
+.pm-muscle:hover, .pm-muscle:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+.pm-muscle b { font-size: 15px; color: var(--heading); }
+.pm-muscle b i { font-style: normal; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a6d2c; margin-left: 6px; }
+.pm-muscle small { font-size: 13px; line-height: 1.45; color: var(--muted); }
+.pm-back { justify-self: start; background: none; border: 0; padding: 0; color: var(--accent-text); font: 600 14px var(--body); cursor: pointer; }
+.hotspot { width: 3.2%; }
