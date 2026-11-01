@@ -13,6 +13,8 @@ const { mountClients } = require("./lib/clients");
 const { mountContent } = require("./lib/content");
 const { mountMessages } = require("./lib/messages");
 const { mountPayments } = require("./lib/payments");
+const { createSecurity } = require("./lib/security");
+const { createCalSync } = require("./lib/calsync");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
@@ -28,6 +30,9 @@ function loadConfig() {
     dataDir: env("DATA_DIR", path.join(__dirname, "data")),
     origins: env("ALLOWED_ORIGINS", "*").split(",").map((s) => s.trim()).filter(Boolean),
     siteUrl: env("SITE_URL").replace(/\/+$/, ""),
+    edgeSecret: env("EDGE_SECRET"),
+    botFilter: env("BOT_FILTER", "on") !== "off",
+    dataKey: env("DATA_ENC_KEY"),
     tz: env("TZ_NAME", "America/New_York"),
     resendKey: env("RESEND_API_KEY"),
     resendUrl: env("RESEND_URL", "https://api.resend.com"),
@@ -37,6 +42,9 @@ function loadConfig() {
     calUrl: env("CAL_API_URL", "https://api.cal.com/v2"),
     calWebhookSecret: env("CAL_WEBHOOK_SECRET"),
     googleKey: env("GOOGLE_PLACES_API_KEY"),
+    googleServiceAccount: env("GOOGLE_SERVICE_ACCOUNT"),
+    googleCalendarId: env("GOOGLE_CALENDAR_ID"),
+    simplePracticeIcs: env("SIMPLEPRACTICE_ICS_URL"),
     googleUrl: env("GOOGLE_PLACES_URL", "https://places.googleapis.com/v1"),
     googleLegacyUrl: env("GOOGLE_PLACES_LEGACY_URL", "https://maps.googleapis.com/maps/api/place"),
     googlePlaceId: env("GOOGLE_PLACE_ID"),
@@ -65,6 +73,14 @@ function nowParts(tz, d) {
   }).formatToParts(d).map((x) => [x.type, x.value]));
   return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
 }
+// Wall-clock date + time in a time zone -> the real instant (handles daylight saving)
+function zonedToUtc(date, time, tz = "America/New_York") {
+  const [y, mo, d] = date.split("-").map(Number), [h, mi] = time.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  const off = (ms) => { const p = nowParts(tz, new Date(ms)); return Date.UTC(+p.date.slice(0, 4), +p.date.slice(5, 7) - 1, +p.date.slice(8, 10), +p.time.slice(0, 2), +p.time.slice(3)) - ms; };
+  let t = guess - off(guess); t = guess - off(t);
+  return new Date(t);
+}
 const addDays = (date, n) => new Date(Date.parse(date + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const weekday = (date) => new Date(date + "T12:00:00Z").getUTCDay();
 const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
@@ -90,7 +106,7 @@ function toCsv(rows, cols) {
 }
 
 function createApp(cfg = loadConfig()) {
-  const store = createStore(cfg.dataDir);
+  const store = createStore(cfg.dataDir, { key: cfg.dataKey });
   const notify = createNotifier({ apiKey: cfg.resendKey, from: cfg.notifyFrom, ownerEmail: cfg.notifyEmail || cfg.adminEmail, apiUrl: cfg.resendUrl });
   const cal = createCal({ apiKey: cfg.calKey, apiUrl: cfg.calUrl });
   const places = createPlaces({ apiKey: cfg.googleKey, baseUrl: cfg.googleUrl, legacyUrl: cfg.googleLegacyUrl });
@@ -254,13 +270,38 @@ function createApp(cfg = loadConfig()) {
 
   // ---- 1-on-1 appointments: open start times for one appointment type on one date.
   // One practitioner, so any live appointment blocks the time for every type.
-  function openSlots(type, date, s = settings()) {
+  // ---- Calendar sync (Google Calendar two-way, SimplePractice feed read-only)
+  const calsync = cfg.calsync || createCalSync({ serviceAccount: cfg.googleServiceAccount, calendarId: cfg.googleCalendarId, icsUrl: "", tz: cfg.tz, zonedToUtc, logger });
+  const spUrl = () => (store.read("calsync", {}).icsUrl || cfg.simplePracticeIcs || "");
+  function syncBooking(appt) {
+    if (!calsync.googleOn()) return;
+    calsync.addBooking(appt).then((eventId) => {
+      if (!eventId) return;
+      const l = appointments(), x = l.find((y) => y.id === appt.id); if (x) { x.googleEventId = eventId; store.write("appointments", l); }
+    }).catch((e) => logger.error("gcal_add_failed", { error: e.message }));
+  }
+  function unsyncBooking(appt) {
+    if (appt.googleEventId) calsync.removeBooking(appt.googleEventId).catch((e) => logger.error("gcal_remove_failed", { error: e.message }));
+  }
+
+  // Busy times from Google Calendar / SimplePractice, as [startMin, endMin] on a clinic date
+  function busyOn(date, busy) {
+    const out = [];
+    for (const b of busy || []) {
+      if (b.allDay) { if (b.date === date) out.push([0, 24 * 60]); continue; }
+      const s0 = nowParts(cfg.tz, b.start), e0 = nowParts(cfg.tz, b.end);
+      if (s0.date > date || e0.date < date) continue;
+      out.push([s0.date < date ? 0 : toMin(s0.time), e0.date > date ? 24 * 60 : toMin(e0.time)]);
+    }
+    return out;
+  }
+  function openSlots(type, date, s = settings(), busy = []) {
     const sch = s.scheduling;
     const { date: today } = nowParts(cfg.tz, cfg.now());
     if (date < today || date > addDays(today, sch.daysAhead) || sch.blockedDates.includes(date)) return [];
     const cutoff = nowParts(cfg.tz, new Date(cfg.now().getTime() + sch.minNoticeHours * 3600e3));
     const taken = appointments().filter((a) => a.date === date && a.status !== "cancelled")
-      .map((a) => [toMin(a.time), toMin(a.time) + a.minutes]);
+      .map((a) => [toMin(a.time), toMin(a.time) + a.minutes]).concat(busyOn(date, busy));
     const slots = [];
     for (const [start, end] of sch.hours[weekday(date)] || []) {
       for (let m = toMin(start); m + type.minutes <= toMin(end); m += sch.slotStepMin) {
@@ -272,6 +313,16 @@ function createApp(cfg = loadConfig()) {
     }
     return slots;
   }
+
+  // ---- Security: real client IP, security headers, edge gate, bot filter, global rate limits
+  const sec = createSecurity({ edgeSecret: cfg.edgeSecret, logger });
+  app.disable("x-powered-by");
+  app.use(sec.clientIp);
+  app.use(sec.headers);
+  app.use(sec.edgeGate);
+  if (cfg.botFilter) app.use(sec.botFilter);
+  app.use("/api", sec.rateLimit({ name: "burst", max: 120, windowMs: 10 * 1000 }));
+  app.use("/api", sec.rateLimit({ name: "steady", max: 1500, windowMs: 10 * 60 * 1000 }));
 
   // ---- Headers, CORS, request log
   app.use(requestLogger);
@@ -421,22 +472,23 @@ function createApp(cfg = loadConfig()) {
       features: { payments: !!(cfg.stripeClient || process.env.STRIPE_SECRET_KEY), healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false } });
   });
 
-  app.get("/api/availability", (req, res) => {
+  app.get("/api/availability", async (req, res) => {
     const s = settings();
     const type = s.appointmentTypes.find((t) => t.id === req.query.type) || (req.query.type === PLAN_REVIEW.id ? PLAN_REVIEW : s.appointmentTypes[0]);
     const { date: today } = nowParts(cfg.tz, cfg.now());
     const from = /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || "") && req.query.from > today ? req.query.from : today;
     const days = Math.min(31, Math.max(1, Number.parseInt(req.query.days, 10) || 14));
+    const busy = await calsync.busy(from, addDays(from, days - 1), { icsUrl: spUrl() });
     const out = [];
     for (let i = 0; i < days; i++) {
       const date = addDays(from, i);
-      out.push({ date, slots: openSlots(type, date, s) });
+      out.push({ date, slots: openSlots(type, date, s, busy) });
     }
     res.set("Cache-Control", "no-cache");
     res.json({ timeZone: cfg.tz, type, lastDate: addDays(today, s.scheduling.daysAhead), days: out });
   });
 
-  app.post("/api/appointments", formLimit.mw, honeypot, (req, res) => {
+  app.post("/api/appointments", formLimit.mw, honeypot, async (req, res) => {
     const a = appointmentInput(req.body);
     const s = settings();
     const type = s.appointmentTypes.find((t) => t.id === a.typeId) || (a.typeId === PLAN_REVIEW.id ? PLAN_REVIEW : null);
@@ -450,7 +502,8 @@ function createApp(cfg = loadConfig()) {
       if (!reward) return res.status(400).json({ error: "That reward code isn't valid. Check the email we sent you." });
       if (reward.rewardUsedAt) return res.status(409).json({ error: "That reward code has already been used." });
     }
-    if (!openSlots(type, a.date, s).includes(a.time))
+    const busy = await calsync.busy(a.date, a.date, { icsUrl: spUrl() });
+    if (!openSlots(type, a.date, s, busy).includes(a.time))
       return res.status(409).json({ error: "That time was just taken or isn't available. Pick another." });
     const appt = {
       id: id(), ...a, typeName: type.name, minutes: type.minutes, status: "booked", adminNotes: "",
@@ -461,6 +514,7 @@ function createApp(cfg = loadConfig()) {
     list.push(appt);
     store.write("appointments", list);
     activity("appointment", { email: a.email, type: type.id, date: a.date });
+    syncBooking(appt);
 
     const when = `${prettyDate(a.date)} at ${prettyTime(a.time)}`;
     const biz = s.business;
@@ -489,6 +543,7 @@ function createApp(cfg = loadConfig()) {
     appt.status = "cancelled";
     appt.cancelledAt = new Date().toISOString();
     store.write("appointments", list);
+    unsyncBooking(appt);
     activity("appointment_cancelled", { email: appt.email, date: appt.date });
     notify.owner(`Cancelled: ${appt.typeName}, ${prettyDate(appt.date)} at ${prettyTime(appt.time)}`, `${appt.name} (${appt.email}) cancelled online.`);
     res.json({ ok: true });
@@ -666,6 +721,7 @@ function createApp(cfg = loadConfig()) {
       if (b.status === "cancelled" && appt.status !== "cancelled" && appt.source === "cal") {
         try { await cal.cancel(appt.calUid, "Cancelled by MD Fit"); } catch (err) { return res.status(502).json({ error: err.message }); }
       }
+      if (b.status === "cancelled" && appt.status !== "cancelled") unsyncBooking(appt);
       appt.status = b.status;
     }
     if (b.adminNotes !== undefined) {
@@ -680,6 +736,25 @@ function createApp(cfg = loadConfig()) {
   admin.get("/appointments.csv", (req, res) => {
     res.type("text/csv").attachment("mdfit-appointments.csv")
       .send(toCsv(appointments(), ["date", "time", "typeName", "minutes", "name", "email", "phone", "areas", "painLevel", "notes", "status", "adminNotes", "createdAt"]));
+  });
+
+  // Calendar sync status + SimplePractice feed link (kept on the server, encrypted at rest, never sent to the public site)
+  admin.get("/calsync", (req, res) => {
+    const u = spUrl();
+    res.json({ ...calsync.status(), simplepractice: u ? "configured" : "off", simplePracticeUrl: u ? u.replace(/(.{24}).+(.{6})$/, "$1…$2") : "" });
+  });
+  admin.put("/calsync", (req, res) => {
+    const u = String((req.body && req.body.icsUrl) || "").trim();
+    if (u && !/^(https|webcal):\/\/[^\s]+$/i.test(u)) return res.status(400).json({ error: "Paste the SimplePractice calendar link (starts with https:// or webcal://)." });
+    store.write("calsync", { icsUrl: u.replace(/^webcal:/i, "https:") });
+    calsync.clear();
+    res.json({ ok: true, simplepractice: u ? "configured" : "off" });
+  });
+  admin.post("/calsync/test", async (req, res) => {
+    const { date } = nowParts(cfg.tz, cfg.now());
+    calsync.clear();
+    const busy = await calsync.busy(date, addDays(date, 13), { icsUrl: spUrl() });
+    res.json({ ...calsync.status(), busyNext14Days: busy.length, bySource: busy.reduce((m, b) => ((m[b.source] = (m[b.source] || 0) + 1), m), {}) });
   });
 
   // Reviews submitted on the site: approve to publish (only those who agreed), or hide
@@ -790,7 +865,7 @@ function createApp(cfg = loadConfig()) {
 
   admin.get("/activity", (req, res) => res.json(store.read("activity", []).slice(0, 200)));
 
-  const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings });
+  const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings, onCancel: (a) => unsyncBooking(a) });
   mountContent({ app, admin, store, notify, activity, ...cl });
   mountMessages({ app, admin, store, notify, activity, cfg, limiter, ...cl });
   const pay = mountPayments({ app, admin, store, notify, activity, cfg, settings, logger, ...cl });

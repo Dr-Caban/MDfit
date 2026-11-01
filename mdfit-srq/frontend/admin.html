@@ -97,6 +97,15 @@
           <button class="btn" type="submit">Save booking system</button>
           <p class="form-msg" role="status"></p>
         </form>
+        <form id="sync-form" class="form" novalidate>
+          <h2>Calendar sync</h2>
+          <p class="muted">Times you're busy in Google Calendar or SimplePractice can't be booked here, and every website booking is added to your Google Calendar.</p>
+          <div class="cal-status" id="sync-status"><span class="muted">Checking…</span></div>
+          <label>SimplePractice calendar link<input name="icsUrl" placeholder="Paste the link from SimplePractice → Settings → Calendar → Calendar sync"></label>
+          <div class="row-actions"><button class="btn btn-sm" type="submit">Save link</button><button class="btn btn-sm btn-line" type="button" id="sync-test">Test sync now</button></div>
+          <p class="form-msg" role="status"></p>
+        </form>
+
         <form id="hours-form" class="form" novalidate>
           <h2>Booking hours</h2>
           <p class="muted">When clients can book 1-on-1 appointments online. Leave a day empty to close it. Split shifts: <code>09:00-12:00, 13:00-17:00</code></p>
@@ -279,9 +288,9 @@
     </main>
   </div>
 
-  <script src="config.js?v=f7c994b0"></script>
+  <script src="config.js?v=73fb174c"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=76c79be0"></script>
-  <script src="admin.js?v=d7aeba89"></script>
+  <script src="admin.js?v=d23a3a32"></script>
 </body>
 </html>

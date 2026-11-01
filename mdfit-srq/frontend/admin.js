@@ -165,7 +165,24 @@
   // ---- Booking hours
   const hf = $("#hours-form");
   $("#hours-days").innerHTML = DAYS.map((d, i) => `<label class="day-hours">${d}<input data-day="${i}" placeholder="Closed"></label>`).join("");
+  // ---- Calendar sync (Google Calendar + SimplePractice)
+  const syncF = $("#sync-form");
+  const showSync = (st) => {
+    const g = st.google === "configured", sp = st.simplepractice === "configured";
+    $("#sync-status").innerHTML = `<p><b>Google Calendar:</b> ${g ? `connected (${esc(st.calendarId || "")})` : "not connected. Add GOOGLE_SERVICE_ACCOUNT and GOOGLE_CALENDAR_ID in Railway"}${st.serviceAccountEmail ? `<br><span class="muted small">Share your calendar with <code>${esc(st.serviceAccountEmail)}</code> ("Make changes to events")</span>` : ""}</p>
+      <p><b>SimplePractice:</b> ${sp ? `connected ${st.simplePracticeUrl ? `<span class="muted small">${esc(st.simplePracticeUrl)}</span>` : ""}` : "not connected. Paste your calendar link below"}</p>
+      ${st.lastSync ? `<p class="muted small">Last sync ${when(st.lastSync)}</p>` : ""}${st.lastError ? `<p class="form-msg err">${esc(st.lastError)}</p>` : ""}${st.busyNext14Days !== undefined ? `<p class="muted small">Busy blocks in the next 14 days: ${st.busyNext14Days} ${Object.entries(st.bySource || {}).map(([k, v]) => `(${k}: ${v})`).join(" ")}</p>` : ""}`;
+  };
+  const loadSync = () => api("GET", "/api/admin/calsync").then(showSync).catch(() => {});
+  syncF.addEventListener("submit", run(async (e) => {
+    e.preventDefault(); const msg = $(".form-msg", syncF);
+    try { await api("PUT", "/api/admin/calsync", { icsUrl: syncF.icsUrl.value.trim() }); syncF.icsUrl.value = ""; msg.className = "form-msg ok"; msg.textContent = "Saved."; loadSync(); }
+    catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+  }));
+  $("#sync-test").addEventListener("click", run(async () => showSync(await api("POST", "/api/admin/calsync/test"))));
+
   async function loadHours() {
+    loadSync();
     const s = await api("GET", "/api/admin/settings");
     cf.provider.value = s.booking.provider;
     cf.calUsername.value = s.booking.calUsername;

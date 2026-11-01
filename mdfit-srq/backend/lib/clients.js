@@ -78,7 +78,7 @@ function participation({ visits, workouts, targets, today }) {
 }
 
 function mountClients(ctx) {
-  const { app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings } = ctx;
+  const { app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings, onCancel } = ctx;
   const clients = () => store.read("clients", []);
   const save = (list) => store.write("clients", list);
   const appointments = () => store.read("appointments", []);
@@ -220,6 +220,7 @@ function mountClients(ctx) {
     a.status = "cancelled";
     a.cancelledAt = new Date().toISOString();
     store.write("appointments", list);
+    if (onCancel) onCancel(a);
     activity("appointment_cancelled", { email: a.email, date: a.date, via: "account" });
     notify.owner(`Cancelled: ${a.typeName}, ${prettyDate(a.date)} at ${prettyTime(a.time)}`, `${a.name} (${a.email}) cancelled from their account.`);
     res.json({ ok: true });
