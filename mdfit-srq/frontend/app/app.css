@@ -697,3 +697,17 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .player .nums-grid label, .player .rpe-cap { color: var(--on-navy); }
 .player .nums-grid input, .player .rpe button { background: var(--navy); color: #fff; border-color: var(--navy-3); }
 .player .nums-msg { color: var(--gold); }
+
+/* Library v2: location tabs, categories, grouped by joint or muscle */
+.vgrid { display: block !important; }
+.vgroup { margin-bottom: 18px; }
+.vgroup h3 { font: 700 18px/1.2 var(--display); color: var(--navy); margin: 6px 0 10px; display: flex; align-items: center; gap: 8px; }
+.vgroup h3 span { font: 700 12px var(--body, inherit); background: var(--gold-soft); color: var(--accent-text); padding: 2px 8px; border-radius: 999px; }
+.vgrid-in { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.loc-seg { grid-template-columns: repeat(5, 1fr); }
+.loc-seg button { font-size: 13.5px; padding: 10px 4px; }
+.vid-org { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
+.vid-org .seg { margin: 0; }
+.vid-org .seg button { font-size: 14px; padding: 9px 14px; }
+@media (min-width: 1000px) { .vgrid-in { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; } .loc-seg { max-width: 640px !important; } }
+@media (max-width: 420px) { .vid-org { grid-template-columns: 1fr; } .loc-seg button { font-size: 12px; } }

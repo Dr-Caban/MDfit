@@ -193,5 +193,5 @@
     return w;
   }
 
-  window.MDFitGen = { swap, stepSecs, GOALS, LOCATIONS, LEVELS, LENGTHS, PER_ROUND, ROUNDS, REST_EX, REST_ROUND, ADDONS, DEFAULTS, generate, presetFor, estimate, prescription, needsGym };
+  window.MDFitGen = { byLocation, swap, stepSecs, GOALS, LOCATIONS, LEVELS, LENGTHS, PER_ROUND, ROUNDS, REST_EX, REST_ROUND, ADDONS, DEFAULTS, generate, presetFor, estimate, prescription, needsGym };
 })();

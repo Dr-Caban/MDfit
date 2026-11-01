@@ -346,14 +346,28 @@
     } catch (err) { toast(err.message); }
   });
 
-  // ================= Videos
-  const CATS = ["All", "♥ Favorites", ...["Strength", "Mobility", "Activation", "Rehab", "Power", "Neuroglide", "Posture", "Lifestyle", "Desk & posture"].filter((c) => EX.some((e) => e.cat === c))];
-  const REGIONS = [...new Set(EX.map((e) => e.region))].sort();
-  const vf = { q: "", cat: "All", region: "" };
+  // ================= Videos: by location first, then Dr. Jared's categories, grouped by primary joint or muscle
+  const LIB = window.MDFitLib;
+  const CATS = ["All", "♥ Favorites", ...LIB.CATEGORIES];
+  EX.forEach((e) => { e.libCat = LIB.category(e); e.joint = LIB.joint(e); e.muscle = LIB.muscle(e); });
+  const LOCS = [{ id: "", label: "Everywhere" }, ...Gen.LOCATIONS.map((l) => ({ id: l.id, label: l.label }))];
+  const locIds = Object.fromEntries(Gen.LOCATIONS.map((l) => [l.id, new Set(Gen.byLocation(l.id).map((e) => e.id))]));
+  const vf = { q: "", cat: "All", region: "", loc: "", by: "joint" };
+  $("#vid-locs").innerHTML = LOCS.map((l) => `<button type="button" role="tab" data-loc="${l.id}" aria-selected="${l.id === ""}">${esc(l.label)}</button>`).join("");
+  $("#vid-locs").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-loc]"); if (!b) return;
+    vf.loc = b.dataset.loc; $$("#vid-locs button").forEach((x) => x.setAttribute("aria-selected", x === b)); renderVideos();
+  });
+  const groupsFor = () => (vf.by === "joint" ? LIB.JOINTS : LIB.MUSCLES);
+  function fillJump() { $("#vid-region").innerHTML = `<option value="">All ${vf.by === "joint" ? "joints" : "muscles"}</option>` + groupsFor().map((r) => `<option>${esc(r)}</option>`).join(""); }
+  fillJump();
+  $("#vid-by").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-by]"); if (!b) return;
+    vf.by = b.dataset.by; vf.region = ""; $$("#vid-by button").forEach((x) => x.setAttribute("aria-selected", x === b)); fillJump(); renderVideos();
+  });
   $("#vid-count").textContent = EX.length;
   $("#lib-count").textContent = `${EX.length} exercises`;
   $("#vid-cats").innerHTML = CATS.map((c) => `<button type="button" class="chip" role="tab" data-cat="${esc(c)}" aria-selected="${c === "All"}">${esc(c)}</button>`).join("");
-  $("#vid-region").innerHTML = `<option value="">All body areas</option>` + REGIONS.map((r) => `<option>${esc(r)}</option>`).join("");
   $("#vid-cats").addEventListener("click", (e) => {
     const c = e.target.closest("[data-cat]");
     if (!c) return;
@@ -365,7 +379,7 @@
   $("#vid-search").addEventListener("input", (e) => { vf.q = e.target.value.trim().toLowerCase(); renderVideos(); });
   const isFav = (id) => lib.favorites.includes(id);
   const heart = (id) => `<button type="button" class="heart" data-fav="${id}" aria-pressed="${isFav(id)}" aria-label="${isFav(id) ? "Remove from" : "Add to"} favorites"><svg viewBox="0 0 24 24"><path d="M12 21 10.6 19.7C5.4 15 2 11.9 2 8.1 2 5 4.4 2.6 7.5 2.6c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1C19.6 2.6 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z"/></svg></button>`;
-  const vcard = (e) => `<div class="vwrap"><button type="button" class="vcard" data-video="${e.id}">${thumbImg(e.id)}<div><b>${esc(e.name)}</b><span>${esc(e.region)} · L${e.level}</span></div></button>${heart(e.id)}</div>`;
+  const vcard = (e) => `<div class="vwrap"><button type="button" class="vcard" data-video="${e.id}">${thumbImg(e.id)}<div><b>${esc(e.name)}</b><span>${esc(e.libCat)} · L${e.level}</span></div></button>${heart(e.id)}</div>`;
   // Favorites live on the account (not the phone), so they follow the client to any device
   document.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-fav]");
@@ -378,10 +392,15 @@
     catch (err) { toast(err.message); }
   });
   function renderVideos() {
-    const list = EX.filter((e) => (vf.cat === "All" || (vf.cat === "♥ Favorites" ? isFav(e.id) : e.cat === vf.cat)) && (!vf.region || e.region === vf.region)
-      && (!vf.q || (e.name + " " + e.region + " " + e.cat).toLowerCase().includes(vf.q)))
-      .sort((a, b) => a.region.localeCompare(b.region) || a.level - b.level || a.name.localeCompare(b.name));
-    $("#vgrid").innerHTML = list.map(vcard).join("");
+    const key = vf.by;
+    const list = EX.filter((e) => (vf.cat === "All" || (vf.cat === "♥ Favorites" ? isFav(e.id) : e.libCat === vf.cat)) && (!vf.region || e[key] === vf.region)
+      && (!vf.loc || locIds[vf.loc].has(e.id))
+      && (!vf.q || [e.name, e.region, e.cat, e.libCat, e.joint, e.muscle].join(" ").toLowerCase().includes(vf.q)))
+      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+    $("#vgrid").innerHTML = groupsFor().map((g) => {
+      const xs = list.filter((e) => e[key] === g);
+      return xs.length ? `<section class="vgroup"><h3>${esc(g)} <span>${xs.length}</span></h3><div class="vgrid-in">${xs.map(vcard).join("")}</div></section>` : "";
+    }).join("");
     $("#vid-empty").hidden = list.length > 0;
     $("#vid-empty").textContent = vf.cat === "♥ Favorites" && !lib.favorites.length ? "Tap the heart on any video to save it here." : "No exercises match. Try another filter.";
   }

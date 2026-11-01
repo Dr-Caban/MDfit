@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=e1fa8310">
+  <link rel="stylesheet" href="app/app.css?v=706eba74">
   <link rel="stylesheet" href="guides.css?v=1b0dd001">
 </head>
 <body class="mdapp">
@@ -135,9 +135,16 @@
       </header>
       <button type="button" class="intro-btn" data-intro="library"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Start here: how to use the library</button>
       <div class="vid-filters">
+      <div class="seg loc-seg" id="vid-locs" role="tablist" aria-label="Where you train"></div>
       <input type="search" id="vid-search" class="search" placeholder="Search exercises" aria-label="Search exercises">
       <div class="chips" id="vid-cats" role="tablist" aria-label="Category"></div>
-      <select id="vid-region" class="select" aria-label="Body area"></select>
+      <div class="vid-org">
+        <div class="seg" id="vid-by" role="tablist" aria-label="Organize by">
+          <button type="button" data-by="joint" aria-selected="true">By joint</button>
+          <button type="button" data-by="muscle" aria-selected="false">By muscle</button>
+        </div>
+        <select id="vid-region" class="select" aria-label="Jump to"></select>
+      </div>
       </div>
       <div class="vgrid" id="vgrid"></div>
       <p class="muted small center" id="vid-empty" hidden>No exercises match. Try another filter.</p>
@@ -335,11 +342,12 @@
   <script src="config.js?v=f7c994b0"></script>
   <script src="common.js?v=303aeac7"></script>
   <script src="app/exercises.js?v=7d154684"></script>
-  <script src="app/generator.js?v=40f2b934"></script>
+  <script src="app/library.js?v=ab606ae7"></script>
+  <script src="app/generator.js?v=8d04d26f"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=59a63eff"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=3f48694d"></script>
-  <script src="account.js?v=f47b9773"></script>
+  <script src="account.js?v=d2739fbe"></script>
 </body>
 </html>
