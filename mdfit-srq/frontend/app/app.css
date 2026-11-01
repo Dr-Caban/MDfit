@@ -854,3 +854,48 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .proto-list span { font-size: 13.5px; color: var(--muted); }
 .proto-list .pill { justify-self: start; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--gold-soft); color: var(--navy); text-transform: capitalize; }
 .proto-list small { color: #2e7d4f; font-weight: 700; }
+
+/* ===== Messenger (inbox + thread) ===== */
+.messenger { background: var(--navy); color: #fff; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow, 0 12px 30px -14px rgba(10,26,46,.28)); }
+.msgr-head { display: flex; align-items: center; gap: 12px; padding: 16px 16px; border-bottom: 1px solid var(--navy-3); }
+.msgr-head h1 { font: 700 22px/1.2 var(--body, inherit); color: #fff; margin: 0; flex: 1; }
+.msgr-ic svg { width: 28px; height: 28px; fill: var(--accent); display: block; }
+.msgr-new, .msgr-back { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--accent); background: rgba(122,175,215,.08); display: grid; place-items: center; cursor: pointer; }
+.msgr-back { border-color: var(--navy-3); background: transparent; }
+.msgr-new svg, .msgr-back svg { width: 22px; height: 22px; fill: var(--accent); }
+.msgr-back svg { fill: #fff; }
+.convos { display: grid; }
+.convo { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; text-align: left; padding: 14px 16px; background: transparent; border: 0; border-bottom: 1px solid rgba(255,255,255,.06); color: #fff; cursor: pointer; font: inherit; width: 100%; }
+.convo:hover { background: var(--navy-2); }
+.av { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: var(--navy-2); border: 2.5px solid var(--accent); box-shadow: 0 0 0 4px rgba(122,175,215,.14), 0 0 18px rgba(122,175,215,.22); overflow: hidden; flex: 0 0 auto; }
+.av img { width: 78%; height: 78%; object-fit: contain; }
+.av-cam svg { width: 26px; height: 26px; fill: none; stroke: var(--accent); stroke-width: 1.8; }
+.cv-main { display: grid; gap: 3px; min-width: 0; }
+.cv-main b { font-size: 17px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cv-prev { color: var(--on-navy); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cv-prev i { font-style: italic; opacity: .85; }
+.convo.unread .cv-prev { color: #fff; font-weight: 600; }
+.cv-tags { display: flex; gap: 6px; margin-top: 4px; }
+.tag { font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 999px; padding: 3px 10px; }
+.tag.lock { color: var(--gold); border-color: var(--gold); }
+.cv-side { display: grid; justify-items: end; gap: 8px; align-self: start; padding-top: 4px; }
+.cv-side time { color: var(--on-navy); font-size: 13px; }
+.cv-badge { font-style: normal; min-width: 24px; height: 24px; border-radius: 12px; background: var(--gold); color: var(--navy); font-weight: 800; font-size: 13px; display: grid; place-items: center; padding: 0 6px; }
+.thread-head { gap: 10px; }
+.thread-head .av { width: 44px; height: 44px; box-shadow: none; border-width: 2px; }
+.thread-who { display: grid; flex: 1; min-width: 0; }
+.thread-who b { font-size: 16px; }
+.thread-who small { color: var(--on-navy); font-size: 12px; }
+#thread .chat { padding: 12px; gap: 8px; }
+#thread .chat-list { max-height: 58vh; min-height: 260px; }
+#thread .msg-gate { margin: 12px; }
+.bubble.dr { background: var(--navy-2); color: #fff; border: 1px solid var(--navy-3); }
+.bubble.me { background: var(--accent); color: var(--navy); }
+.day-sep { text-align: center; font-size: 11.5px; color: var(--on-navy); margin: 8px 0 2px; letter-spacing: .5px; text-transform: uppercase; }
+#thread .chat-empty { color: var(--on-navy); }
+#thread .chat-form { grid-template-columns: 1fr 48px; background: var(--navy-2); border: 1px solid var(--navy-3); border-radius: 24px; padding: 6px 6px 6px 14px; align-items: center; }
+#thread .chat-form textarea { background: transparent; border: 0; color: #fff; resize: none; padding: 8px 0; outline: none; min-height: 24px; }
+#thread .chat-form textarea::placeholder { color: var(--on-navy); }
+.send-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent); display: grid; place-items: center; cursor: pointer; }
+.send-btn svg { width: 18px; height: 18px; fill: var(--navy); }
+.chat-fine { text-align: center; color: var(--on-navy) !important; margin: 2px 0 0; }

@@ -1153,26 +1153,85 @@
   // ================= Messages with Dr. Jared (members): poll while open, unread badge otherwise
   let msgPoll = null, msgCount = -1;
   const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  // Messenger: an inbox of conversations (Dr. Jared, live Q&A, 1-on-1 sessions), then the chat itself
+  const ago = (iso) => {
+    if (!iso) return "";
+    const d = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (d < 60) return "now"; if (d < 3600) return Math.floor(d / 60) + "m"; if (d < 86400) return Math.floor(d / 3600) + "h";
+    if (d < 7 * 86400) return Math.floor(d / 86400) + "d";
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+  let msgData = null, inThread = false;
+  async function renderInbox() {
+    let d; try { d = await apiAuth("GET", "/api/me/messages"); } catch { return; }
+    msgData = d;
+    if (!C) await (contentLoading || loadContent()).catch(() => {});
+    const last = d.messages[d.messages.length - 1];
+    const rows = [];
+    rows.push(`<button type="button" class="convo${d.unread ? " unread" : ""}" data-open="dr">
+      <span class="av av-dr"><img src="assets/logo.webp" alt=""></span>
+      <span class="cv-main"><b>Dr. Jared Caban</b><span class="cv-prev">${last ? `${last.from === "client" ? "You: " : ""}${esc(last.body)}` : d.member ? "<i>Say hi. Ask about your pain or plan.</i>" : "<i>Members can message Dr. Jared</i>"}</span>
+        <span class="cv-tags"><em class="tag">Direct</em>${d.member ? "" : `<em class="tag lock">Members</em>`}</span></span>
+      <span class="cv-side"><time>${last ? ago(last.at) : ""}</time>${d.unread ? `<i class="cv-badge">${d.unread}</i>` : ""}</span></button>`);
+    const L = C && C.live;
+    if (L) {
+      const has = L.date && L.date >= todayInTz();
+      rows.push(`<button type="button" class="convo" data-goto="learn">
+        <span class="av av-cam"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11z"/></svg></span>
+        <span class="cv-main"><b>${esc(L.title)}</b><span class="cv-prev"><i>${has ? `Next live: ${esc(fmtDate(L.date, { weekday: "short", month: "short", day: "numeric" }))}, ${esc(fmtTime(L.time))}` : "Next date coming soon"}</i></span>
+          <span class="cv-tags"><em class="tag">Live</em>${L.locked ? `<em class="tag lock">Members</em>` : ""}</span></span>
+        <span class="cv-side"><time>${has ? esc(fmtDate(L.date, { month: "short", day: "numeric" })) : ""}</time></span></button>`);
+    }
+    if (C && C.access === "premium") {
+      const m = await apiAuth("GET", "/api/me/meetings").catch(() => null);
+      const nx = m && m.meetings.find((x) => x.status === "scheduled");
+      rows.push(`<button type="button" class="convo" data-goto="premium">
+        <span class="av av-cam"><svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11z"/></svg></span>
+        <span class="cv-main"><b>1-on-1 with Dr. Jared</b><span class="cv-prev"><i>${nx ? `Scheduled: ${esc(nx.when)}` : m ? `${Math.max(0, m.allowance - m.usedThisMonth)} of ${m.allowance} sessions left this month` : "Request a session"}</i></span>
+          <span class="cv-tags"><em class="tag">1-on-1</em></span></span>
+        <span class="cv-side"><time></time></span></button>`);
+    }
+    $("#convos").innerHTML = rows.join("");
+    setBadge(d.unread);
+  }
   async function loadMessages(scroll) {
     let d; try { d = await apiAuth("GET", "/api/me/messages"); } catch { return; }
+    msgData = d;
     $("#msg-gate").hidden = d.member;
     $("#chat-form").hidden = !d.member;
     $("#chat").hidden = !d.member && !d.messages.length;
     const list = $("#chat-list");
-    list.innerHTML = d.messages.length ? d.messages.map((m) => `<div class="bubble ${m.from === "client" ? "me" : "dr"}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span>${m.from === "doctor" ? "Dr. Jared · " : ""}${fmtWhen(m.at)}</span></div>`).join("")
+    let lastDay = "";
+    list.innerHTML = d.messages.length ? d.messages.map((m) => {
+      const day = new Date(m.at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      const sep = day !== lastDay ? `<p class="day-sep">${day}</p>` : ""; lastDay = day;
+      return `${sep}<div class="bubble ${m.from === "client" ? "me" : "dr"}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span>${new Date(m.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}${m.from === "client" && m.read ? " · Seen" : ""}</span></div>`;
+    }).join("")
       : `<p class="muted small chat-empty">Start the conversation. Tell Dr. Jared what's going on, where it hurts, or what you'd like help with.</p>`;
     if (scroll || d.messages.length !== msgCount) list.scrollTop = list.scrollHeight;
     msgCount = d.messages.length;
     if (d.unread) { await apiAuth("POST", "/api/me/messages/read", {}).catch(() => {}); setBadge(0); }
   }
-  function openMessages() { loadMessages(true); clearInterval(msgPoll); msgPoll = setInterval(() => { if (!document.hidden) loadMessages(false); }, 20000); }
+  function showThread(on) {
+    inThread = on; $("#inbox").hidden = on; $("#thread").hidden = !on;
+    if (on) loadMessages(true); else renderInbox();
+  }
+  function openMessages() {
+    showThread(location.hash === "#messages/dr");
+    clearInterval(msgPoll); msgPoll = setInterval(() => { if (!document.hidden) (inThread ? loadMessages(false) : renderInbox()); }, 20000);
+  }
+  $("#convos").addEventListener("click", (e) => { if (e.target.closest('[data-open="dr"]')) { history.pushState(null, "", "#messages/dr"); showThread(true); } });
+  $("#msgr-new").addEventListener("click", () => { history.pushState(null, "", "#messages/dr"); showThread(true); setTimeout(() => $("#chat-form textarea").focus(), 50); });
+  $("#msgr-back").addEventListener("click", () => { history.pushState(null, "", "#messages"); showThread(false); });
+  const growTA = (t) => { t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; };
+  $("#chat-form textarea").addEventListener("input", (e) => growTA(e.target));
   function setBadge(n) { const b = $("#msg-badge"); b.hidden = !n; b.textContent = n > 9 ? "9+" : n; $("#more-btn").classList.toggle("has-badge", !!n); const ml = $('#more-list [data-goto="messages"]'); if (ml) ml.dataset.badge = n || ""; }
   const pollUnread = () => apiAuth("GET", "/api/me/messages/unread-count").then((r) => setBadge(r.unread)).catch(() => {});
   setInterval(() => { if (!document.hidden && $("#view-messages").hidden) pollUnread(); }, 60000);
   $("#chat-form").addEventListener("submit", async (e) => {
     e.preventDefault(); const f = e.target, body = f.body.value.trim(); if (!body) return;
     const btn = $("button", f); btn.disabled = true;
-    try { await apiAuth("POST", "/api/me/messages", { body }); f.reset(); loadMessages(true); }
+    try { await apiAuth("POST", "/api/me/messages", { body }); f.reset(); growTA(f.body); loadMessages(true); }
     catch (err) { if (/membership/i.test(err.message)) showPaywall("Messaging Dr. Jared is part of membership."); else toast(err.message); }
     finally { btn.disabled = false; }
   });
