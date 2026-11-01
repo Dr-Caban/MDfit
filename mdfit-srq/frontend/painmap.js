@@ -14,7 +14,7 @@
   };
 
   // One point per muscle (66), from painmuscles.js MAPS: [x, y, deep] in px of the 1182×1073 figure image
-  const MUS = window.MDFitMuscles;
+  const MUS = window.MDFitMuscles, TK = window.MDFitTracks;
   const W = 1182, H = 1073;
   const POINTS = ["body-front", "body-back"].flatMap((view) => Object.entries(MUS.MAPS[view].pts).map(([id, [x, y, deep]]) => ({ id, view: view.split("-")[1], x, y, deep })));
 
@@ -41,10 +41,12 @@
   function show(id, view) {
     const m = MUS.MUSCLES[id], p = POINTS.find((x) => x.id === id && (!view || x.view === view));
     if (!m) return;
+    const tracks = TK ? TK.forPoint(id) : [];
     $$(".hotspot", root).forEach((b) => b.setAttribute("aria-pressed", b.dataset.spot === id));
     panel.innerHTML = `
       <p class="eyebrow">${p.view === "front" ? "Front" : "Back"} view${p.deep ? " · deep muscle" : ""}</p>
       <h3>${esc(m.name)}</h3>
+      ${tracks.length ? `<div class="pm-tracks"><b>Choose your pain pattern${tracks.length > 1 ? ` (${tracks.length})` : ""}</b><div class="track-list">${tracks.map(TK.card).join("")}</div></div>` : ""}
       <ul class="sources muscle-facts">
         <li><b>Where it sends pain</b><span>${esc(m.refers)}</span></li>
         <li><b>What it does</b><span>${esc(m.does)}</span></li>
@@ -63,6 +65,11 @@
   $(".hotspots", root).addEventListener("click", (e) => {
     const b = e.target.closest(".hotspot");
     if (b) show(b.dataset.spot, b.dataset.view);
+  });
+  // A pain track goes straight to its videos; the app version tracks progress and plays them in order
+  panel.addEventListener("click", (e) => {
+    const c = e.target.closest("[data-track]");
+    if (c) TK.open(c.dataset.track, { startLabel: "Do this track in the free MD Fit app →", onStart: (t) => { location.href = `/account#pain/track/${t.id}`; } });
   });
 
   // Pre-select the matching body area in the intake form

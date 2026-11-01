@@ -297,3 +297,20 @@ test("email notifications go to owner and client when configured", async (t) => 
   assert.ok(owner.some((m) => /Pain: 4\/10/.test(m.text)));
   assert.ok(owner.some((m) => /Where: Shoulder/.test(m.text) && /Pain: 3\/10/.test(m.text)));
 });
+
+test("services, payment plans and Medical Massage are public and admin-editable", async (t) => {
+  const s = await start(); t.after(s.close);
+  const site = (await s.call("GET", "/api/site")).body;
+  const svc = Object.fromEntries(site.settings.services.map((v) => [v.id, v]));
+  assert.equal(svc.eval.rate, 300); assert.equal(svc.followup.rate, 150); assert.equal(svc.massage.rate, 250);
+  assert.equal(site.settings.plans.gold, 20); assert.equal(site.settings.plans.silver, 10);
+  assert.equal(site.settings.plans.ext12, 5); assert.equal(site.settings.plans.ext24, 10); assert.equal(site.settings.plans.guaranteeMin, 12);
+  assert.ok(site.settings.appointmentTypes.some((a) => a.id === "massage"));
+  assert.ok(site.options.services.includes("Medical massage"));
+  await s.login();
+  const r = await s.call("PUT", "/api/admin/settings", { services: [...site.settings.services, { id: "dry-needling", name: "Dry Needling", rate: 180, protocol: true, description: "" }], plans: { gold: 25, participation: { creditPct: 15 } } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const after = (await s.call("GET", "/api/site")).body.settings;
+  assert.equal(after.services.length, 4); assert.equal(after.plans.gold, 25); assert.equal(after.plans.participation.creditPct, 15); assert.equal(after.plans.participation.attendPct, 90);
+  assert.equal((await s.call("PUT", "/api/admin/settings", { services: [{ id: "Bad Id", name: "x", rate: 1 }] })).status, 400);
+});

@@ -32,6 +32,7 @@
     let [tab, sub, arg] = String(hash).split("/");
     if (!TABS.includes(tab)) tab = "home";
     if (tab === "pain" && sub === "muscle" && arg) setTimeout(() => openReport(arg, false), 0);
+    else if (tab === "pain" && sub === "track" && arg) setTimeout(() => openTrack(arg), 0);
     else if (tab === "pain" && !$("#muscle-report").hidden) setMode(reportFrom);
     $$("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== tab));
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
@@ -501,6 +502,15 @@
 
   // ---- Pick a muscle: full report (anatomy, self-check, look-alikes, red flags, 3-phase protocol) from musclereports.js
   const REPORTS = window.MDFIT_MUSCLE_REPORTS || {};
+  const TK = window.MDFitTracks;
+  // Pain tracks (Dr. Jared's mapping documents): open goes straight to the videos; Start runs them in order in the player
+  const trackWorkout = (t) => {
+    const ex = TK.steps(t).filter((v) => v.id).map((v) => ({ ...(byId.get(v.id) || { id: v.id, region: t.region, cat: "Rehab", level: 1, loc: "any" }), name: v.name, sets: "Follow the video", block: v.level.split(" · ")[0] }));
+    return { title: `${t.title.split(" →")[0]} pain track`.slice(0, 80), goal: "Mobility & Recovery", goalId: "mobility", location: "home", level: "beginner", levelLabel: "Pain track",
+      rounds: 1, restEx: 15, restRound: 0, minutes: Math.max(5, ex.length * 3), warmup: [], circuit: ex, cooldown: [], exercises: ex, perRound: ex.length };
+  };
+  function openTrack(id) { TK.open(id, { startLabel: "Start this track", onStart: (t) => startPlayer(trackWorkout(t)) }); }
+  document.addEventListener("click", (e) => { const c = e.target.closest("[data-track]"); if (c) openTrack(c.dataset.track); });
   const GROUPS = [
     ["Head & jaw", ["suboccipitals", "occipitalis", "splenius", "temporalis", "masseter", "scm"]],
     ["Neck", ["upper-trap", "levator", "scalenes"]],
@@ -509,7 +519,7 @@
     ["Shoulder: blade & upper back", ["middle-trap", "lower-trap", "rhomboid-minor", "rhomboid-major", "lats"]],
     ["Upper arm", ["biceps-long", "biceps-short", "triceps-long", "triceps-lateral", "triceps-medial"]],
     ["Elbow, wrist & hand", ["wrist-ext", "finger-ext", "wrist-flex", "finger-flex", "brachioradialis", "supinator"]],
-    ["Ribs", ["intercostals"]],
+    ["Ribs & abdomen", ["intercostals", "ext-oblique"]],
     ["Low back & core", ["ql", "iliocostalis", "longissimus", "multifidus", "psoas"]],
     ["Hip & glutes", ["iliacus", "glute-med", "glute-min", "piriformis", "glute-max", "tfl", "adductor-longus", "adductor-magnus"]],
     ["Thigh & knee", ["rectus-femoris", "vastus-intermedius", "vmo", "vastus-lateralis", "biceps-femoris", "medial-hamstrings", "popliteus"]],
@@ -534,7 +544,8 @@
         <img src="assets/pain/body-figures.webp" alt="" style="width:${(1182 / w) * 100}%;left:${(-x / w) * 100}%;top:${(-y / h) * 100}%">
         ${Object.entries(mp.pts).map(([id, [px, py, deep]]) => `<button type="button" class="mdot ${deep ? "deep" : ""} ${id === mapPick ? "on" : ""}" data-pick="${id}" style="left:${((px - x) / w) * 100}%;top:${((py - y) / h) * 100}%" aria-label="${esc(MUS.MUSCLES[id].name)}${deep ? " (deep)" : ""}"></button>`).join("")}
       </div>
-      <div class="map-pick">${mapPick ? `<div><b>${esc(MUS.MUSCLES[mapPick].name)}</b><span>${esc(MUS.MUSCLES[mapPick].refers.split(/[.;]/)[0])}</span></div><button type="button" class="btn-gold sm" data-report="${mapPick}">Open report</button>`
+      <div class="map-pick">${mapPick ? `<div><b>${esc(MUS.MUSCLES[mapPick].name)}</b><span>${esc(MUS.MUSCLES[mapPick].refers.split(/[.;]/)[0])}</span></div><button type="button" class="btn-gold sm" data-report="${mapPick}">Open report</button>
+          ${TK.forPoint(mapPick).length ? `<div class="pm-tracks"><b>Choose your pain pattern</b><div class="track-list">${TK.forPoint(mapPick).map(TK.card).join("")}</div></div>` : ""}`
         : `<p class="muted small">Tap a point on the muscle that hurts. Navy points are deep muscles under the surface.${mapView.startsWith("body") ? " Use the Shoulder views to zoom in." : ""}</p>`}</div>`;
   }
   $("#muscle-map").addEventListener("click", (e) => {
@@ -597,6 +608,7 @@
         ${m.guide ? `<img src="assets/guides/${m.guide}-thumb.webp" alt="" width="110" height="110">` : ""}</header>
       <div class="report-grid">
         <div class="col-main">
+          ${TK.forPoint(id).length ? `<section class="card"><span class="label accent">Dr. Jared's pain tracks for this muscle</span><div class="track-list">${TK.forPoint(id).map(TK.card).join("")}</div></section>` : ""}
           <section class="card"><span class="label accent">Where it sends pain</span><p class="rlead">${esc(m.refers)}</p>
             ${r.symptoms ? `<p class="label">What people usually feel</p>${list(r.symptoms)}` : ""}</section>
           ${r.questions ? `<section class="card"><span class="label accent">Self-check: is it this muscle?</span>
@@ -803,7 +815,7 @@
     w.warmup.forEach((e) => out.push({ e, label: "Warm-up" }));
     for (let r = 1; r <= w.rounds; r++) {
       w.circuit.forEach((e, i) => {
-        out.push({ e, label: `Round ${r} of ${w.rounds}` });
+        out.push({ e, label: w.rounds === 1 && e.block !== "Circuit" ? e.block : `Round ${r} of ${w.rounds}` });
         if (w.restEx && i < w.circuit.length - 1) out.push({ rest: w.restEx, label: "Rest" });
       });
       if (r < w.rounds && w.restRound) out.push({ rest: w.restRound, label: `Rest before round ${r + 1}` });

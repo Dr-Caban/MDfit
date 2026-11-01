@@ -7,7 +7,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const SERVICES = ["Injury rehabilitation", "Post-surgical rehab", "Chronic pain", "Functional mobility",
+const SERVICES = ["Injury rehabilitation", "Post-surgical rehab", "Chronic pain", "Medical massage", "Functional mobility",
   "Strength & performance training", "Group classes", "Not sure yet"];
 const GOALS = ["Get out of pain", "Recover from surgery", "Move better", "Get stronger", "Return to sport", "Lose weight", "Other"];
 const AREAS = ["Neck", "Shoulder", "Upper back", "Lower back", "Hip", "Knee", "Ankle / foot", "Elbow / wrist / hand", "Other"];
@@ -49,8 +49,21 @@ function defaultSettings() {
       { name: "Client review", quote: "Jared takes his time to find the muscle that is the problem and gives stretching exercises to solve the pain." },
       { name: "Class review", quote: "Smart, practical, and focused on helping you actually move and feel better." }
     ],
+    // Services and pricing (admin-editable). rate = dollars per hour; protocol = sold in multi-session packages
+    services: [
+      { id: "eval", name: "Initial Evaluation", rate: 300, unit: "hour", protocol: false, description: "Full pain and movement assessment, hands-on treatment and your personal plan." },
+      { id: "followup", name: "Follow-up Visit", rate: 150, unit: "hour", protocol: true, description: "Treatment, movement correction and progression of your protocol." },
+      { id: "massage", name: "Medical Massage", rate: 250, unit: "hour", protocol: true, description: "Targeted soft-tissue treatment for the exact muscles driving your pain." }
+    ],
+    // Payment plans for protocol packages. Discounts and increases are percentages.
+    plans: {
+      gold: 20, silver: 10, silverPayments: 3, ext12: 5, ext24: 10, packageSizes: [6, 12, 24], guaranteeMin: 12,
+      // Participation credit: attend at least attendPct% of booked visits and log homePerWeek home sessions a week to earn creditPct% back
+      participation: { creditPct: 10, attendPct: 90, homePerWeek: 3 }
+    },
     appointmentTypes: [
       { id: "eval", name: "Initial Evaluation", minutes: 60, description: "Full pain and movement assessment, hands-on treatment and a plan." },
+      { id: "massage", name: "Medical Massage", minutes: 60, description: "Targeted soft-tissue treatment for the muscles driving your pain." },
       { id: "session", name: "Rehab / Training Session", minutes: 60, description: "For existing clients continuing their plan." },
       { id: "call", name: "Free 15-Minute Phone Consult", minutes: 15, description: "Not sure where to start? Talk it through with Dr. Jared." }
     ],
@@ -198,7 +211,7 @@ function classInput(b, { partial = false } = {}) {
 // Partial settings update: only the sections/fields sent are changed.
 function mergeSettings(current, body) {
   obj(body, "Settings");
-  const known = ["business", "rating", "coach", "packages", "testimonials", "appointmentTypes", "scheduling", "booking"];
+  const known = ["business", "rating", "coach", "packages", "testimonials", "appointmentTypes", "scheduling", "booking", "services", "plans"];
   const unknown = Object.keys(body).filter((k) => !known.includes(k));
   if (unknown.length) fail(`Unknown setting: ${unknown[0]}`);
   if (!Object.keys(body).length) fail("Nothing to update.");
@@ -248,6 +261,42 @@ function mergeSettings(current, body) {
     });
   }
 
+  if (body.services !== undefined) {
+    if (!Array.isArray(body.services) || body.services.length < 1 || body.services.length > 12) fail("Services: between 1 and 12.");
+    s.services = body.services.map((v, i) => {
+      obj(v, `Service ${i + 1}`);
+      const id = str(v.id, `Service ${i + 1} id`, { min: 1, max: 30 });
+      if (!/^[a-z0-9-]+$/.test(id)) fail(`Service id "${id}": lowercase letters, numbers and dashes only.`);
+      return {
+        id, name: str(v.name, `Service ${i + 1} name`, { min: 1, max: 60 }),
+        rate: int(v.rate, `Service ${i + 1} rate`, { min: 0, max: 10000 }),
+        unit: str(v.unit || "hour", `Service ${i + 1} unit`, { max: 20 }),
+        protocol: Boolean(v.protocol),
+        description: str(v.description, `Service ${i + 1} description`, { max: 300 })
+      };
+    });
+    if (new Set(s.services.map((v) => v.id)).size !== s.services.length) fail("Service ids must be unique.");
+  }
+
+  if (body.plans !== undefined) {
+    const b = obj(body.plans, "plans");
+    const pct = (k, label, max = 50) => { if (b[k] !== undefined) s.plans[k] = int(b[k], label, { min: 0, max }); };
+    pct("gold", "Gold discount"); pct("silver", "Silver discount"); pct("ext12", "12-month increase"); pct("ext24", "24-month increase");
+    if (b.silverPayments !== undefined) s.plans.silverPayments = int(b.silverPayments, "Silver payments", { min: 2, max: 12 });
+    if (b.guaranteeMin !== undefined) s.plans.guaranteeMin = int(b.guaranteeMin, "Guarantee minimum sessions", { min: 1, max: 100 });
+    if (b.packageSizes !== undefined) {
+      if (!Array.isArray(b.packageSizes) || !b.packageSizes.length || b.packageSizes.length > 6) fail("Package sizes: 1 to 6 numbers.");
+      s.plans.packageSizes = [...new Set(b.packageSizes.map((n) => int(n, "Package size", { min: 1, max: 100 })))].sort((x, y) => x - y);
+    }
+    if (b.participation !== undefined) {
+      const p = obj(b.participation, "participation");
+      s.plans.participation = { ...s.plans.participation };
+      if (p.creditPct !== undefined) s.plans.participation.creditPct = int(p.creditPct, "Participation credit", { min: 0, max: 50 });
+      if (p.attendPct !== undefined) s.plans.participation.attendPct = int(p.attendPct, "Attendance target", { min: 0, max: 100 });
+      if (p.homePerWeek !== undefined) s.plans.participation.homePerWeek = int(p.homePerWeek, "Home sessions per week", { min: 0, max: 14 });
+    }
+  }
+
   if (body.testimonials !== undefined) {
     if (!Array.isArray(body.testimonials) || body.testimonials.length > 20) fail("Testimonials: up to 20.");
     s.testimonials = body.testimonials.map((t, i) => {
@@ -271,6 +320,7 @@ function mergeSettings(current, body) {
       };
     });
     if (new Set(s.appointmentTypes.map((t) => t.id)).size !== s.appointmentTypes.length) fail("Appointment type ids must be unique.");
+    s.massageAdded = true; // the admin now owns this list, so don't re-add Medical Massage
   }
 
   if (body.booking !== undefined) {

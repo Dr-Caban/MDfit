@@ -133,7 +133,11 @@ function createApp(cfg = loadConfig()) {
     return {
       ...d, ...s,
       business: { ...d.business, ...s.business }, coach: { ...d.coach, ...s.coach },
-      rating: { ...d.rating, ...s.rating }, scheduling: { ...d.scheduling, ...s.scheduling }, booking: { ...d.booking, ...s.booking }
+      rating: { ...d.rating, ...s.rating }, scheduling: { ...d.scheduling, ...s.scheduling }, booking: { ...d.booking, ...s.booking },
+      plans: { ...d.plans, ...s.plans, participation: { ...d.plans.participation, ...(s.plans || {}).participation } },
+      // Saved appointment types from before Medical Massage existed get it added once
+      appointmentTypes: s.appointmentTypes && !s.massageAdded && !s.appointmentTypes.some((t) => t.id === "massage")
+        ? [...s.appointmentTypes, d.appointmentTypes.find((t) => t.id === "massage")] : (s.appointmentTypes || d.appointmentTypes)
     };
   };
   const classes = () => {
@@ -328,7 +332,7 @@ function createApp(cfg = loadConfig()) {
 
   app.get("/api/site", async (req, res) => {
     const s = settings();
-    const { scheduling, booking, ...pub } = s;
+    const { scheduling, booking, massageAdded, ...pub } = s;
     const calData = booking.provider === "cal" ? await calInfo(s) : null;
     res.set("Cache-Control", "no-cache");
     res.json({
