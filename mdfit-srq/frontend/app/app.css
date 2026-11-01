@@ -632,3 +632,27 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .map-stage.dense .mdot { width: 20px; height: 20px; }
 .map-stage.dense .mdot::after { inset: 4px; border-width: 1.5px; }
 .map-stage.dense .mdot.on::after { inset: -2px; }
+
+/* Player v2: auto-advance, optional breaks, looping video, countdown ring */
+.player { grid-template-rows: auto auto 1fr auto; }
+.player-foot { grid-template-columns: 1fr 1fr 2fr; }
+.p-opts { display: flex; gap: 8px; padding: 0 16px 10px; flex-wrap: wrap; }
+.p-opts button { font: 600 12.5px var(--body, inherit); border: 1px solid var(--navy-3); background: transparent; color: var(--on-navy); padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.p-opts button.on { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+.p-opts button::before { content: "○ "; }
+.p-opts button.on::before { content: "● "; }
+.p-frame video { width: 100%; height: 100%; object-fit: contain; background: #000; display: block; }
+.p-setrow { display: flex; gap: 14px; align-items: center; margin: 6px 0 10px; }
+.p-ring { --pct: 0%; flex: 0 0 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--gold) var(--pct), var(--navy-3) 0); position: relative; }
+.p-ring::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--navy); }
+.p-ring span { position: relative; font: 700 18px/1 var(--display, Georgia); color: #fff; font-variant-numeric: tabular-nums; }
+.p-setrow .p-sets, .p-setrow .p-meta { margin: 0; }
+.p-load { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--on-navy); margin: 0 0 10px; }
+.p-load input { width: 90px; background: var(--navy-2); border: 1px solid var(--navy-3); color: #fff; border-radius: 8px; padding: 7px 10px; font: inherit; }
+@media (min-width: 1000px) { .player { grid-template-rows: auto auto auto auto; } .p-opts { width: min(980px, 92vw); margin: 0 auto; padding: 0 20px 12px; background: var(--navy); } }
+.ex-swap { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.swap-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line, #e4ded1); background: var(--card, #fff); display: grid; place-items: center; cursor: pointer; }
+.swap-btn svg { width: 20px; height: 20px; fill: var(--accent-text, #b85500); }
+.swap-btn:hover { background: var(--gold-soft, #f6eedb); }
+.ex-swap.swapped .ex { animation: swapflash .9s ease; }
+@keyframes swapflash { from { background: var(--gold-soft, #f6eedb); box-shadow: 0 0 0 2px var(--gold, #C8A763); } to { box-shadow: none; } }

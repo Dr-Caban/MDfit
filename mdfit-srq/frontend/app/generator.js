@@ -157,5 +157,41 @@
     };
   }
 
-  window.MDFitGen = { GOALS, LOCATIONS, LEVELS, LENGTHS, PER_ROUND, ROUNDS, REST_EX, REST_ROUND, ADDONS, DEFAULTS, generate, presetFor, estimate, prescription, needsGym };
+  // Seconds one move takes in the player: timed holds as written, reps at ~4s each (slow/gentle ~6s)
+  function stepSecs(rx) {
+    const t = String(rx).match(/(\d+)\s*(sec|min)/); if (t) return Number(t[1]) * (t[2] === "min" ? 60 : 1);
+    const r = String(rx).match(/(\d+)\s*(slow|gentle)?\s*reps?/); if (r) return Math.max(30, Number(r[1]) * (r[2] ? 6 : 4));
+    return 45;
+  }
+
+  // Replace one move with a random alternative that fits the same slot (same block, location, level and, when possible, category and body region)
+  function swap(w, block, index, seed = Date.now()) {
+    const key = block === "Warm-up" ? "warmup" : block === "Cool-down" ? "cooldown" : "circuit";
+    const old = w[key][index]; if (!old) return w;
+    const L = LEVELS.find((l) => l.id === w.level) || LEVELS[1];
+    const used = new Set([...w.warmup, ...w.circuit, ...w.cooldown].map((e) => e.id));
+    let pool = byLocation(w.location).filter((e) => !used.has(e.id) && e.name !== old.name);
+    if (w.addons && w.addons.bodyweight) pool = pool.filter((e) => !needsGym(e));
+    const easy = (e) => e.level <= Math.min(L.max, 4);
+    const tiers = key === "warmup" ? [(e) => WARM.includes(e.cat) && easy(e) && e.rc === old.rc, (e) => WARM.includes(e.cat) && easy(e)]
+      : key === "cooldown" ? [(e) => COOL.includes(e.cat) && easy(e) && e.rc === old.rc, (e) => COOL.includes(e.cat) && easy(e)]
+      : [(e) => e.cat === old.cat && e.rc === old.rc && e.level >= L.min && e.level <= L.max,
+         (e) => e.cat === old.cat && e.level >= L.min && e.level <= L.max,
+         (e) => e.rc === old.rc && MAIN.includes(e.cat) && e.level <= L.max,
+         (e) => old.cat === e.cat && e.level <= L.max];
+    const rand = rng(seed);
+    for (const t of tiers) {
+      const c = pool.filter(t);
+      if (c.length) {
+        const n = c[Math.floor(rand() * c.length)];
+        const list = w[key].slice(); list[index] = { ...n, block, sets: prescription(n, L.id) };
+        const out = { ...w, [key]: list };
+        out.exercises = [...out.warmup, ...out.circuit, ...out.cooldown];
+        return out;
+      }
+    }
+    return w;
+  }
+
+  window.MDFitGen = { swap, stepSecs, GOALS, LOCATIONS, LEVELS, LENGTHS, PER_ROUND, ROUNDS, REST_EX, REST_ROUND, ADDONS, DEFAULTS, generate, presetFor, estimate, prescription, needsGym };
 })();

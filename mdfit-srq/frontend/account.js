@@ -269,10 +269,11 @@
     $("#generated").hidden = false;
     $("#gen-title").textContent = w.title;
     $("#gen-meta").textContent = `About ${w.minutes} min · ${planLine(w)} · ${w.levelLabel} · ${loc ? loc.label : ""}. Tap any exercise to watch Dr. Jared demo it.`;
-    const group = (label, list, note = "") => list.length ? `<li class="block-tag">${label}${note ? `<span>${note}</span>` : ""}</li>${list.map(exLi).join("")}` : "";
-    $("#gen-list").innerHTML = group("Warm-up", w.warmup)
-      + group(`Circuit × ${w.rounds} round${w.rounds === 1 ? "" : "s"}`, w.circuit, [w.restEx && `${w.restEx}s between exercises`, w.restRound && w.rounds > 1 && `${w.restRound}s between rounds`].filter(Boolean).join(" · "))
-      + group("Cool-down", w.cooldown);
+    const swapLi = (block) => (e, i) => `<li class="ex-swap">${exLi(e).slice(4, -5)}<button type="button" class="swap-btn" data-swap="${block}" data-i="${i}" aria-label="Swap ${esc(e.name)} for another movement" title="Swap for another movement"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3 1.4-1.4L22 8l-5.6 5.4L15 12l3-3H7zm10 10H6l3 3-1.4 1.4L2 16l5.6-5.4L9 12l-3 3h11z"/></svg></button></li>`;
+    const group = (label, list, block, note = "") => list.length ? `<li class="block-tag">${label}${note ? `<span>${note}</span>` : ""}</li>${list.map(swapLi(block)).join("")}` : "";
+    $("#gen-list").innerHTML = group("Warm-up · plays once", w.warmup, "Warm-up")
+      + group(`Circuit × ${w.rounds} round${w.rounds === 1 ? "" : "s"}`, w.circuit, "Circuit", [w.restEx && `${w.restEx}s between exercises`, w.restRound && w.rounds > 1 && `${w.restRound}s between rounds`].filter(Boolean).join(" · "))
+      + group("Cool-down · starts automatically", w.cooldown, "Cool-down");
   }
   function generateNow(seed = Date.now()) {
     current = Gen.generate({ ...choice, seed });
@@ -285,6 +286,18 @@
   }
   $("#generate").addEventListener("click", () => { generateNow(); $("#generated").scrollIntoView({ behavior: "smooth", block: "start" }); });
   $("#shuffle").addEventListener("click", () => generateNow());
+  // Swap one movement for a random alternative that fits the same slot
+  $("#gen-list").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-swap]"); if (!b || !current) return;
+    ev.stopPropagation();
+    const before = current;
+    current = Gen.swap(current, b.dataset.swap, Number(b.dataset.i), Date.now());
+    if (current === before) return toast("No other movement fits that slot.");
+    store.set(TODAY_KEY, { date: todayInTz(), workout: current });
+    renderToday(); renderGenerated();
+    const li = $$(`#gen-list [data-swap="${b.dataset.swap}"]`)[Number(b.dataset.i)];
+    if (li) li.closest("li").classList.add("swapped");
+  });
   $("#start-gen").addEventListener("click", () => current && startPlayer(current));
   renderChoices();
 
@@ -807,8 +820,12 @@
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
-  // ================= Workout player: warm-up → circuit rounds with rest countdowns → cool-down
-  const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false };
+  // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
+  // Drive serves the raw MP4 (CORS + range requests), so a real <video> can autoplay, loop through the set and move on by itself.
+  const driveMp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
+  const PLAY_KEY = "mdfit.player";
+  const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false, left: 0, paused: false,
+    opt: { auto: true, breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}) } };
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   function buildSteps(w) {
     const out = [];
@@ -823,23 +840,43 @@
     w.cooldown.forEach((e) => out.push({ e, label: "Cool-down" }));
     return out;
   }
+  const saveOpt = () => store.set(PLAY_KEY, P.opt);
+  function renderOpts() {
+    $$("#p-opts [data-opt]").forEach((b) => { const on = !!P.opt[b.dataset.opt]; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+  }
   function startPlayer(w) {
-    P.w = w; P.steps = buildSteps(w); P.i = 0; P.start = Date.now(); P.done = false;
+    P.w = w; P.steps = buildSteps(w); P.i = 0; P.start = Date.now(); P.done = false; P.paused = false; P.log = {};
     $("#player").hidden = false;
     document.body.style.overflow = "hidden";
     clearInterval(P.tick);
-    P.tick = setInterval(() => ($("#p-timer").textContent = fmtClock(Math.floor((Date.now() - P.start) / 1000))), 1000);
+    P.tick = setInterval(onTick, 1000);
     $("#p-timer").textContent = "0:00";
+    renderOpts();
     renderStep();
   }
   function closePlayer() {
-    clearInterval(P.tick); clearInterval(P.rest);
+    clearInterval(P.tick);
+    const v = $("#p-video"); if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
     $("#player").hidden = true;
     $("#p-body").innerHTML = "";
     document.body.style.overflow = "";
   }
+  // One clock drives everything: the session timer, the rest countdown and the per-move countdown
+  function onTick() {
+    if (P.done) return;
+    $("#p-timer").textContent = fmtClock(Math.floor((Date.now() - P.start) / 1000));
+    if (P.paused) return;
+    const st = P.steps[P.i]; if (!st) return;
+    if (st.rest || P.opt.auto) {
+      P.left = Math.max(0, P.left - 1);
+      const c = $("#p-count"); if (c) c.textContent = st.rest ? P.left : fmtClock(P.left);
+      const ring = $("#p-ring"); if (ring) ring.style.setProperty("--pct", `${100 - (P.left / P.total) * 100}%`);
+      if (P.left <= 0) advance();
+    }
+  }
+  function advance() { P.i++; skipRests(); renderStep(); }
+  function skipRests() { if (!P.opt.breaks) while (P.steps[P.i] && P.steps[P.i].rest) P.i++; }
   function renderStep() {
-    clearInterval(P.rest);
     const n = P.steps.length;
     if (P.i >= n) return finish();
     const st = P.steps[P.i], next = P.steps.slice(P.i + 1).find((x) => x.e);
@@ -848,29 +885,52 @@
     $("#p-bar").style.width = `${(P.i / n) * 100}%`;
     $("#p-prev").disabled = P.i === 0;
     $("#p-next").textContent = P.i === n - 1 ? "Finish" : st.rest ? "Skip rest" : "Next";
-    const upNext = next ? `<div class="p-next">Up next: <b>${esc(next.e.name)}</b> · ${esc(next.e.sets)}</div>` : `<div class="p-next">Last one. Finish strong.</div>`;
+    P.paused = false; $("#p-pause").textContent = "Pause";
+    const upNext = next ? `<div class="p-next">Up next: <b>${esc(next.e.name)}</b> · ${esc(next.e.sets)}${next.label !== st.label && next.label === "Cool-down" ? " · cool-down starts" : ""}</div>` : `<div class="p-next">Last one. Finish strong.</div>`;
     if (st.rest) {
-      let left = st.rest;
-      $("#p-body").innerHTML = `<div class="p-rest"><p class="p-block">${esc(st.label)}</p><div class="count" id="rest-count">${left}</div><p>Breathe. Get set for the next move.</p>${upNext}</div>`;
-      P.rest = setInterval(() => {
-        left--;
-        const c = $("#rest-count");
-        if (c) c.textContent = Math.max(0, left);
-        if (left <= 0) { clearInterval(P.rest); P.i++; renderStep(); }
-      }, 1000);
+      P.left = P.total = st.rest;
+      $("#p-body").innerHTML = `<div class="p-rest"><p class="p-block">${esc(st.label)}</p><div class="count" id="p-count">${P.left}</div><p>Breathe. Get set for the next move.</p>${upNext}</div>`;
       return;
     }
     const e = st.e;
+    P.left = P.total = Gen.stepSecs(e.sets);
     $("#p-body").innerHTML = `
-      <div class="frame"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(e.id)}/preview" title="${esc(e.name)} demo" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
-      <p class="p-block">${esc(st.label)}</p>
-      <h2 class="p-name">${esc(e.name)}</h2>
-      <p class="p-sets">${esc(e.sets)}</p>
-      <p class="p-meta">${esc(exMeta(e))}</p>
-      ${upNext}`;
+      <div class="frame p-frame">
+        <video id="p-video" playsinline loop ${P.opt.sound ? "" : "muted"} autoplay preload="auto" poster="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800"></video>
+      </div>
+      <div class="p-info">
+        <p class="p-block">${esc(st.label)}</p>
+        <h2 class="p-name">${esc(e.name)}</h2>
+        <div class="p-setrow">
+          <div class="p-ring" id="p-ring" style="--pct:0%"><span id="p-count">${fmtClock(P.left)}</span></div>
+          <div><p class="p-sets">${esc(e.sets)}</p><p class="p-meta">${esc(exMeta(e))}</p></div>
+        </div>
+        ${st.label.startsWith("Round") || st.label === "Circuit" ? `<label class="p-load">Weight used <input id="p-weight" inputmode="decimal" placeholder="lb" value="${esc((P.log[e.id] || {}).weight || "")}"></label>` : ""}
+        ${upNext}
+      </div>`;
+    const v = $("#p-video");
+    // Fall back to Drive's own player if the direct stream is refused
+    v.addEventListener("error", () => { v.parentElement.innerHTML = `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(e.id)}/preview" title="${esc(e.name)} demo" allow="autoplay; fullscreen" allowfullscreen></iframe>`; }, { once: true });
+    v.src = driveMp4(e.id);
+    const pr = v.play(); if (pr) pr.catch(() => { v.muted = true; v.play().catch(() => {}); });
+    const wt = $("#p-weight");
+    if (wt) wt.addEventListener("input", () => { P.log[e.id] = { name: e.name, weight: wt.value.trim().slice(0, 12) }; });
   }
+  $("#p-pause").addEventListener("click", () => {
+    if (P.done) return;
+    P.paused = !P.paused;
+    $("#p-pause").textContent = P.paused ? "Resume" : "Pause";
+    const v = $("#p-video"); if (v) P.paused ? v.pause() : v.play().catch(() => {});
+  });
+  $("#p-opts").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-opt]"); if (!b) return;
+    const k = b.dataset.opt; P.opt[k] = !P.opt[k]; saveOpt(); renderOpts();
+    if (k === "sound") { const v = $("#p-video"); if (v) { v.muted = !P.opt.sound; v.play().catch(() => {}); } }
+    if (k === "breaks" && !P.opt.breaks && P.steps[P.i] && P.steps[P.i].rest) { skipRests(); renderStep(); }
+  });
   async function finish() {
-    clearInterval(P.tick); clearInterval(P.rest);
+    clearInterval(P.tick);
+    const pv = $("#p-video"); if (pv) pv.pause();
     P.done = true;
     const secsUsed = Math.floor((Date.now() - P.start) / 1000), minutes = Math.min(300, Math.max(1, Math.round(secsUsed / 60)));
     $("#p-bar").style.width = "100%";
@@ -888,7 +948,7 @@
       loadRewards(true);
     } catch (err) { $("#done-msg").textContent = "Couldn't save this workout: " + err.message; }
   }
-  $("#p-next").addEventListener("click", () => { if (P.done) return closePlayer(); P.i++; renderStep(); });
+  $("#p-next").addEventListener("click", () => { if (P.done) return closePlayer(); advance(); });
   $("#p-prev").addEventListener("click", () => {
     if (P.done || P.i === 0) return;
     P.i--;

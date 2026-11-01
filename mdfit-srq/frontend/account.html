@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=daf80b0a">
+  <link rel="stylesheet" href="app/app.css?v=b715f303">
   <link rel="stylesheet" href="guides.css?v=a3d95bb8">
 </head>
 <body class="mdapp">
@@ -288,9 +288,15 @@
       <div class="player-progress"><span id="p-step"></span><div class="bar"><i id="p-bar"></i></div></div>
       <span class="timer" id="p-timer">0:00</span>
     </header>
+    <div class="p-opts" id="p-opts" role="group" aria-label="Player options">
+      <button type="button" data-opt="auto" aria-pressed="true">Auto-advance</button>
+      <button type="button" data-opt="breaks" aria-pressed="true">Breaks</button>
+      <button type="button" data-opt="sound" aria-pressed="false">Sound</button>
+    </div>
     <div class="player-body" id="p-body"></div>
     <footer class="player-foot">
       <button type="button" class="btn-ghost" id="p-prev">Back</button>
+      <button type="button" class="btn-ghost" id="p-pause">Pause</button>
       <button type="button" class="btn-gold" id="p-next">Next</button>
     </footer>
   </div>
@@ -307,11 +313,11 @@
   <script src="config.js?v=f7c994b0"></script>
   <script src="common.js?v=303aeac7"></script>
   <script src="app/exercises.js?v=7d154684"></script>
-  <script src="app/generator.js?v=31e17920"></script>
+  <script src="app/generator.js?v=40f2b934"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=b974369f"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=3f48694d"></script>
-  <script src="account.js?v=bef03d4d"></script>
+  <script src="account.js?v=94e6ac57"></script>
 </body>
 </html>
