@@ -109,6 +109,11 @@
   ],
   "redirects": [
     {
+      "source": "/privacy",
+      "destination": "/privacy-policy",
+      "permanent": true
+    },
+    {
       "source": "/evaluation",
       "destination": "/book?type=eval",
       "permanent": false
