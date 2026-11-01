@@ -306,7 +306,7 @@
   const expand = (arr, block) => arr.map((x) => byId.get(x.id) && { ...byId.get(x.id), sets: x.sets, block }).filter(Boolean);
   function programWorkout(p) {
     const w = p.workout, warmup = expand(w.warmup, "Warm-up"), circuit = expand(w.circuit, "Circuit"), cooldown = expand(w.cooldown, "Cool-down");
-    return { ...w, title: p.name, warmup, circuit, cooldown, exercises: [...warmup, ...circuit, ...cooldown], perRound: circuit.length };
+    return { ...w, key: "program-" + p.id, title: p.name, warmup, circuit, cooldown, exercises: [...warmup, ...circuit, ...cooldown], perRound: circuit.length };
   }
   const programLi = (p, del) => {
     const w = p.workout;
@@ -928,6 +928,7 @@
     if (k === "sound") { const v = $("#p-video"); if (v) { v.muted = !P.opt.sound; v.play().catch(() => {}); } }
     if (k === "breaks" && !P.opt.breaks && P.steps[P.i] && P.steps[P.i].rest) { skipRests(); renderStep(); }
   });
+  const workoutKey = (w) => w.key || w.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 80);
   async function finish() {
     clearInterval(P.tick);
     const pv = $("#p-video"); if (pv) pv.pause();
@@ -938,16 +939,132 @@
     $("#p-prev").disabled = true;
     $("#p-next").textContent = "Done";
     $("#p-body").innerHTML = `<div class="p-done"><div class="big-check"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></div>
-      <h2>Workout complete</h2><p class="muted">${esc(P.w.title)}</p><p class="muted small" id="done-msg">Saving…</p></div>`;
+      <h2>Workout complete</h2><p class="muted">${esc(P.w.title)}</p><p class="muted small" id="done-msg">Saving…</p><div id="done-form"></div></div>`;
+    const hr = HR.summary(P.start);
+    const lifts = Object.values(P.log || {}).filter((l) => l.weight && !isNaN(Number(l.weight))).map((l) => ({ name: l.name, weight: Number(l.weight) }));
     try {
-      const r = await apiAuth("POST", "/api/me/workouts", { title: P.w.title.slice(0, 80), goal: P.w.goal, minutes, exercises: Math.min(50, P.w.exercises.length) });
+      const r = await apiAuth("POST", "/api/me/workouts", { title: P.w.title.slice(0, 80), goal: P.w.goal, minutes, exercises: Math.min(50, P.w.exercises.length),
+        key: workoutKey(P.w), seconds: Math.max(1, Math.min(18000, secsUsed)), lifts, ...(hr ? { hrAvg: hr.avg, hrMax: hr.max, source: HR.name || "Heart-rate strap" } : {}) });
       stats = { ...r.stats, recent: [r.workout, ...((stats && stats.recent) || [])].slice(0, 10) };
-      $("#done-msg").outerHTML = `<div class="stats3"><div><b>${r.stats.streak}</b><span>Day streak</span></div><div><b>${minutes}</b><span>Minutes</span></div><div><b>${r.stats.workouts}</b><span>Workouts</span></div></div>`;
+      $("#done-msg").outerHTML = `<div class="stats3"><div><b>${r.stats.streak}</b><span>Day streak</span></div><div><b>${minutes}</b><span>Minutes</span></div><div><b>${hr ? hr.avg : r.stats.workouts}</b><span>${hr ? "Avg bpm" : "Workouts"}</span></div></div>`;
       allWorkouts.push(r.workout);
-      renderStats(); renderActivity(); renderNotes(); renderCalendar();
+      numbersForm($("#done-form"), r.workout, "Add your numbers so you can compare this session later. Copy them from your watch if you wore one.");
+      renderStats(); renderActivity(); renderNotes(); renderCalendar(); renderPerf();
       loadRewards(true);
     } catch (err) { $("#done-msg").textContent = "Couldn't save this workout: " + err.message; }
   }
+
+  // ---- Performance: daily vitals + side-by-side comparison of saved workouts
+  let vitals = [];
+  const VITALS = [["restingHr", "Resting HR", "bpm", -1], ["hrv", "HRV", "ms", 1], ["vo2max", "VO2 max", "", 1], ["weight", "Body weight", "lb", 0]];
+  const latestOf = (k) => [...vitals].reverse().find((v) => v[k] !== undefined);
+  function spark(k) {
+    const pts = vitals.filter((v) => v[k] !== undefined).slice(-30);
+    if (pts.length < 2) return "";
+    const ys = pts.map((v) => v[k]), lo = Math.min(...ys), hi = Math.max(...ys), span = hi - lo || 1;
+    const d = ys.map((y, i) => `${i ? "L" : "M"}${(i / (ys.length - 1)) * 100},${28 - ((y - lo) / span) * 24}`).join(" ");
+    return `<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>`;
+  }
+  function renderPerf() {
+    if (!$("#perf-card")) return;
+    $("#vitals").innerHTML = VITALS.map(([k, label, unit, good]) => {
+      const last = latestOf(k), first = vitals.find((v) => v[k] !== undefined);
+      const diff = last && first && last !== first ? Math.round((last[k] - first[k]) * 10) / 10 : null;
+      const cls = diff === null || !good || !diff ? "" : diff * good > 0 ? "up-good" : "up-bad";
+      return `<div class="vital"><span>${label}</span><b>${last ? last[k] : "--"}<small> ${unit}</small></b>${diff !== null ? `<em class="${cls}">${diff > 0 ? "+" : ""}${diff} since ${first.date.slice(5)}</em>` : `<em>${last ? `Logged ${last.date.slice(5)}` : "No readings yet"}</em>`}${spark(k)}</div>`;
+    }).join("");
+    const ws = [...allWorkouts].reverse();
+    const opt = (w) => `<option value="${w.id}">${w.date.slice(5)} · ${esc(w.title)}${w.hrAvg ? ` · ${w.hrAvg} bpm` : ""}</option>`;
+    const A = $("#cmp-a"), B = $("#cmp-b"), fresh = renderPerf.n !== ws.length, keepA = fresh ? "" : A.value, keepB = fresh ? "" : B.value;
+    renderPerf.n = ws.length;
+    A.innerHTML = ws.map(opt).join(""); B.innerHTML = ws.map(opt).join("");
+    if (ws.length < 1) { $("#cmp-table").innerHTML = `<p class="muted small">Finish a workout to start comparing sessions.</p>`; $("#cmp-edit-wrap").hidden = true; return; }
+    A.value = ws.some((w) => w.id === keepA) ? keepA : ws[0].id;
+    const a = ws.find((w) => w.id === A.value);
+    const same = ws.find((w) => w.id !== a.id && (w.key ? w.key === a.key : w.title === a.title));
+    B.value = ws.some((w) => w.id === keepB) && keepB !== a.id ? keepB : (same || ws.find((w) => w.id !== a.id) || a).id;
+    const b = ws.find((w) => w.id === B.value);
+    const dur = (w) => w.seconds ? `${Math.floor(w.seconds / 60)}:${String(w.seconds % 60).padStart(2, "0")}` : `${w.minutes} min`;
+    const val = (w) => (w.seconds || w.minutes * 60);
+    const rows = [["Time", dur, val, -1], ["Avg heart rate", (w) => w.hrAvg && `${w.hrAvg} bpm`, (w) => w.hrAvg, 0], ["Max heart rate", (w) => w.hrMax && `${w.hrMax} bpm`, (w) => w.hrMax, 0],
+      ["HRV", (w) => w.hrv && `${w.hrv} ms`, (w) => w.hrv, 1], ["VO2 max", (w) => w.vo2max, (w) => w.vo2max, 1], ["Effort", (w) => w.rpe && `${w.rpe}/10`, (w) => w.rpe, 0], ["Calories", (w) => w.calories, (w) => w.calories, 0]];
+    const names = [...new Set([...(a.lifts || []), ...(b.lifts || [])].map((l) => l.name))];
+    const liftW = (w, n) => ((w.lifts || []).find((l) => l.name === n) || {}).weight;
+    const delta = (x, y, good, fmt = (d) => d) => {
+      if (x === undefined || y === undefined || a === b) return "";
+      const d = Math.round((x - y) * 10) / 10; if (!d) return `<span class="dz">same</span>`;
+      return `<span class="${good ? (d * good > 0 ? "up-good" : "up-bad") : ""}">${d > 0 ? "+" : ""}${fmt(d)}</span>`;
+    };
+    $("#cmp-table").innerHTML = `<table><thead><tr><th></th><th>${a.date.slice(5)}</th><th>${b.date.slice(5)}</th><th>Change</th></tr></thead><tbody>
+      ${rows.map(([label, show, num, good]) => `<tr><th>${label}</th><td>${show(a) ?? "--"}</td><td>${show(b) ?? "--"}</td><td>${delta(num(a), num(b), good, label === "Time" ? (d) => `${Math.round(d)}s` : undefined)}</td></tr>`).join("")}
+      ${names.map((n) => `<tr class="lift"><th>${esc(n)}</th><td>${liftW(a, n) ?? "--"}</td><td>${liftW(b, n) ?? "--"}</td><td>${delta(liftW(a, n), liftW(b, n), 1, (d) => `${d} lb`)}</td></tr>`).join("")}
+      </tbody></table>${a === b ? `<p class="muted small">Only one session so far. Do this workout again (or save it to My Programs) to compare.</p>` : ""}`;
+    $("#cmp-edit-wrap").hidden = false;
+    numbersForm($("#cmp-edit"), a, `${a.title} on ${a.date}`);
+  }
+  $("#cmp-a").addEventListener("change", () => { $("#cmp-b").value = ""; renderPerf(); });
+  $("#cmp-b").addEventListener("change", renderPerf);
+  $("#vitals-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, body = {};
+    ["restingHr", "hrv", "vo2max", "weight", "sleep"].forEach((k) => { const v = f[k].value.trim(); if (v) body[k] = Number(v); });
+    try { vitals = await apiAuth("POST", "/api/me/vitals", body); f.reset(); $(".nums-msg", f).textContent = "Saved."; renderPerf(); }
+    catch (err) { $(".nums-msg", f).textContent = err.message; }
+  });
+
+  // Heart rate, HRV, VO2 max and effort for one saved workout (fills in or corrects later)
+  function numbersForm(host, w, intro) {
+    const f = (k, label, ph, step = 1) => `<label>${label}<input name="${k}" type="number" inputmode="decimal" step="${step}" placeholder="${ph}" value="${w[k] ?? ""}"></label>`;
+    host.innerHTML = `<form class="nums-form" novalidate>
+      <p class="small">${esc(intro)}</p>
+      <div class="nums-grid">${f("hrAvg", "Avg heart rate", "bpm")}${f("hrMax", "Max heart rate", "bpm")}${f("hrv", "HRV", "ms")}${f("vo2max", "VO2 max", "ml/kg/min", 0.1)}${f("calories", "Calories", "kcal")}</div>
+      <div class="rpe" role="radiogroup" aria-label="Effort, 1 easy to 10 max">${Array.from({ length: 10 }, (_, i) => `<button type="button" role="radio" data-rpe="${i + 1}" class="${w.rpe === i + 1 ? "on" : ""}">${i + 1}</button>`).join("")}</div>
+      <p class="rpe-cap small muted">Effort: 1 = easy, 10 = all-out</p>
+      <button class="btn-gold sm" type="submit">Save numbers</button><span class="nums-msg small"></span></form>`;
+    const form = $("form", host); let rpe = w.rpe;
+    form.addEventListener("click", (e) => { const b = e.target.closest("[data-rpe]"); if (!b) return; rpe = Number(b.dataset.rpe); $$("[data-rpe]", form).forEach((x) => x.classList.toggle("on", x === b)); });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const body = {}; ["hrAvg", "hrMax", "hrv", "vo2max", "calories"].forEach((k) => { const v = form[k].value.trim(); if (v) body[k] = Number(v); });
+      if (rpe) body.rpe = rpe;
+      try {
+        const up = await apiAuth("PATCH", `/api/me/workouts/${w.id}`, body);
+        Object.assign(w, up); const i = allWorkouts.findIndex((x) => x.id === w.id); if (i >= 0) allWorkouts[i] = up;
+        $(".nums-msg", form).textContent = "Saved."; renderPerf();
+      } catch (err) { $(".nums-msg", form).textContent = err.message; }
+    });
+  }
+
+  // Bluetooth heart-rate straps and watches that broadcast HR (Chrome on Android, Mac, Windows; not iPhone Safari)
+  const HR = {
+    dev: null, name: "", bpm: 0, samples: [],
+    supported: () => !!(navigator.bluetooth && navigator.bluetooth.requestDevice),
+    async connect() {
+      const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ["heart_rate"] }] });
+      const ch = await (await (await dev.gatt.connect()).getPrimaryService("heart_rate")).getCharacteristic("heart_rate_measurement");
+      ch.addEventListener("characteristicvaluechanged", (e) => {
+        const d = e.target.value, bpm = d.getUint8(0) & 1 ? d.getUint16(1, true) : d.getUint8(1);
+        HR.bpm = bpm; HR.samples.push([Date.now(), bpm]); if (HR.samples.length > 20000) HR.samples.shift();
+        const el = $("#p-hr b"); if (el) el.textContent = bpm;
+      });
+      await ch.startNotifications();
+      dev.addEventListener("gattserverdisconnected", () => { HR.dev = null; HR.bpm = 0; renderHrBtn(); });
+      HR.dev = dev; HR.name = dev.name || "Heart-rate strap"; renderHrBtn();
+    },
+    summary(since) {
+      const xs = HR.samples.filter(([t]) => t >= since).map(([, b]) => b).filter((b) => b >= 30 && b <= 230);
+      return xs.length < 5 ? null : { avg: Math.round(xs.reduce((a, b) => a + b, 0) / xs.length), max: Math.max(...xs) };
+    }
+  };
+  function renderHrBtn() {
+    const b = $("#p-hr"); if (!b) return;
+    b.hidden = !HR.supported();
+    b.classList.toggle("on", !!HR.dev);
+    b.innerHTML = HR.dev ? `♥ <b>${HR.bpm || "--"}</b> bpm` : "♥ Connect heart rate";
+  }
+  $("#p-hr").addEventListener("click", () => { if (!HR.dev) HR.connect().catch((err) => { if (err.name !== "NotFoundError") toast("Couldn't connect: " + err.message); }); });
+  renderHrBtn();
+
   $("#p-next").addEventListener("click", () => { if (P.done) return closePlayer(); advance(); });
   $("#p-prev").addEventListener("click", () => {
     if (P.done || P.i === 0) return;
@@ -1070,6 +1187,7 @@
     if (s.status === "fulfilled") stats = s.value;
     if (sched.status === "fulfilled") classes = sched.value.sessions || [];
     if (wl.status === "fulfilled") allWorkouts = wl.value;
+    apiAuth("GET", "/api/me/vitals").then((v) => { vitals = v; renderPerf(); }).catch(() => renderPerf());
     if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }
     renderStats(); renderEvents(); renderActivity(); renderNotes(); renderCalendar();
     loadRewards();

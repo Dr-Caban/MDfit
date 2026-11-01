@@ -241,3 +241,24 @@ test("library: favorites and programs persist on the account", async (t) => {
   assert.equal(r.badges.find((b) => b.id === "first-workout").earned, true);
   assert.equal((await s.call("GET", "/api/me/workouts", undefined, tok)).body.length, 1);
 });
+
+test("workout performance numbers, later edits and daily vitals", async (t) => {
+  const s = await start(); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  const r = await s.call("POST", "/api/me/workouts", { title: "Lower Strength", goal: "Lower Body", minutes: 40, exercises: 8, key: "lower-strength", seconds: 2410, hrAvg: 132, hrMax: 171, rpe: 7, lifts: [{ name: "Goblet Squat", weight: 35, reps: 10 }, { name: "Glute Bridge" }] }, tok);
+  assert.equal(r.status, 201);
+  assert.equal(r.body.workout.hrAvg, 132);
+  assert.deepEqual(r.body.workout.lifts, [{ name: "Goblet Squat", weight: 35, reps: 10 }]);
+  assert.equal((await s.call("POST", "/api/me/workouts", { title: "x", minutes: 10, hrAvg: 400 }, tok)).status, 400);
+  const p = await s.call("PATCH", `/api/me/workouts/${r.body.workout.id}`, { hrv: 61, vo2max: 44.36, source: "Apple Watch" }, tok);
+  assert.equal(p.status, 200);
+  assert.equal(p.body.vo2max, 44.4);
+  assert.equal(p.body.hrAvg, 132, "earlier numbers are kept");
+  assert.equal((await s.call("PATCH", "/api/me/workouts/nope-nope", { hrv: 50 }, tok)).status, 404);
+  assert.equal((await s.call("POST", "/api/me/vitals", {}, tok)).status, 400);
+  assert.equal((await s.call("POST", "/api/me/vitals", { date: "2099-01-01", hrv: 50 }, tok)).status, 400);
+  await s.call("POST", "/api/me/vitals", { date: "2026-10-01", restingHr: 58, hrv: 55 }, tok);
+  const v = await s.call("POST", "/api/me/vitals", { date: "2026-10-01", vo2max: 42 }, tok);
+  assert.equal(v.status, 201);
+  assert.deepEqual(v.body.map((x) => [x.date, x.restingHr, x.hrv, x.vo2max]), [["2026-10-01", 58, 55, 42]], "same day merges");
+});

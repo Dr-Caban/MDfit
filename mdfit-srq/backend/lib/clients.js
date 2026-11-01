@@ -231,7 +231,28 @@ function mountClients(ctx) {
     res.json({ ok: true });
   });
 
-  // Completed workouts (from the app's workout generator)
+  // Completed workouts (from the app's workout generator), with optional performance numbers for comparing sessions
+  const optNum = (v, label, lo, hi, dp = 0) => {
+    if (v === undefined || v === null || v === "") return undefined;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < lo || n > hi) fail(`${label} must be between ${lo} and ${hi}.`);
+    const f = 10 ** dp; return Math.round(n * f) / f;
+  };
+  function metricsOf(b) {
+    const m = {
+      seconds: optNum(b.seconds, "Duration", 1, 18000), hrAvg: optNum(b.hrAvg, "Average heart rate", 30, 230), hrMax: optNum(b.hrMax, "Max heart rate", 30, 240),
+      hrv: optNum(b.hrv, "HRV", 5, 300), vo2max: optNum(b.vo2max, "VO2 max", 10, 95, 1), rpe: optNum(b.rpe, "Effort (RPE)", 1, 10), calories: optNum(b.calories, "Calories", 1, 5000),
+      source: b.source === undefined ? undefined : text(b.source, "Source", { max: 40 })
+    };
+    if (b.lifts !== undefined) {
+      if (!Array.isArray(b.lifts) || b.lifts.length > 40) fail("Lifts: up to 40.");
+      m.lifts = b.lifts.map((l, i) => ({ name: text(l && l.name, `Lift ${i + 1} name`, { min: 1, max: 80 }), weight: optNum(l.weight, `Lift ${i + 1} weight`, 0, 2000, 1), reps: optNum(l.reps, `Lift ${i + 1} reps`, 0, 500) }))
+        .filter((l) => l.weight !== undefined || l.reps !== undefined);
+    }
+    if (b.key !== undefined) m.key = text(b.key, "Workout key", { max: 80 });
+    Object.keys(m).forEach((k) => m[k] === undefined && delete m[k]);
+    return m;
+  }
   me.post("/workouts", (req, res) => {
     const b = req.body || {};
     const minutes = Number(b.minutes);
@@ -239,12 +260,42 @@ function mountClients(ctx) {
     const exercises = Number(b.exercises || 0);
     if (!Number.isInteger(exercises) || exercises < 0 || exercises > 50) fail("Exercise count is off.");
     const entry = { id: id(), title: text(b.title, "Workout name", { min: 1, max: 80 }), goal: text(b.goal, "Goal", { max: 40 }),
-      minutes, exercises, date: today(), completedAt: new Date().toISOString() };
+      minutes, exercises, date: today(), completedAt: new Date().toISOString(), ...metricsOf(b) };
     const list = clients();
     const c = list.find((x) => x.id === req.client.id);
     c.workouts = [...(c.workouts || []), entry].slice(-WORKOUT_LOG_MAX);
     save(list);
     res.status(201).json({ workout: entry, stats: workoutStats(c.workouts, today()) });
+  });
+  // Add or correct numbers after the fact (heart rate from a watch, weights, effort)
+  me.patch("/workouts/:id", (req, res) => {
+    const list = clients();
+    const c = list.find((x) => x.id === req.client.id);
+    const w = (c.workouts || []).find((x) => x.id === req.params.id);
+    if (!w) return res.status(404).json({ error: "Workout not found." });
+    Object.assign(w, metricsOf(req.body || {}));
+    save(list);
+    res.json(w);
+  });
+
+  // Daily readings: resting heart rate, HRV, VO2 max, body weight (from a watch or entered by hand)
+  const VITALS_MAX = 1500;
+  me.get("/vitals", (req, res) => res.json(req.client.vitals || []));
+  me.post("/vitals", (req, res) => {
+    const b = req.body || {};
+    const date = b.date === undefined ? today() : String(b.date);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today()) fail("Date must be today or earlier (YYYY-MM-DD).");
+    const v = { restingHr: optNum(b.restingHr, "Resting heart rate", 25, 150), hrv: optNum(b.hrv, "HRV", 5, 300), vo2max: optNum(b.vo2max, "VO2 max", 10, 95, 1),
+      weight: optNum(b.weight, "Body weight", 50, 800, 1), sleep: optNum(b.sleep, "Sleep hours", 0, 24, 1) };
+    Object.keys(v).forEach((k) => v[k] === undefined && delete v[k]);
+    if (!Object.keys(v).length) fail("Enter at least one reading.");
+    const list = clients();
+    const c = list.find((x) => x.id === req.client.id);
+    const rest = (c.vitals || []).filter((x) => x.date !== date);
+    const prev = (c.vitals || []).find((x) => x.date === date) || {};
+    c.vitals = [...rest, { ...prev, ...v, date, source: b.source ? text(b.source, "Source", { max: 40 }) : prev.source || "manual" }].sort((x, y) => (x.date < y.date ? -1 : 1)).slice(-VITALS_MAX);
+    save(list);
+    res.status(201).json(c.vitals);
   });
 
   me.get("/stats", (req, res) => {

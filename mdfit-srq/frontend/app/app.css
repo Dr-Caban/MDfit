@@ -656,3 +656,44 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .swap-btn:hover { background: var(--gold-soft, #f6eedb); }
 .ex-swap.swapped .ex { animation: swapflash .9s ease; }
 @keyframes swapflash { from { background: var(--gold-soft, #f6eedb); box-shadow: 0 0 0 2px var(--gold, #C8A763); } to { box-shadow: none; } }
+
+/* Performance: vitals, comparison, numbers form */
+.p-hr { margin-left: auto; }
+.p-hr.on { background: #c62828 !important; border-color: #c62828 !important; color: #fff !important; }
+.p-hr::before { content: "" !important; }
+.vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+.vital { background: var(--card-2); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.vital span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.vital b { font: 700 22px/1.15 var(--display); color: var(--navy); }
+.vital b small { font: 600 12px var(--body, inherit); color: var(--muted); }
+.vital em { font-style: normal; font-size: 11.5px; color: var(--muted); }
+.spark { width: 100%; height: 26px; margin-top: 4px; }
+.spark path { fill: none; stroke: var(--accent, #FF7A00); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.up-good { color: #2e7d4f !important; font-weight: 700; }
+.up-bad { color: #c62828 !important; font-weight: 700; }
+.dz { color: var(--muted); }
+.vitals-add { margin: 6px 0 10px; }
+.vitals-add summary { cursor: pointer; font-weight: 700; color: var(--accent-text); font-size: 14px; padding: 6px 0; }
+.nums-form { display: grid; gap: 10px; text-align: left; }
+.nums-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.nums-grid label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.nums-grid input { font: inherit; font-size: 15px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); width: 100%; box-sizing: border-box; }
+.rpe { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.rpe button { font: 700 13px var(--body, inherit); padding: 8px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--navy); cursor: pointer; }
+.rpe button.on { background: var(--accent, #FF7A00); color: #fff; border-color: var(--accent, #FF7A00); }
+.rpe-cap { margin: -4px 0 0; }
+.nums-msg { margin-left: 10px; }
+.btn-gold.sm { padding: 9px 16px; font-size: 14px; justify-self: start; }
+.perf-h { font: 700 17px/1.2 var(--display); color: var(--navy); margin: 14px 0 8px; }
+.cmp-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cmp-pick label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.cmp-table { overflow-x: auto; margin: 10px 0; }
+.cmp-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cmp-table th, .cmp-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.cmp-table th:first-child { text-align: left; font-weight: 600; color: var(--muted); }
+.cmp-table thead th { font-size: 12px; color: var(--muted); }
+.cmp-table tr.lift th { color: var(--navy); }
+.player .nums-form { margin-top: 16px; background: var(--navy-2); padding: 14px; border-radius: 14px; }
+.player .nums-grid label, .player .rpe-cap { color: var(--on-navy); }
+.player .nums-grid input, .player .rpe button { background: var(--navy); color: #fff; border-color: var(--navy-3); }
+.player .nums-msg { color: var(--gold); }
