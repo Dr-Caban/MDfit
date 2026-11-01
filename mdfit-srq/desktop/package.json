@@ -1,0 +1,15 @@
+{
+  "name": "mdfit-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "MD Fit desktop app (Tauri). Opens the MD Fit app in a locked-down native window.",
+  "scripts": {
+    "tauri": "tauri",
+    "icons": "tauri icon ../frontend/assets/app-icon-512.png",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0"
+  }
+}

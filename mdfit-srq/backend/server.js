@@ -15,6 +15,7 @@ const { mountMessages } = require("./lib/messages");
 const { mountPayments } = require("./lib/payments");
 const { createSecurity } = require("./lib/security");
 const { createCalSync } = require("./lib/calsync");
+const { createAudit } = require("./lib/audit");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
@@ -33,6 +34,7 @@ function loadConfig() {
     edgeSecret: env("EDGE_SECRET"),
     botFilter: env("BOT_FILTER", "on") !== "off",
     dataKey: env("DATA_ENC_KEY"),
+    auditSigningKey: env("AUDIT_SIGNING_KEY"),
     tz: env("TZ_NAME", "America/New_York"),
     resendKey: env("RESEND_API_KEY"),
     resendUrl: env("RESEND_URL", "https://api.resend.com"),
@@ -323,6 +325,33 @@ function createApp(cfg = loadConfig()) {
   if (cfg.botFilter) app.use(sec.botFilter);
   app.use("/api", sec.rateLimit({ name: "burst", max: 120, windowMs: 10 * 1000 }));
   app.use("/api", sec.rateLimit({ name: "steady", max: 1500, windowMs: 10 * 60 * 1000 }));
+
+  // ---- Audit ledger (hash-chained, Ed25519-signed): recorded after each response
+  const audit = createAudit({ store, signingKey: cfg.auditSigningKey, ipSalt: cfg.sessionSecret, logger });
+  const QUIET = new Set(["GET /api/admin/me", "GET /api/admin/messages", "GET /api/admin/calsync", "GET /api/admin/audit"]);
+  app.use((req, res, next) => {
+    res.on("finish", () => {
+      const p = (req.originalUrl || req.url).split("?")[0], m = req.method;
+      if (m === "OPTIONS" || !p.startsWith("/api/")) return;
+      // Route pattern (e.g. /api/admin/clients/:id) so entries never contain raw ids in the action name
+      const base = p.startsWith("/api/admin") ? "/api/admin" : p.startsWith("/api/me") ? "/api/me" : "";
+      const route = req.route ? (base && !String(req.baseUrl || "").startsWith(base) ? base : (req.baseUrl || "")) + req.route.path : p;
+      const key = `${m} ${route}`, ok = res.statusCode < 400;
+      const params = req.params || {};
+      const subject = params.clientId || (route.includes("/clients/:id") ? params.id : "") || (req.client && req.client.id) || "";
+      let actor = "", action = "";
+      if (p === "/api/admin/login") { actor = "admin"; action = ok ? "auth.admin.login" : "auth.admin.login_failed"; }
+      else if (p === "/api/clients/login") { actor = ok ? "client" : "anonymous"; action = ok ? "auth.client.login" : "auth.client.login_failed"; }
+      else if (p === "/api/clients/signup" && ok) { actor = "client"; action = "auth.client.signup"; }
+      else if (p === "/api/clients/reset" && ok) { actor = "client"; action = "auth.client.password_reset"; }
+      else if (p === "/api/stripe/webhook" && ok) { actor = "stripe"; action = "payments.webhook"; }
+      else if (req.admin && ok && !QUIET.has(key)) { actor = `admin:${req.admin}`; action = `admin.${m === "GET" ? "view" : "change"} ${route.replace("/api/admin", "")}`; }
+      else if (req.client && ok && m !== "GET") { actor = `client:${req.client.id}`; action = `client.${route.replace("/api/me", "") || "/"}`; }
+      if (!action) return;
+      audit.record({ actor, action, subject, ip: req.ip, meta: { method: m, status: res.statusCode } });
+    });
+    next();
+  });
 
   // ---- Headers, CORS, request log
   app.use(requestLogger);
@@ -737,6 +766,13 @@ function createApp(cfg = loadConfig()) {
     res.type("text/csv").attachment("mdfit-appointments.csv")
       .send(toCsv(appointments(), ["date", "time", "typeName", "minutes", "name", "email", "phone", "areas", "painLevel", "notes", "status", "adminNotes", "createdAt"]));
   });
+
+  // Audit ledger: recent entries, filters, and full chain verification
+  admin.get("/audit", (req, res) => {
+    const limit = Math.min(1000, Math.max(1, Number.parseInt(req.query.limit, 10) || 200));
+    res.json({ entries: audit.list({ limit, subject: req.query.subject || undefined, action: req.query.action || undefined }), publicKey: audit.publicPem, fingerprint: audit.fingerprint });
+  });
+  admin.get("/audit/verify", (req, res) => res.json(audit.verify()));
 
   // Calendar sync status + SimplePractice feed link (kept on the server, encrypted at rest, never sent to the public site)
   admin.get("/calsync", (req, res) => {

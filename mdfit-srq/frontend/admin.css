@@ -149,3 +149,7 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .msg-reply { display: grid; gap: 8px; }
 .msg-reply textarea { font: inherit; padding: 10px; border-radius: 10px; border: 1px solid #e4ded1; }
 @media (max-width: 800px) { .msg-admin { grid-template-columns: 1fr; } }
+.banner.ok { background: #e3f3e8; border-color: #9bd1ad; color: #1e5c37; }
+.banner.bad { background: #fde8e8; border-color: #f0aaaa; color: #a12020; }
+.audit-key pre { white-space: pre-wrap; font-size: 12px; background: #f6f4ee; padding: 10px; border-radius: 8px; }
+#audit-table code { font-size: 12px; }

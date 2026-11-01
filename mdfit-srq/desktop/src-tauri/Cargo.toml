@@ -1,0 +1,20 @@
+[package]
+name = "mdfit-desktop"
+version = "1.0.0"
+description = "MD Fit desktop app"
+authors = ["MD Fit"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# No plugins: the remote site gets zero access to the computer (no fs, shell, clipboard or process APIs)
+tauri = { version = "2", features = [] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

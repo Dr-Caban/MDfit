@@ -51,7 +51,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, messages: loadThreads, members: loadMembers, content: loadContent, settings: loadSettings };
+  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, audit: loadAudit, messages: loadThreads, members: loadMembers, content: loadContent, settings: loadSettings };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -405,6 +405,22 @@
     const row = e.target.closest("tr[data-email]");
     if (!row || !e.target.matches("[data-del]") || !confirm("Remove this subscriber?")) return;
     await api("DELETE", `/api/admin/subscribers/${encodeURIComponent(row.dataset.email)}`); toast("Removed."); loadSubs();
+  }));
+
+  // ---- Audit ledger
+  async function loadAudit() {
+    const f = $("#audit-filter").value;
+    const d = await api("GET", "/api/admin/audit?limit=300" + (f ? "&action=" + encodeURIComponent(f) : ""));
+    $("#audit-pub").textContent = `${d.publicKey}\nFingerprint: ${d.fingerprint}`;
+    table($("#audit-table"), ["#", "When", "Who", "What", "Record", "Hash"], d.entries.map((e) => `
+      <tr><td>${e.seq}</td><td>${when(e.ts)}</td><td>${esc(e.actor)}</td><td>${esc(e.action)}</td><td>${esc(e.subject || "")}</td><td><code title="${e.hash}">${e.hash.slice(0, 10)}…</code></td></tr>`), "No events yet.");
+  }
+  $("#audit-filter").addEventListener("change", run(loadAudit));
+  $("#audit-verify").addEventListener("click", run(async () => {
+    const v = await api("GET", "/api/admin/audit/verify");
+    $("#audit-status").innerHTML = v.ok
+      ? `<p class="banner ok">✓ Ledger intact: ${v.entries} entries, every link and signature checks out. Head <code>${v.head.slice(0, 16)}…</code></p>`
+      : `<p class="banner bad">✗ ${esc(v.error)}</p>`;
   }));
 
   // ---- Messages from members

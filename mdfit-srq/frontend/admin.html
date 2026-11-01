@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=43f8cd00">
-  <link rel="stylesheet" href="admin.css?v=da499201">
+  <link rel="stylesheet" href="admin.css?v=6370fd43">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -42,6 +42,7 @@
           <button data-tab="members">Members</button>
           <button data-tab="content">Content</button>
           <button data-tab="hours">Booking</button>
+          <button data-tab="audit">Audit</button>
           <button data-tab="settings">Settings</button>
           <button id="logout" class="link">Log out</button>
         </nav>
@@ -175,6 +176,15 @@
         </div>
       </section>
 
+      <section data-panel="audit" hidden>
+        <p class="muted">Every login, every look at a patient's record, and every change, in a tamper-proof ledger. Each entry is hash-chained to the one before and signed (Ed25519), so editing, deleting or reordering anything is detected.</p>
+        <div class="bar"><button class="btn btn-sm" id="audit-verify" type="button">Verify chain</button>
+          <select id="audit-filter"><option value="">All events</option><option value="auth.">Logins</option><option value="admin.view">Admin viewed records</option><option value="admin.change">Admin changes</option><option value="client.">Client activity</option><option value="payments">Payments</option></select></div>
+        <div id="audit-status"></div>
+        <div class="table-wrap"><table id="audit-table"></table></div>
+        <details class="audit-key"><summary>Public verification key</summary><pre id="audit-pub"></pre></details>
+      </section>
+
       <section data-panel="reviews" hidden>
         <p class="muted">Reviews left on the website. Everyone who leaves one gets a free 30-minute plan review code, whatever their rating. Approve a review to show it on the homepage (only if they agreed).</p>
         <div id="reviews-list" class="stack"></div>
@@ -291,6 +301,6 @@
   <script src="config.js?v=73fb174c"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=76c79be0"></script>
-  <script src="admin.js?v=d23a3a32"></script>
+  <script src="admin.js?v=89fe4e42"></script>
 </body>
 </html>
