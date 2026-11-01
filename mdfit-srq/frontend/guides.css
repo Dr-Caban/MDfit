@@ -155,3 +155,57 @@
 .tk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .tk-guide { background: #fff; color: #0A1A2E; border: 1.5px solid #7AAFD7; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
 @media (max-width: 560px) { .tg-level li { grid-template-columns: 76px 1fr; } .tg-play, .tg-soon { width: 76px; } }
+
+/* Pain-track pictures (painpatterns.js): same figure, same framing, every track */
+.pp { display: flex; gap: 8px; justify-content: center; }
+.pp-panel { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; background: #fff; border-radius: 12px; }
+.pp-2 .pp-panel { width: calc(50% - 4px); }
+.pp img { width: 100%; aspect-ratio: 4 / 5; object-fit: contain; background: #fff; border-radius: 12px; }
+.tk-pp { width: 230px; }
+.tk-pp .pp-2 { width: 100%; }
+.tk-head:has(.tk-pp .pp-2) .tk-pp { width: 360px; }
+@media (max-width: 600px) { .tk-pp, .tk-head:has(.tk-pp .pp-2) .tk-pp { width: 100%; max-width: 380px; } }
+
+/* "Which most resembles your pain?" sheet */
+.pm-sheet { width: min(1060px, 100% - 24px); max-height: calc(100vh - 24px); padding: 0; border: 0; border-radius: 20px; background: #F6F4EE; color: #424244; font-family: "Montserrat", system-ui, sans-serif; overflow: hidden; }
+.pm-sheet::backdrop { background: rgba(10, 26, 46, .78); }
+.pm-sheet-body { max-height: calc(100vh - 24px); overflow-y: auto; padding: 26px 28px 24px; display: grid; gap: 20px; }
+.pm-sheet-close { position: absolute; top: 12px; right: 14px; z-index: 2; width: 42px; height: 42px; border-radius: 50%; border: 0; background: #fff; color: #0A1A2E; font-size: 28px; line-height: 1; cursor: pointer; box-shadow: 0 2px 10px rgba(10,26,46,.15); }
+.pm-sheet-head { padding-right: 50px; }
+.pm-sheet-head .eyebrow { margin: 0 0 6px; color: #2F6E9E; font-size: 12px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; }
+.pm-sheet-head h2 { margin: 0 0 6px; color: #0A1A2E; font: 700 clamp(24px, 4vw, 34px)/1.15 "Libre Baskerville", Georgia, serif; }
+.pm-sheet-head p:last-child { margin: 0; color: #6b6a6e; }
+.pm-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); grid-auto-flow: dense; gap: 16px; }
+.pm-choice { display: grid; gap: 10px; align-content: start; padding: 10px; background: #fff; border: 3px solid #e4ded1; border-radius: 18px; cursor: pointer; text-align: left; font: inherit; color: inherit; transition: border-color .15s, transform .15s, box-shadow .15s; }
+.pm-choice.two { grid-column: span 2; }
+.pm-choice:hover, .pm-choice:focus-visible { border-color: #7AAFD7; transform: translateY(-2px); box-shadow: 0 14px 30px -16px rgba(10,26,46,.4); }
+.pm-choice .pp-panel { border-radius: 10px; }
+.pm-choice-cap { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 0 4px 2px; }
+.pm-choice-cap b { color: #0A1A2E; font-size: 16px; line-height: 1.3; }
+.pm-choice-cap small { flex: none; color: #2F6E9E; font-size: 12.5px; font-weight: 600; }
+.pm-none { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; background: #fff; border-radius: 14px; border: 1px solid #e4ded1; color: #0A1A2E; font-weight: 600; }
+.pm-more { border-top: 1px solid #e4ded1; padding-top: 14px; }
+.pm-more > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: #2F6E9E; font-size: 15px; }
+.pm-more > summary::-webkit-details-marker, .pm-mus > summary::-webkit-details-marker { display: none; }
+.pm-more > summary::before { content: "+"; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #EAF3FA; font-size: 17px; }
+.pm-more[open] > summary::before { content: "−"; }
+.pm-more > .muted { margin: 12px 0; font-size: 14px; color: #6b6a6e; }
+.pm-mus-list { display: grid; gap: 8px; }
+.pm-mus { background: #fff; border: 1px solid #e4ded1; border-radius: 12px; }
+.pm-mus > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; padding: 12px 14px; color: #0A1A2E; }
+.pm-mus > summary::after { content: "›"; margin-left: auto; font-size: 20px; color: #6b6a6e; transition: transform .15s; }
+.pm-mus[open] > summary::after { transform: rotate(90deg); }
+.pm-mus > summary i { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #8a6d2c; }
+.pm-mus dl { margin: 0; padding: 0 14px 4px; display: grid; gap: 4px; }
+.pm-mus dt { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #2F6E9E; margin-top: 8px; }
+.pm-mus dd { margin: 0; font-size: 14px; line-height: 1.55; }
+.pm-mus-links { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 10px 14px 14px; font-size: 14px; font-weight: 600; }
+.pm-mus-links a, .pm-mus-links .link { color: #2F6E9E; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: underline; }
+@media (max-width: 640px) {
+  .pm-sheet { width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; border-radius: 0; }
+  .pm-sheet-body { max-height: 100vh; padding: 20px 14px 28px; }
+  .pm-choices { grid-template-columns: 1fr; }
+  .pm-choice.two { grid-column: auto; }
+  .pm-choice.two .pp { flex-direction: column; }
+  .pm-choice.two .pp-panel { width: 100%; }
+}

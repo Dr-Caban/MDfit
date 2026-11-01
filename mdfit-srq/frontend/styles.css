@@ -531,3 +531,8 @@ dialog .book-when { margin: -6px 0 4px; }
 .pm-muscle small { font-size: 13px; line-height: 1.45; color: var(--muted); }
 .pm-back { justify-self: start; background: none; border: 0; padding: 0; color: var(--accent-text); font: 600 14px var(--body); cursor: pointer; }
 .hotspot { width: 3.2%; }
+.pm-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15.5px; }
+.pm-steps b { color: var(--heading); }
+.pm-library { margin-top: 28px; }
+.pm-library > summary { cursor: pointer; display: inline-flex; color: var(--accent-bright); font-weight: 700; font-size: 15px; }
+.pm-library > .guide-library { margin-top: 18px; }

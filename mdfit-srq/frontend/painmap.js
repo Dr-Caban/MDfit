@@ -1,6 +1,6 @@
 // "Find the source" pain map: Dr. Jared's front/back anatomy figures with a point on each general pain area.
-// Tapping an area lists the muscles most likely behind it; tapping a muscle shows where it sends pain
-// and links to its full self-check and protocol in the app.
+// Tapping an area opens "Which most resembles your pain?": one large picture per pain track (painpatterns.js).
+// Picking one opens that track's videos. Muscle details stay folded under "Want to know more about your pain?".
 (() => {
   const { $, $$, esc } = window.MDFit;
 
@@ -22,11 +22,10 @@
 
   const root = $("#pain-map");
   if (!root) return;
-  const panel = $(".painmap-panel", root);
   $(".hotspots", root).innerHTML = POINTS.map((p) =>
     `<button type="button" class="hotspot" data-spot="${p.id}" data-view="${p.view}" style="left:${(p.x / W) * 100}%;top:${(p.y / H) * 100}%" aria-label="${esc(p.label)} (${p.view})"><span></span></button>`).join("");
 
-  // Phones: show one figure at a time, big enough to tap the right muscle
+  // Phones: show one figure at a time, big enough to tap the right area
   const stage = $(".pm-stage", root);
   function setView(v) {
     stage.dataset.view = v;
@@ -35,78 +34,72 @@
   $$(".pm-toggle [data-pmview]", root).forEach((b) => b.addEventListener("click", () => setView(b.dataset.pmview)));
   setView("front");
 
-  const guideCard = (g) => `<button type="button" class="guide-card" data-guide="${g}">
-      <img src="assets/guides/${g}-thumb.webp" alt="" width="120" height="120" loading="lazy">
-      <span><b>${esc(GUIDES[g].title)}</b><small>${esc(GUIDES[g].sub)}</small><i>Open guide →</i></span>
-    </button>`;
+  const PP = window.MDFitPatterns;
+  // "Scalenes → neck, shoulder blade & deltoid" -> "Neck, shoulder blade & deltoid" (where it hurts, not the muscle)
+  const where = (t) => { const d = (t.title.split("→")[1] || t.title).trim(); return d.charAt(0).toUpperCase() + d.slice(1); };
+  const nVideos = (t) => TK.steps(t).length;
 
-  const scrollPanel = () => { if (matchMedia("(max-width: 960px)").matches) panel.scrollIntoView({ behavior: "smooth", block: "start" }); };
-  let current = null;
+  // Region picker: a large sheet with one picture per pain track, plus the muscle details folded away
+  let sheet;
+  function ensureSheet() {
+    if (sheet) return sheet;
+    sheet = document.createElement("dialog");
+    sheet.className = "pm-sheet";
+    sheet.innerHTML = `<button type="button" class="pm-sheet-close" aria-label="Close">&times;</button><div class="pm-sheet-body"></div>`;
+    document.body.appendChild(sheet);
+    sheet.addEventListener("click", (e) => {
+      if (e.target === sheet || e.target.closest(".pm-sheet-close")) return sheet.close();
+      const c = e.target.closest("[data-track]");
+      if (c) TK.open(c.dataset.track, { startLabel: "Do this track in the free MD Fit app →", onStart: (t) => { location.href = `/account#pain/track/${t.id}`; } });
+      if (e.target.closest("a[href^='#']")) sheet.close();
+    });
+    sheet.addEventListener("close", () => $$(".hotspot", root).forEach((b) => b.setAttribute("aria-pressed", "false")));
+    return sheet;
+  }
 
-  // Area: the muscles most likely behind pain there, most common first
+  const muscleInfo = (m) => `<details class="pm-mus">
+      <summary><b>${esc(m.name)}</b>${deepOf(m.id) ? "<i>deep</i>" : ""}</summary>
+      <dl>
+        <dt>Where it sends pain</dt><dd>${esc(m.refers)}</dd>
+        <dt>What it does</dt><dd>${esc(m.does)}</dd>
+        ${m.attach ? `<dt>Attachments</dt><dd>${esc(m.attach)}</dd>` : ""}
+        <dt>Often worse with</dt><dd>${m.worse.map((w) => esc(MUS.AGGRAVATORS[w])).join(" · ")}</dd>
+      </dl>
+      <p class="pm-mus-links"><a href="/account#pain/muscle/${m.id}">Take the self-check →</a>${m.guide && GUIDES[m.guide] ? `<button type="button" class="link" data-guide="${m.guide}">Read the guide: ${esc(GUIDES[m.guide].title)}</button>` : ""}</p>
+    </details>`;
+
   function showArea(areaId) {
     const p = POINTS.find((x) => x.id === areaId);
     if (!p) return;
-    current = p;
     $$(".hotspot", root).forEach((b) => b.setAttribute("aria-pressed", b.dataset.spot === areaId));
+    let tracks = (p.tracks || []).map((id) => TK.TRACKS.find((t) => t.id === id)).filter(Boolean);
+    if (!tracks.length) tracks = [...new Set(MUS.rank(p.spots).slice(0, 6).flatMap((m) => TK.forPoint(m.id)))].slice(0, 6);
     const ranked = MUS.rank(p.spots).slice(0, 8);
-    panel.innerHTML = `
-      <p class="eyebrow">${p.view === "front" ? "Front" : "Back"} view</p>
-      <h3>${esc(p.label)}</h3>
-      <p class="muted">Pain here usually comes from one of these muscles, most common first. Tap one to see where it sends pain.</p>
-      <div class="pm-muscles">${ranked.map((m) => `<button type="button" class="pm-muscle" data-muscle="${m.id}"><b>${esc(m.name)}${deepOf(m.id) ? ' <i>deep</i>' : ""}</b><small>${esc(m.refers)}</small></button>`).join("")}</div>
-      <div class="painmap-cta">
-        <a href="/account#pain" class="btn">Narrow it down in the free app →</a>
-        <a href="#book" class="btn btn-line">Book an evaluation</a>
-      </div>
-      <p class="fine">Educational only, not a diagnosis.</p>`;
-    scrollPanel();
-  }
-
-  function show(id) {
-    const m = MUS.MUSCLES[id], p = current, deep = deepOf(id);
-    if (!m) return;
-    const tracks = TK ? TK.forPoint(id) : [];
-    panel.innerHTML = `
-      ${p ? `<button type="button" class="pm-back" data-backarea="${p.id}">← ${esc(p.label)}</button>` : ""}
-      <p class="eyebrow">${deep ? "Deep muscle" : "Muscle"}</p>
-      <h3>${esc(m.name)}</h3>
-      ${tracks.length ? `<div class="pm-tracks"><b>Choose your pain pattern${tracks.length > 1 ? ` (${tracks.length})` : ""}</b><div class="track-list">${tracks.map(TK.card).join("")}</div></div>` : ""}
-      <ul class="sources muscle-facts">
-        <li><b>Where it sends pain</b><span>${esc(m.refers)}</span></li>
-        <li><b>What it does</b><span>${esc(m.does)}</span></li>
-      </ul>
-      <div class="pm-tags"><b>Often worse with</b>${m.worse.map((w) => `<span>${esc(MUS.AGGRAVATORS[w])}</span>`).join("")}</div>
-      ${m.guide && GUIDES[m.guide] ? `<div class="guide-cards">${guideCard(m.guide)}</div>` : ""}
-      ${tracks.length ? `<div class="pm-guide-links"><b>Protocol guides</b>${tracks.map((t) => `<button type="button" class="pm-glink" data-tguide="${esc(t.id)}">${esc(t.title)} <span>Read →</span></button>`).join("")}</div>` : ""}
-      <a class="btn pm-report" href="/account#pain/muscle/${id}">Take the self-check &amp; get the protocol →</a>
-      <div class="painmap-cta">
-        <a href="#book" class="btn btn-line">Book an evaluation</a>
-        <a href="#intake" class="btn btn-line" data-area="${esc(MUS.areaOf(id))}">Tell us about it</a>
-      </div>
-      <p class="fine">Free in the MD Fit app: a 5-question self-check, look-alike conditions, red flags and a 3-phase protocol with Dr. Jared's videos. Educational only, not a diagnosis.</p>`;
-    scrollPanel();
+    const d = ensureSheet();
+    $(".pm-sheet-body", d).innerHTML = `
+      <header class="pm-sheet-head">
+        <p class="eyebrow">${esc(p.label)}</p>
+        <h2>Which most resembles your pain?</h2>
+        <p>Tap the picture closest to where you feel it. Red shows where the pain is felt.</p>
+      </header>
+      ${tracks.length ? `<div class="pm-choices">${tracks.map((t) => `<button type="button" class="pm-choice ${PP && PP.has(t.id) && PP.PATTERNS[t.id].length > 1 ? "two" : ""}" data-track="${t.id}">
+          ${PP && PP.has(t.id) ? PP.html(t.id, where(t)) : `<div class="pp"><img src="${TK.img(t.img[0], 800)}" alt="" referrerpolicy="no-referrer"></div>`}
+          <span class="pm-choice-cap"><b>${esc(where(t))}</b><small>${nVideos(t)} videos</small></span>
+        </button>`).join("")}</div>` : `<p class="muted">We don't have a self-guided track for this area yet. Dr. Jared can find the source in one visit.</p>`}
+      <div class="pm-none"><span>None of these look right?</span><a href="#book" class="btn btn-sm">Book an evaluation</a></div>
+      <details class="pm-more">
+        <summary>Want to know more about your pain?</summary>
+        <p class="muted">These muscles most often cause pain in this area, most common first. Open one for where it sends pain, what it does, where it attaches and what makes it worse.</p>
+        <div class="pm-mus-list">${ranked.map(muscleInfo).join("")}</div>
+      </details>
+      <p class="fine">Educational only, not a diagnosis. In an emergency, call 911.</p>`;
+    if (!d.open) d.showModal();
+    $(".pm-sheet-body", d).scrollTop = 0;
   }
 
   $(".hotspots", root).addEventListener("click", (e) => {
     const b = e.target.closest(".hotspot");
     if (b) showArea(b.dataset.spot);
-  });
-  panel.addEventListener("click", (e) => {
-    const m = e.target.closest("[data-muscle]"), back = e.target.closest("[data-backarea]");
-    if (m) show(m.dataset.muscle);
-    else if (back) showArea(back.dataset.backarea);
-  });
-  // A pain track goes straight to its videos; the app version tracks progress and plays them in order
-  panel.addEventListener("click", (e) => {
-    const c = e.target.closest("[data-track]");
-    if (c) TK.open(c.dataset.track, { startLabel: "Do this track in the free MD Fit app →", onStart: (t) => { location.href = `/account#pain/track/${t.id}`; } });
-  });
-
-  // Pre-select the matching body area in the intake form
-  panel.addEventListener("click", (e) => {
-    const a = e.target.closest("[data-area]");
-    if (a) $$("#lead-form [name=areas]").forEach((i) => { if (i.value === a.dataset.area) i.checked = true; });
   });
 
   // Guide viewer: native MD Fit guide pages (guides.js)

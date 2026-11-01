@@ -16,7 +16,8 @@
     let n = 0;
     return `
       <header class="tk-head">
-        <div class="tk-imgs">${t.img.map((i) => `<img src="${img(i)}" alt="${esc(t.title)} referred pain pattern" referrerpolicy="no-referrer">`).join("")}</div>
+        ${window.MDFitPatterns && window.MDFitPatterns.has(t.id) ? `<div class="tk-pp">${window.MDFitPatterns.html(t.id, t.title)}</div>`
+          : `<div class="tk-imgs">${t.img.map((i) => `<img src="${img(i)}" alt="${esc(t.title)} referred pain pattern" referrerpolicy="no-referrer">`).join("")}</div>`}
         <div><p class="tk-eyebrow">Pain track · ${esc(t.region)}</p><h2>${esc(t.title)}</h2><p class="tk-note">${esc(t.note)}</p>
           <div class="tk-actions">${startLabel ? `<button type="button" class="tk-start" data-track-start="${t.id}">${esc(startLabel)}</button>` : ""}<button type="button" class="tk-guide" data-tguide="${t.id}">Read the full guide</button></div></div>
       </header>
