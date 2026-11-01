@@ -32,7 +32,7 @@
     let [tab, sub, arg] = String(hash).split("/");
     if (!TABS.includes(tab)) tab = "home";
     if (tab === "pain" && sub === "muscle" && arg) setTimeout(() => openReport(arg, false), 0);
-    else if (tab === "pain" && !$("#muscle-report").hidden) { $("#muscle-report").hidden = true; setMode("muscle"); }
+    else if (tab === "pain" && !$("#muscle-report").hidden) setMode(reportFrom);
     $$("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== tab));
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
     if (tab === "videos") renderVideos();
@@ -503,23 +503,46 @@
   const REPORTS = window.MDFIT_MUSCLE_REPORTS || {};
   const GROUPS = [
     ["Head & jaw", ["suboccipitals", "occipitalis", "splenius", "temporalis", "masseter", "scm"]],
-    ["Neck & upper back", ["upper-trap", "levator", "scalenes", "rhomboids", "mid-trap"]],
-    ["Shoulder & arm", ["supraspinatus", "infraspinatus", "teres-minor", "subscapularis", "deltoid", "biceps", "triceps", "lats"]],
-    ["Chest & ribs", ["pec-major", "pec-minor", "serratus", "intercostals"]],
-    ["Elbow, wrist & hand", ["wrist-extensors", "wrist-flexors", "brachioradialis", "supinator"]],
-    ["Low back & core", ["ql", "erectors", "multifidus", "psoas"]],
-    ["Hip & glutes", ["iliacus", "glute-med", "glute-min", "piriformis", "glute-max", "tfl", "adductors"]],
-    ["Thigh & knee", ["rectus-femoris", "vmo", "vastus-lateralis", "hamstrings", "popliteus"]],
+    ["Neck", ["upper-trap", "levator", "scalenes"]],
+    ["Shoulder: deltoid & rotator cuff", ["ant-delt", "lat-delt", "post-delt", "supraspinatus", "infraspinatus", "teres-minor", "subscapularis", "teres-major"]],
+    ["Shoulder: chest side", ["pec-major-clav", "pec-major-stern", "pec-minor", "subclavius", "coracobrachialis", "serratus"]],
+    ["Shoulder: blade & upper back", ["middle-trap", "lower-trap", "rhomboid-minor", "rhomboid-major", "lats"]],
+    ["Upper arm", ["biceps-long", "biceps-short", "triceps-long", "triceps-lateral", "triceps-medial"]],
+    ["Elbow, wrist & hand", ["wrist-ext", "finger-ext", "wrist-flex", "finger-flex", "brachioradialis", "supinator"]],
+    ["Ribs", ["intercostals"]],
+    ["Low back & core", ["ql", "iliocostalis", "longissimus", "multifidus", "psoas"]],
+    ["Hip & glutes", ["iliacus", "glute-med", "glute-min", "piriformis", "glute-max", "tfl", "adductor-longus", "adductor-magnus"]],
+    ["Thigh & knee", ["rectus-femoris", "vastus-intermedius", "vmo", "vastus-lateralis", "biceps-femoris", "medial-hamstrings", "popliteus"]],
     ["Lower leg & foot", ["gastroc", "soleus", "tib-post", "tib-ant", "peroneals", "foot-intrinsics"]]
   ];
+
   function setMode(mode) {
     $$(".mode-seg [data-mode]").forEach((b) => b.setAttribute("aria-selected", b.dataset.mode === mode));
     $("#mode-area").hidden = mode !== "area";
     $("#mode-muscle").hidden = mode !== "muscle";
     $("#muscle-report").hidden = true;
-    if (mode === "muscle") renderMuscleList();
+    if (mode === "muscle") { renderMap(); renderMuscleList(); }
   }
   $$(".mode-seg [data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  // Tap the muscle on Dr. Jared's anatomy figure (zoomed crops from painmuscles.js MAPS)
+  let mapView = "shoulder-front", mapPick = null;
+  function renderMap() {
+    const mp = MUS.MAPS[mapView], [x, y, w, h] = mp.box;
+    $("#muscle-map").innerHTML = `
+      <div class="map-tabs">${Object.entries(MUS.MAPS).map(([k, v]) => `<button type="button" class="chip" data-map="${k}" aria-selected="${k === mapView}">${esc(v.label)}</button>`).join("")}</div>
+      <div class="map-stage" style="aspect-ratio:${w}/${h}">
+        <img src="assets/pain/body-figures.webp" alt="" style="width:${(1182 / w) * 100}%;left:${(-x / w) * 100}%;top:${(-y / h) * 100}%">
+        ${Object.entries(mp.pts).map(([id, [px, py, deep]]) => `<button type="button" class="mdot ${deep ? "deep" : ""} ${id === mapPick ? "on" : ""}" data-pick="${id}" style="left:${((px - x) / w) * 100}%;top:${((py - y) / h) * 100}%" aria-label="${esc(MUS.MUSCLES[id].name)}${deep ? " (deep)" : ""}"></button>`).join("")}
+      </div>
+      <div class="map-pick">${mapPick ? `<div><b>${esc(MUS.MUSCLES[mapPick].name)}</b><span>${esc(MUS.MUSCLES[mapPick].refers.split(/[.;]/)[0])}</span></div><button type="button" class="btn-gold sm" data-report="${mapPick}">Open report</button>`
+        : `<p class="muted small">Tap a point on the muscle that hurts. Navy points are deep muscles under the surface.</p>`}</div>`;
+  }
+  $("#muscle-map").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-map]"), d = e.target.closest("[data-pick]");
+    if (t) { mapView = t.dataset.map; mapPick = null; renderMap(); }
+    else if (d) { mapPick = d.dataset.pick; renderMap(); }
+  });
+
   function renderMuscleList() {
     const q = $("#muscle-search").value.trim().toLowerCase();
     const hit = (id) => { const m = MUS.MUSCLES[id]; return !q || (m.name + " " + m.refers + " " + m.does).toLowerCase().includes(q); };
@@ -532,9 +555,10 @@
   $("#muscle-search").addEventListener("input", renderMuscleList);
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-report]"); if (b) openReport(b.dataset.report); });
 
-  let report = null; // { id, answers: Map(index -> bool) }
+  let report = null, reportFrom = "muscle"; // report = { id, answers: Map(index -> bool) }; reportFrom = mode to go back to
   function openReport(id, push = true) {
     if (!MUS.MUSCLES[id]) return;
+    if (!$("#mode-area").hidden) reportFrom = "area"; else if (!$("#mode-muscle").hidden) reportFrom = "muscle";
     if (location.hash.slice(1).split("/")[0] !== "pain") show("pain");
     if (push) history.pushState(null, "", `#pain/muscle/${id}`);
     report = { id, answers: new Map() };
@@ -611,7 +635,7 @@
       rounds: 1, restEx: 15, restRound: 0, minutes: Math.max(5, all.length * 3), warmup: [], circuit: all, cooldown: [], exercises: all, perRound: all.length };
   }
   $("#muscle-report").addEventListener("click", async (e) => {
-    if (e.target.closest("[data-back]")) { history.pushState(null, "", "#pain"); $("#muscle-report").hidden = true; setMode($("#mode-muscle").hidden && $("#pain-results").innerHTML ? "area" : "muscle"); return; }
+    if (e.target.closest("[data-back]")) { history.pushState(null, "", "#pain"); setMode(reportFrom); return; }
     const yn = e.target.closest(".yn [data-a]");
     if (yn) {
       report.answers.set(Number(yn.parentElement.dataset.q), yn.dataset.a === "1");
