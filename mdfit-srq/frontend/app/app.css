@@ -713,7 +713,9 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 @media (max-width: 420px) { .vid-org { grid-template-columns: 1fr; } .loc-seg button { font-size: 12px; } }
 
 /* Tab bar: phones get 5 tabs + More */
-.tabbar { grid-template-columns: repeat(6, 1fr) !important; }
+.tabbar { grid-template-columns: repeat(7, 1fr) !important; padding-left: 2px; padding-right: 2px; }
+.tabbar button, .more-btn { min-width: 0; font-size: 10.5px; }
+.tabbar .short { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .tabbar .ov { display: none; }
 .more-btn { border: 0; background: none; display: grid; justify-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: #94a0b2; cursor: pointer; padding: 4px 0; }
 .more-btn svg { width: 26px; height: 26px; fill: currentColor; }
@@ -799,3 +801,4 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .pbar { grid-column: 1 / -1; height: 8px; border-radius: 8px; background: var(--card-2); overflow: hidden; }
 .pbar i { display: block; height: 100%; background: var(--accent, #FF7A00); border-radius: 8px; }
 .part-week { margin: 10px 0 0; font-size: 14px; }
+@media (max-width: 350px) { .tabbar button, .more-btn { font-size: 9.5px; letter-spacing: -.1px; } .tabbar svg, .more-btn svg { width: 23px; height: 23px; } }
