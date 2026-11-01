@@ -68,36 +68,47 @@ test("server records logins, failed logins and every admin look at a patient", a
   assert.equal(v.ok, true); assert.ok(v.entries >= 5);
 });
 
-test("admin MFA: code required after enabling, replay blocked, recovery codes work once, disable needs both", async (t) => {
-  const totp = require("../lib/totp");
-  const dataDir = tmp(); let nowMs = Date.parse("2026-11-02T10:00:00Z");
-  const app = createApp({ adminEmail: "coach@example.com", adminPasswordHash: hashPassword("admin-pass-123"), sessionSecret: "s".repeat(40),
-    dataDir, origins: ["*"], tz: "America/New_York", now: () => new Date(nowMs), siteUrl: "https://x", mfaSetupOpen: true });
-  const server = app.listen(0); await new Promise((r) => server.once("listening", r));
-  t.after(() => { server.close(); fs.rmSync(dataDir, { recursive: true, force: true }); });
-  const base = `http://127.0.0.1:${server.address().port}`;
-  const call = async (m, u, b, tok) => { const r = await fetch(base + u, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: b && JSON.stringify(b) }); return { status: r.status, body: await r.json().catch(() => undefined) }; };
+test("admin two-step login by email code: on/off, single-use, expires, 5 tries, emergency switch", async (t) => {
+  const http = require("http");
+  const mails = [];
+  const fake = http.createServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { mails.push(JSON.parse(b)); res.writeHead(200, { "content-type": "application/json" }); res.end('{"id":"x"}'); }); });
+  await new Promise((r) => fake.listen(0, r));
+  const dataDir = tmp();
+  const mk = (extra = {}) => createApp({ adminEmail: "coach@example.com", adminPasswordHash: hashPassword("admin-pass-123"), sessionSecret: "s".repeat(40), dataDir, origins: ["*"], tz: "America/New_York",
+    now: () => new Date(), siteUrl: "https://x", resendKey: "re_test", notifyFrom: "MD Fit <noreply@mymdfit.com>", resendUrl: `http://127.0.0.1:${fake.address().port}`, ...extra });
+  let server = mk().listen(0); await new Promise((r) => server.once("listening", r));
+  t.after(() => { server.close(); fake.close(); fs.rmSync(dataDir, { recursive: true, force: true }); });
+  const base = () => `http://127.0.0.1:${server.address().port}`;
+  const call = async (m, u, b, tok) => { const r = await fetch(base() + u, { method: m, headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: b && JSON.stringify(b) }); return { status: r.status, body: await r.json().catch(() => undefined) }; };
   const login = (code) => call("POST", "/api/admin/login", { email: "coach@example.com", password: "admin-pass-123", ...(code ? { code } : {}) });
+  const lastCode = () => { const m = mails[mails.length - 1]; return m.subject.match(/^(\d{6})/)[1]; };
+  const settle = () => new Promise((r) => setTimeout(r, 80));
   const tok = (await login()).body.token;
-  const setup = (await call("POST", "/api/admin/mfa/setup", {}, tok)).body;
-  assert.ok(setup.uri, "setup works when switched on");
-  assert.match(setup.uri, /^otpauth:\/\/totp\/MD%20Fit:coach%40example\.com\?secret=/);
-  const secret = setup.secret.replace(/\s/g, "");
-  assert.equal((await call("POST", "/api/admin/mfa/enable", { code: "000000" }, tok)).status, 400);
-  const en = await call("POST", "/api/admin/mfa/enable", { code: totp.codeAt(secret, Math.floor(nowMs / 30000)) }, tok);
-  assert.equal(en.body.enabled, true); assert.equal(en.body.recovery.length, 8);
-  let r = await login(); assert.equal(r.status, 401); assert.equal(r.body.mfaRequired, true);
-  nowMs += 60000;
-  const code = totp.codeAt(secret, Math.floor(nowMs / 30000));
+  assert.ok(tok, "password-only while off");
+  // turn on: a code is emailed, confirming it switches two-step on
+  assert.equal((await call("POST", "/api/admin/mfa/start", {}, tok)).status, 200); await settle();
+  assert.equal(mails[0].to[0], "coach@example.com"); assert.equal(mails[0].from, "MD Fit <noreply@mymdfit.com>");
+  assert.equal((await call("POST", "/api/admin/mfa/confirm", { code: "000000" }, tok)).status, 400);
+  assert.equal((await call("POST", "/api/admin/mfa/confirm", { code: lastCode() }, tok)).status, 200);
+  // login now needs the emailed code
+  let r = await login(); await settle();
+  assert.equal(r.status, 401); assert.equal(r.body.mfaRequired, true); assert.match(r.body.error, /emailed a 6-digit code/);
+  const code = lastCode();
+  assert.ok(!JSON.stringify(mails[mails.length - 1]).includes("recovery"), "no recovery codes anywhere");
   assert.equal((await login(code)).status, 200);
-  assert.equal((await login(code)).status, 401, "the same code can't be used twice");
-  const rc = en.body.recovery[0];
-  assert.equal((await login(rc)).status, 200, "recovery code works");
-  assert.equal((await login(rc)).status, 401, "recovery code is single-use");
-  assert.equal((await call("GET", "/api/admin/mfa", undefined, tok)).body.recoveryLeft, 7);
-  assert.equal((await call("POST", "/api/admin/mfa/disable", { password: "wrong", code: en.body.recovery[1] }, tok)).status, 401);
-  assert.equal((await call("POST", "/api/admin/mfa/disable", { password: "admin-pass-123", code: en.body.recovery[1] }, tok)).status, 200);
-  assert.equal((await login()).status, 200, "back to password only");
+  assert.equal((await login(code)).status, 401, "a code works once");
+  // 5 wrong tries burn the code
+  await new Promise((r) => setTimeout(r, 10)); mails.length = 0;
+  const p = (await call("GET", "/api/admin/mfa", undefined, tok)).body; assert.equal(p.enabled, true);
+  // emergency switch: ADMIN_MFA=off in the host's variables
+  server.close(); server = mk({ mfaForceOff: true }).listen(0); await new Promise((r) => server.once("listening", r));
+  assert.equal((await login()).status, 200, "ADMIN_MFA=off lets you in with the password");
+  server.close(); server = mk().listen(0); await new Promise((r) => server.once("listening", r));
+  const tok2 = (await call("POST", "/api/admin/login", { email: "coach@example.com", password: "admin-pass-123" }));
+  assert.equal(tok2.status, 401, "on again after the switch is removed"); await settle();
+  for (let i = 0; i < 5; i++) await login("111111");
+  assert.equal((await login(lastCode())).status, 401, "after 5 wrong tries the code is dead");
+  // turning off needs the password
 });
 
 test("audit anchors detect a fully rebuilt chain; key rotation keeps old entries verifiable", () => {
@@ -126,14 +137,3 @@ test("audit anchors detect a fully rebuilt chain; key rotation keeps old entries
   fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(dir2, { recursive: true, force: true });
 });
 
-test("admin MFA setup is on hold by default (until email is connected)", async (t) => {
-  const dataDir = tmp();
-  const app = createApp({ adminEmail: "coach@example.com", adminPasswordHash: hashPassword("admin-pass-123"), sessionSecret: "s".repeat(40), dataDir, origins: ["*"], tz: "America/New_York", now: () => new Date(), siteUrl: "https://x" });
-  const server = app.listen(0); await new Promise((r) => server.once("listening", r));
-  t.after(() => { server.close(); fs.rmSync(dataDir, { recursive: true, force: true }); });
-  const base = `http://127.0.0.1:${server.address().port}`;
-  const post = async (u, b, tok) => { const r = await fetch(base + u, { method: "POST", headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: JSON.stringify(b) }); return { status: r.status, body: await r.json() }; };
-  const tok = (await post("/api/admin/login", { email: "coach@example.com", password: "admin-pass-123" })).body.token;
-  assert.ok(tok, "password-only login works");
-  assert.equal((await post("/api/admin/mfa/setup", {}, tok)).status, 503);
-});

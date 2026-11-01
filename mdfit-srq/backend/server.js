@@ -16,7 +16,6 @@ const { mountPayments } = require("./lib/payments");
 const { createSecurity } = require("./lib/security");
 const { createCalSync } = require("./lib/calsync");
 const { createAudit } = require("./lib/audit");
-const totp = require("./lib/totp");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
@@ -36,6 +35,7 @@ function loadConfig() {
     botFilter: env("BOT_FILTER", "on") !== "off",
     dataKey: env("DATA_ENC_KEY"),
     auditSigningKey: env("AUDIT_SIGNING_KEY"),
+    mfaForceOff: env("ADMIN_MFA") === "off",
     tz: env("TZ_NAME", "America/New_York"),
     resendKey: env("RESEND_API_KEY"),
     resendUrl: env("RESEND_URL", "https://api.resend.com"),
@@ -667,22 +667,27 @@ function createApp(cfg = loadConfig()) {
   });
 
   // ================= Admin =================
-  // ---- Admin MFA (authenticator app codes). State lives in the encrypted store; recovery codes are stored hashed.
+  // ---- Admin two-step login by EMAIL code (Resend). No authenticator app, no recovery codes.
+  // A 6-digit code is emailed after the password checks out; it expires in 10 minutes, works once, 5 tries max.
+  // Emergency switch: ADMIN_MFA=off in the host's variables turns it off (e.g. if email is down).
   const mfaState = () => store.read("admin-mfa", { enabled: false });
-  const hashCode = (c) => crypto.createHash("sha256").update("mdfit-recovery:" + String(c).replace(/[\s-]/g, "").toUpperCase()).digest("hex");
-  function checkSecondFactor(code) {
-    const st = mfaState();
-    if (!st.enabled) return true;
-    const c = String(code || "").trim();
-    const step = totp.verify(st.secret, c, cfg.now().getTime());
-    if (step !== null) {
-      if (st.lastStep && step <= st.lastStep) return false; // a code can't be reused
-      store.write("admin-mfa", { ...st, lastStep: step });
-      return true;
-    }
-    const h = hashCode(c), i = (st.recovery || []).indexOf(h);
-    if (c.length >= 8 && i >= 0) { st.recovery.splice(i, 1); store.write("admin-mfa", st); return true; }
-    return false;
+  const mfaOn = () => !cfg.mfaForceOff && notify.enabled && mfaState().enabled === true && mfaState().method === "email";
+  const pendingCodes = new Map(); // purpose -> { hash, exp, tries, sentAt }
+  const codeHash = (c) => crypto.createHash("sha256").update("mdfit-mfa:" + cfg.sessionSecret + ":" + c).digest("hex");
+  async function emailCode(purpose) {
+    const prev = pendingCodes.get(purpose);
+    if (prev && Date.now() - prev.sentAt < 30000) return true; // don't resend within 30 s
+    const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
+    pendingCodes.set(purpose, { hash: codeHash(code), exp: Date.now() + 10 * 60e3, tries: 0, sentAt: Date.now() });
+    return notify.client(cfg.adminEmail, `${code} is your MD Fit admin code`, `Your MD Fit admin sign-in code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't try to sign in, someone has your password: change it right away.\n\nMD Fit`);
+  }
+  function checkCode(purpose, code) {
+    const p = pendingCodes.get(purpose);
+    if (!p || Date.now() > p.exp || p.tries >= 5) { pendingCodes.delete(purpose); return false; }
+    p.tries++;
+    const ok = crypto.timingSafeEqual(Buffer.from(p.hash), Buffer.from(codeHash(String(code || "").trim())));
+    if (ok) pendingCodes.delete(purpose);
+    return ok;
   }
 
   app.post("/api/admin/login", (req, res) => {
@@ -696,12 +701,15 @@ function createApp(cfg = loadConfig()) {
       logger.warn("login_failed", { email: mask(email || "-") });
       return res.status(401).json({ error: "Wrong email or password." });
     }
-    if (mfaState().enabled) {
-      if (!req.body.code) return res.status(401).json({ error: "Enter the 6-digit code from your authenticator app.", mfaRequired: true });
-      if (!checkSecondFactor(req.body.code)) {
+    if (mfaOn()) {
+      if (!req.body.code) {
+        emailCode("login");
+        return res.status(401).json({ error: `We emailed a 6-digit code to ${mask(cfg.adminEmail)}. Enter it to finish signing in.`, mfaRequired: true });
+      }
+      if (!checkCode("login", req.body.code)) {
         loginFails.hit(req.ip);
         logger.warn("mfa_failed", { email: mask(email) });
-        return res.status(401).json({ error: "That code didn't work. Use the newest code, or a recovery code.", mfaRequired: true });
+        return res.status(401).json({ error: "That code didn't work or has expired. Leave the code blank and sign in again for a new one.", mfaRequired: true });
       }
     }
     loginFails.reset(req.ip);
@@ -713,32 +721,24 @@ function createApp(cfg = loadConfig()) {
   const admin = express.Router();
   admin.use(requireAdmin);
 
-  admin.get("/me", (req, res) => res.json({ email: req.admin, emailNotifications: notify.enabled, mfa: mfaState().enabled }));
-  admin.get("/mfa", (req, res) => { const st = mfaState(); res.json({ enabled: !!st.enabled, recoveryLeft: (st.recovery || []).length }); });
-  admin.post("/mfa/setup", (req, res) => {
-    // On hold until email (Resend) is connected: two-step login will send codes by email, without recovery codes
-    if (!cfg.mfaSetupOpen) return res.status(503).json({ error: "Two-step login is on hold until email (Resend) is connected." });
-    const st = mfaState();
-    if (st.enabled) return res.status(409).json({ error: "MFA is already on. Turn it off first to set up a new device." });
-    const secret = totp.newSecret();
-    store.write("admin-mfa", { enabled: false, pending: secret });
-    res.json({ secret: secret.replace(/(.{4})/g, "$1 ").trim(), uri: totp.uri(secret, req.admin) });
+  admin.get("/me", (req, res) => res.json({ email: req.admin, emailNotifications: notify.enabled, mfa: mfaOn() }));
+  admin.get("/mfa", (req, res) => res.json({ enabled: mfaOn(), method: "email", emailReady: notify.enabled, forcedOff: !!cfg.mfaForceOff, sendsTo: mask(cfg.adminEmail) }));
+  admin.post("/mfa/start", async (req, res) => {
+    if (!notify.enabled) return res.status(503).json({ error: "Email isn't connected yet (RESEND_API_KEY and NOTIFY_FROM)." });
+    const sent = await emailCode("enable");
+    if (!sent) return res.status(502).json({ error: "Couldn't send the email. Check the Resend settings." });
+    res.json({ sent: true, to: mask(cfg.adminEmail) });
   });
-  admin.post("/mfa/enable", (req, res) => {
-    const st = mfaState();
-    if (!st.pending) return res.status(400).json({ error: "Start setup first." });
-    const step = totp.verify(st.pending, req.body && req.body.code, cfg.now().getTime());
-    if (step === null) return res.status(400).json({ error: "That code didn't match. Check the time on your phone and try the newest code." });
-    const recovery = Array.from({ length: 8 }, () => crypto.randomBytes(5).toString("hex").toUpperCase().replace(/(.{5})/, "$1-"));
-    store.write("admin-mfa", { enabled: true, secret: st.pending, lastStep: step, recovery: recovery.map(hashCode), enabledAt: new Date().toISOString() });
-    res.json({ enabled: true, recovery });
+  admin.post("/mfa/confirm", (req, res) => {
+    if (!checkCode("enable", req.body && req.body.code)) return res.status(400).json({ error: "That code didn't match or has expired." });
+    store.write("admin-mfa", { enabled: true, method: "email", enabledAt: new Date().toISOString() });
+    res.json({ enabled: true });
   });
   admin.post("/mfa/disable", (req, res) => {
-    const b = req.body || {};
-    if (!verifyPassword(String(b.password || ""), cfg.adminPasswordHash) || !checkSecondFactor(b.code)) return res.status(401).json({ error: "Password or code is wrong." });
+    if (!verifyPassword(String((req.body && req.body.password) || ""), cfg.adminPasswordHash)) return res.status(401).json({ error: "Password is wrong." });
     store.write("admin-mfa", { enabled: false });
     res.json({ enabled: false });
-  });
+  });;
 
   admin.get("/stats", (req, res) => {
     const { date: today } = nowParts(cfg.tz, cfg.now());

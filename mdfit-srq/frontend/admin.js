@@ -631,30 +631,27 @@
 
   // ---- Settings
   const sf = $("#settings-form");
-  // ---- MFA
+  // ---- Two-step login by email code
   async function loadMfa() {
     const st = await api("GET", "/api/admin/mfa");
-    $("#mfa-box").innerHTML = st.enabled
-      ? `<p class="banner ok">✓ Two-step login is on. ${st.recoveryLeft} recovery codes left.</p>
-         <div class="row-actions"><input type="password" id="mfa-pass" placeholder="Password"><input id="mfa-off-code" placeholder="Current code"><button class="mini danger" type="button" id="mfa-off">Turn off</button></div>`
-      : `<p class="banner">Two-step login is off. Turn it on so a stolen password alone can't open patient records.</p><button class="btn btn-sm" type="button" id="mfa-start">Set up two-step login</button>`;
+    $("#mfa-box").innerHTML = !st.emailReady ? `<p class="banner">Two-step login needs email (Resend) to be connected first.</p>`
+      : st.forcedOff ? `<p class="banner">Two-step login is switched off in Railway (ADMIN_MFA=off). Remove that variable to turn it back on.</p>`
+      : st.enabled ? `<p class="banner ok">✓ Two-step login is on. Each sign-in emails a 6-digit code to ${esc(st.sendsTo)}.</p>
+         <div class="row-actions"><input type="password" id="mfa-pass" placeholder="Your password"><button class="mini danger" type="button" id="mfa-off">Turn off</button></div>`
+      : `<p class="banner">Two-step login is off. When on, every admin sign-in also needs a 6-digit code emailed to ${esc(st.sendsTo)}, so a stolen password alone can't open patient records.</p><button class="btn btn-sm" type="button" id="mfa-start">Turn on</button>`;
   }
   document.addEventListener("click", run(async (e) => {
     if (e.target.id === "mfa-start") {
-      const s = await api("POST", "/api/admin/mfa/setup");
-      $("#mfa-box").innerHTML = `<ol class="mfa-steps"><li>Open an authenticator app (Google Authenticator, 1Password, Authy, Microsoft Authenticator).</li>
-        <li>Add an account → <b>Enter a setup key</b>. Name: <b>MD Fit</b>. Key: <code class="mfa-secret">${esc(s.secret)}</code> (time-based). On a phone, you can also <a href="${esc(s.uri)}">tap here to add it</a>.</li>
-        <li>Type the 6-digit code it shows: <input id="mfa-code" inputmode="numeric" maxlength="6" style="width:110px"> <button class="btn btn-sm" type="button" id="mfa-confirm">Turn on</button></li></ol>`;
+      const r = await api("POST", "/api/admin/mfa/start");
+      $("#mfa-box").innerHTML = `<p class="banner">We emailed a 6-digit code to ${esc(r.to)}. Enter it to turn on two-step login.</p>
+        <div class="row-actions"><input id="mfa-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="width:130px" placeholder="6-digit code"><button class="btn btn-sm" type="button" id="mfa-confirm">Turn on</button></div>`;
     }
-    if (e.target.id === "mfa-confirm") {
-      const r = await api("POST", "/api/admin/mfa/enable", { code: $("#mfa-code").value.trim() });
-      $("#mfa-box").innerHTML = `<p class="banner ok">✓ Two-step login is on.</p><p><b>Save these recovery codes</b> somewhere safe (each works once if you lose your phone):</p><pre class="mfa-recovery">${r.recovery.join("\n")}</pre><button class="btn btn-sm btn-line" type="button" id="mfa-done">I saved them</button>`;
-    }
-    if (e.target.id === "mfa-done") loadMfa();
-    if (e.target.id === "mfa-off") { await api("POST", "/api/admin/mfa/disable", { password: $("#mfa-pass").value, code: $("#mfa-off-code").value.trim() }); toast("Two-step login turned off."); loadMfa(); }
+    if (e.target.id === "mfa-confirm") { await api("POST", "/api/admin/mfa/confirm", { code: $("#mfa-code").value.trim() }); toast("Two-step login is on."); loadMfa(); }
+    if (e.target.id === "mfa-off") { await api("POST", "/api/admin/mfa/disable", { password: $("#mfa-pass").value }); toast("Two-step login turned off."); loadMfa(); }
   }));
 
   async function loadSettings() {
+    loadMfa();
     const s = await api("GET", "/api/admin/settings");
     $$("input[name*='.'], textarea[name*='.']", sf).forEach((el) => {
       const [sec, key] = el.name.split(".");
