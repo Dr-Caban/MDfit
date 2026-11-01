@@ -72,7 +72,7 @@ test("admin MFA: code required after enabling, replay blocked, recovery codes wo
   const totp = require("../lib/totp");
   const dataDir = tmp(); let nowMs = Date.parse("2026-11-02T10:00:00Z");
   const app = createApp({ adminEmail: "coach@example.com", adminPasswordHash: hashPassword("admin-pass-123"), sessionSecret: "s".repeat(40),
-    dataDir, origins: ["*"], tz: "America/New_York", now: () => new Date(nowMs), siteUrl: "https://x" });
+    dataDir, origins: ["*"], tz: "America/New_York", now: () => new Date(nowMs), siteUrl: "https://x", mfaSetupOpen: true });
   const server = app.listen(0); await new Promise((r) => server.once("listening", r));
   t.after(() => { server.close(); fs.rmSync(dataDir, { recursive: true, force: true }); });
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -80,6 +80,7 @@ test("admin MFA: code required after enabling, replay blocked, recovery codes wo
   const login = (code) => call("POST", "/api/admin/login", { email: "coach@example.com", password: "admin-pass-123", ...(code ? { code } : {}) });
   const tok = (await login()).body.token;
   const setup = (await call("POST", "/api/admin/mfa/setup", {}, tok)).body;
+  assert.ok(setup.uri, "setup works when switched on");
   assert.match(setup.uri, /^otpauth:\/\/totp\/MD%20Fit:coach%40example\.com\?secret=/);
   const secret = setup.secret.replace(/\s/g, "");
   assert.equal((await call("POST", "/api/admin/mfa/enable", { code: "000000" }, tok)).status, 400);
@@ -123,4 +124,16 @@ test("audit anchors detect a fully rebuilt chain; key rotation keeps old entries
   assert.equal(e.kid, b.fingerprint);
   assert.equal(b.verify().ok, true);
   fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(dir2, { recursive: true, force: true });
+});
+
+test("admin MFA setup is on hold by default (until email is connected)", async (t) => {
+  const dataDir = tmp();
+  const app = createApp({ adminEmail: "coach@example.com", adminPasswordHash: hashPassword("admin-pass-123"), sessionSecret: "s".repeat(40), dataDir, origins: ["*"], tz: "America/New_York", now: () => new Date(), siteUrl: "https://x" });
+  const server = app.listen(0); await new Promise((r) => server.once("listening", r));
+  t.after(() => { server.close(); fs.rmSync(dataDir, { recursive: true, force: true }); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = async (u, b, tok) => { const r = await fetch(base + u, { method: "POST", headers: { "content-type": "application/json", ...(tok ? { authorization: "Bearer " + tok } : {}) }, body: JSON.stringify(b) }); return { status: r.status, body: await r.json() }; };
+  const tok = (await post("/api/admin/login", { email: "coach@example.com", password: "admin-pass-123" })).body.token;
+  assert.ok(tok, "password-only login works");
+  assert.equal((await post("/api/admin/mfa/setup", {}, tok)).status, 503);
 });

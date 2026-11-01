@@ -716,6 +716,8 @@ function createApp(cfg = loadConfig()) {
   admin.get("/me", (req, res) => res.json({ email: req.admin, emailNotifications: notify.enabled, mfa: mfaState().enabled }));
   admin.get("/mfa", (req, res) => { const st = mfaState(); res.json({ enabled: !!st.enabled, recoveryLeft: (st.recovery || []).length }); });
   admin.post("/mfa/setup", (req, res) => {
+    // On hold until email (Resend) is connected: two-step login will send codes by email, without recovery codes
+    if (!cfg.mfaSetupOpen) return res.status(503).json({ error: "Two-step login is on hold until email (Resend) is connected." });
     const st = mfaState();
     if (st.enabled) return res.status(409).json({ error: "MFA is already on. Turn it off first to set up a new device." });
     const secret = totp.newSecret();

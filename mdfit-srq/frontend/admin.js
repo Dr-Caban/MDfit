@@ -655,7 +655,6 @@
   }));
 
   async function loadSettings() {
-    loadMfa();
     const s = await api("GET", "/api/admin/settings");
     $$("input[name*='.'], textarea[name*='.']", sf).forEach((el) => {
       const [sec, key] = el.name.split(".");
