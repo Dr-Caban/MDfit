@@ -461,6 +461,19 @@
       <label>1-on-1 sessions per month<input data-f="meetings" type="number" min="0" max="31" value="${x.meetings}"></label>
       <label>Session length (min)<input data-f="meetingMinutes" type="number" min="0" max="180" value="${x.meetingMinutes}"></label>
       <label class="wide">Perks, one per line<textarea data-f="perks" rows="3">${esc(x.perks.join("\n"))}</textarea></label>` },
+    tracks: { blank: { id: "", title: "", region: "", img: [], pts: [], note: "", levels: [{ title: "Level 1", videos: [] }] }, html: (x) => {
+      const MUS = (window.MDFitMuscles || {}).MUSCLES || {};
+      const opts = Object.entries(MUS).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([id, m]) => `<option value="${id}"${x.pts.includes(id) ? " selected" : ""}>${esc(m.name)}</option>`).join("");
+      const lv = x.levels.map((l) => [l.title, ...l.videos.map((v) => `${v.name} | ${v.id ? "https://drive.google.com/file/d/" + v.id + "/view" : ""}`)].join("\n")).join("\n");
+      return `
+      <label class="wide">Title<input data-f="title" value="${esc(x.title)}" maxlength="120" placeholder="Scalenes → front of the chest"></label>
+      <label>Region<input data-f="region" value="${esc(x.region)}" maxlength="40" placeholder="Chest"></label>
+      <label>Note<input data-f="note" value="${esc(x.note)}" maxlength="300"></label>
+      <label class="wide">Muscles (body-map buttons). Ctrl/Cmd-click to pick several<select data-f="pts" multiple size="6">${opts}</select></label>
+      <label class="wide">Pain pattern images, one Drive link per line<textarea data-f="img" rows="2">${esc(x.img.map((i) => "https://drive.google.com/file/d/" + i + "/view").join("\n"))}</textarea></label>
+      <div class="wide trk-thumbs">${x.img.map((i) => `<img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(i)}&sz=w200" alt="" referrerpolicy="no-referrer">`).join("")}</div>
+      <label class="wide">Levels and videos<textarea data-f="levels" rows="8">${esc(lv)}</textarea></label>`;
+    } },
     programs: { blank: { id: "", title: "", category: "Strength", level: "beginner", location: "home", weeks: 4, seed: Math.floor(Math.random() * 90000) + 1000, access: "free", summary: "", notes: "", days: [{ name: "Day 1", goal: "full", length: 30 }] }, html: (x, c) => `
       <label>Title<input data-f="title" value="${esc(x.title)}" maxlength="80"></label>
       <label>Category<select data-f="category">${c.categories.map((t) => `<option${t === x.category ? " selected" : ""}>${t}</option>`).join("")}</select></label>
@@ -473,6 +486,13 @@
       <label class="wide">Coaching notes<textarea data-f="notes" rows="2" maxlength="1000">${esc(x.notes)}</textarea></label>
       <label class="wide">Days<textarea data-f="days" rows="4">${esc(x.days.map((d) => [d.name, d.goal, d.length, d.rounds || ""].join(" | ")).join("\n"))}</textarea></label>` }
   };
+  let tracksEdited = false;
+  $("#rows-tracks").addEventListener("input", () => (tracksEdited = true));
+  $("#rows-tracks").addEventListener("change", () => (tracksEdited = true));
+  $("#tracks-reset").addEventListener("click", run(async () => {
+    if (!confirm("Replace every pain track with Dr. Jared's originals? Your edits to tracks will be lost.")) return;
+    await api("PUT", "/api/admin/content", { tracks: [] }); toast("Pain tracks reset."); loadContent();
+  }));
   const slugify = (x) => x.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "item";
   function addRow(kind, x, c) {
     const row = document.createElement("div"); row.className = "crow"; row.dataset.id = x.id || ""; row.dataset.extra = JSON.stringify(kind === "programs" ? { days: x.days } : {});
@@ -486,11 +506,13 @@
     contentCache = c;
     ["title", "date", "time", "minutes", "joinUrl", "access", "notes"].forEach((k) => (ctf["live_" + k].value = c.live[k] ?? ""));
     ctf.live_recordings.value = c.live.recordings.map((r) => [r.title, r.date, r.url].join(" | ")).join("\n");
+    tracksEdited = false;
+    c.tracks = c.tracks && c.tracks.length ? c.tracks : ((window.MDFitTracks || {}).BUILTIN || []);
     Object.keys(FIELDS).forEach((k) => { $("#rows-" + k).innerHTML = ""; c[k].forEach((x) => addRow(k, x, c)); });
   }
   ctf.addEventListener("click", (e) => {
-    const a = e.target.closest("[data-add]"); if (a) addRow(a.dataset.add, { ...FIELDS[a.dataset.add].blank }, contentCache);
-    if (e.target.closest("[data-del-row]") && confirm("Remove this item?")) e.target.closest(".crow").remove();
+    const a = e.target.closest("[data-add]"); if (a) { addRow(a.dataset.add, { ...FIELDS[a.dataset.add].blank }, contentCache); if (a.dataset.add === "tracks") tracksEdited = true; }
+    if (e.target.closest("[data-del-row]") && confirm("Remove this item?")) { if (e.target.closest("#rows-tracks")) tracksEdited = true; e.target.closest(".crow").remove(); }
   });
   function readRows(kind) {
     const used = new Set();
@@ -498,6 +520,17 @@
       const o = {}; $$("[data-f]", r).forEach((el) => (o[el.dataset.f] = el.type === "number" ? Number(el.value) : el.value.trim()));
       const base = o.title || o.name || "item"; let id = r.dataset.id || slugify(base), n = 2; while (used.has(id)) id = slugify(base) + "-" + n++; used.add(id); o.id = id;
       if (kind === "tiers") o.perks = o.perks.split("\n").map((x) => x.trim()).filter(Boolean);
+      if (kind === "tracks") {
+        o.pts = [...$("[data-f=pts]", r).selectedOptions].map((op) => op.value);
+        o.img = o.img.split("\n").map((x) => x.trim()).filter(Boolean);
+        const levels = [];
+        o.levels.split("\n").map((x) => x.trim()).filter(Boolean).forEach((line) => {
+          const i = line.indexOf("|");
+          if (i < 0) levels.push({ title: line, videos: [] });
+          else { if (!levels.length) levels.push({ title: "Level 1", videos: [] }); levels[levels.length - 1].videos.push({ name: line.slice(0, i).trim(), id: line.slice(i + 1).trim() }); }
+        });
+        o.levels = levels;
+      }
       if (kind === "programs") o.days = o.days.split("\n").map((x) => x.trim()).filter(Boolean).map((line) => {
         const [name, goal = "full", length = "30", rounds = ""] = line.split("|").map((y) => y.trim());
         return { name, goal, length: Number(length), ...(rounds ? { rounds: Number(rounds) } : {}) };
@@ -512,7 +545,7 @@
     live.minutes = Number(ctf.live_minutes.value || 60);
     live.recordings = ctf.live_recordings.value.split("\n").map((x) => x.trim()).filter(Boolean).map((l) => { const [title, date = "", url = ""] = l.split("|").map((y) => y.trim()); return { title, date, url }; });
     try {
-      await api("PUT", "/api/admin/content", { live, lectures: readRows("lectures"), recommendations: readRows("recommendations"), tiers: readRows("tiers"), programs: readRows("programs") });
+      await api("PUT", "/api/admin/content", { live, lectures: readRows("lectures"), recommendations: readRows("recommendations"), tiers: readRows("tiers"), programs: readRows("programs"), ...(tracksEdited ? { tracks: readRows("tracks") } : {}) });
       msg.className = "form-msg ok"; msg.textContent = "Saved. The app updates immediately."; loadContent();
     } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
   }));

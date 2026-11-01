@@ -547,7 +547,7 @@
     return { title: `${t.title.split(" →")[0]} pain track`.slice(0, 80), goal: "Mobility & Recovery", goalId: "mobility", location: "home", level: "beginner", levelLabel: "Pain track",
       rounds: 1, restEx: 15, restRound: 0, minutes: Math.max(5, ex.length * 3), warmup: [], circuit: ex, cooldown: [], exercises: ex, perRound: ex.length };
   };
-  function openTrack(id) { TK.open(id, { startLabel: "Start this track", onStart: (t) => startPlayer(trackWorkout(t)) }); }
+  function openTrack(id) { TK.ready.then(() => TK.open(id, { startLabel: "Start this track", onStart: (t) => startPlayer(trackWorkout(t)) })); }
   document.addEventListener("click", (e) => { const c = e.target.closest("[data-track]"); if (c) openTrack(c.dataset.track); });
   const GROUPS = [
     ["Head & jaw", ["suboccipitals", "occipitalis", "splenius", "temporalis", "masseter", "scm"]],

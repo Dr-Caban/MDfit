@@ -147,6 +147,7 @@ Appointment types and prices come from `GET /api/site` (`settings.appointmentTyp
 | `GET /api/me/meetings` | | `{ meetings[], allowance, minutes, usedThisMonth }` |
 | `POST /api/me/meetings` | `{ topic, times }` | `201` meeting · `403` without Premium · `409` when the month's sessions are used up |
 
+- `tracks`: pain tracks edited in Admin. **An empty list means "use the tracks in `catalog.json`".** When it isn't empty, it replaces them.
 - Locked items have `locked: true`, with `url`, `joinUrl` and recording links blanked. Show a lock and link to the membership screen.
 - **Programs:** each day is a generator session: `generate({ goal, location, level, length, rounds?, restEx?, restRound?, seed: program.seed + (day.seedOffset || 0) + dayIndex * 101 })`. Save the finished workout with `key: "prog-<id>-d<dayIndex>"`.
 - **Lectures:** YouTube, Vimeo and Drive links play in a `WKWebView` embed. `downloadUrl`, when set, can be saved for offline viewing.

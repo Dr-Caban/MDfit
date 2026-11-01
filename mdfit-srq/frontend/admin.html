@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=c4bf1250">
-  <link rel="stylesheet" href="admin.css?v=760e5f44">
+  <link rel="stylesheet" href="admin.css?v=25a993d5">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -198,6 +198,12 @@
           <p class="muted">Days, one per line: <code>Name | focus (upper, lower, full, core, mobility) | minutes (15/20/30/45/60/90) | rounds</code>. Change the seed number to get a different mix of exercises.</p>
           <div class="rows" id="rows-programs"></div><button class="btn btn-sm btn-line" type="button" data-add="programs">+ Add a program</button>
 
+          <h2>Pain tracks</h2>
+          <p class="muted">Each track shows up on the body map for the muscles you pick. Pattern images and videos are Google Drive links (or file ids). Levels: a line with no <code>|</code> starts a level; each video is <code>Video name | Drive link</code>. Leave the link blank to show "Video coming soon".</p>
+          <div class="rows" id="rows-tracks"></div>
+          <div class="row-actions"><button class="btn btn-sm btn-line" type="button" data-add="tracks">+ Add a pain track</button>
+            <button class="btn btn-sm btn-line" type="button" id="tracks-reset">Reset to Dr. Jared's original tracks</button></div>
+
           <button class="btn" type="submit">Save content</button>
           <p class="form-msg" role="status"></p>
         </form>
@@ -266,6 +272,8 @@
   </div>
 
   <script src="config.js?v=f7c994b0"></script>
-  <script src="admin.js?v=708de1b9"></script>
+  <script src="painmuscles.js?v=7a092add"></script>
+  <script src="paintracks.js?v=2ba8708d"></script>
+  <script src="admin.js?v=62eddf0d"></script>
 </body>
 </html>

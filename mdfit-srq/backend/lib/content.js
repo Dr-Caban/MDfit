@@ -68,6 +68,8 @@ function defaultContent() {
       { id: "premium", name: "Premium 1-on-1", price: 349, meetings: 2, meetingMinutes: 45, perks: ["Everything in Member", "2 remote 1-on-1 sessions with Dr. Jared every month", "Programming built for you", "Help with your specific issues"] },
       { id: "premium-plus", name: "Premium Plus", price: 699, meetings: 4, meetingMinutes: 45, perks: ["Everything in Premium", "4 remote 1-on-1 sessions every month", "Priority scheduling", "Direct access between sessions"] }
     ],
+    // Pain tracks: empty = use the built-in tracks transcribed from Dr. Jared's Drive (frontend/paintracks.js)
+    tracks: [],
     recommendations: [
       { id: "zero-drop", area: "Feet", title: "Switch to zero-drop shoes, gradually", body: "Zero-drop shoes keep your heel and forefoot level, so your calves, arches and toes do their job again. Start with 1 to 2 hours a day and add time each week. If your calves or arches get sore, hold at that amount for a few days.", link: "" },
       { id: "toes", area: "Feet", title: "Let your toes spread", body: "Choose shoes with a wide toe box. Spend some time barefoot at home on safe surfaces to rebuild foot strength.", link: "" },
@@ -115,6 +117,30 @@ const recIn = (r, i) => ({
   title: str(r.title, `Recommendation ${i + 1} title`, { min: 1, max: 120 }), body: str(r.body, `Recommendation ${i + 1} text`, { min: 1, max: 2000 }),
   link: url(r.link, `Recommendation ${i + 1} link`)
 });
+const driveId = (v, label) => {
+  const s = str(v, label, { max: 300 });
+  if (!s) return null;
+  const m = s.match(/[-\w]{20,}/);
+  if (!m) fail(`${label}: paste a Google Drive link or file id.`);
+  return m[0];
+};
+const trackIn = (t, i) => {
+  const L = `Track ${i + 1}`;
+  if (!t || typeof t !== "object") fail(`${L} is missing.`);
+  if (!Array.isArray(t.levels) || !t.levels.length || t.levels.length > 8) fail(`${L}: 1 to 8 levels.`);
+  if (!Array.isArray(t.pts) || !t.pts.length || t.pts.length > 25) fail(`${L}: pick 1 to 25 muscles on the body map.`);
+  return {
+    id: slug(t.id, `${L} id`), title: str(t.title, `${L} title`, { min: 1, max: 120 }), region: str(t.region, `${L} region`, { min: 1, max: 40 }),
+    img: list(t.img || [], `${L} images`, 6, (x, j) => driveId(x, `${L} image ${j + 1}`)).filter(Boolean),
+    pts: t.pts.map((x) => slug(x, `${L} muscle`)), note: str(t.note, `${L} note`, { max: 300 }),
+    levels: t.levels.map((l, j) => {
+      if (!Array.isArray(l.videos) || !l.videos.length || l.videos.length > 15) fail(`${L} level ${j + 1}: 1 to 15 videos.`);
+      return { title: str(l.title, `${L} level ${j + 1} title`, { min: 1, max: 100 }),
+        videos: l.videos.map((v, k) => ({ name: str(v.name, `${L} video ${k + 1} name`, { min: 1, max: 100 }), id: driveId(v.id || "", `${L} video ${k + 1} link`), file: str(v.file || "", "File", { max: 100 }) })) };
+    })
+  };
+};
+
 function liveIn(b, prev) {
   const o = { ...prev };
   if (b.title !== undefined) o.title = str(b.title, "Live title", { min: 1, max: 120 });
@@ -144,7 +170,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
       programs: c.programs.map((p) => ({ ...p, locked: !can(p.access) })),
       lectures: c.lectures.map((l) => (can(l.access) ? { ...l, locked: false } : { ...l, url: "", downloadUrl: "", locked: true, hasVideo: !!l.url })),
       live: can(c.live.access) ? { ...c.live, locked: false } : { ...c.live, joinUrl: "", recordings: c.live.recordings.map((r) => ({ ...r, url: "" })), locked: true, hasLink: !!c.live.joinUrl },
-      tiers: c.tiers, recommendations: c.recommendations, categories: PROGRAM_CATS, topics: LECTURE_TOPICS
+      tiers: c.tiers, recommendations: c.recommendations, tracks: c.tracks, categories: PROGRAM_CATS, topics: LECTURE_TOPICS
     };
   };
 
@@ -200,6 +226,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     if (b.tiers !== undefined) next.tiers = list(b.tiers, "Membership tiers", 6, tierIn);
     if (b.recommendations !== undefined) next.recommendations = list(b.recommendations, "Recommendations", 100, recIn);
     if (b.live !== undefined) next.live = liveIn(b.live || {}, c.live);
+    if (b.tracks !== undefined) next.tracks = list(b.tracks, "Pain tracks", 80, trackIn);
     store.write("content", next);
     res.json(content());
   });

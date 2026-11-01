@@ -130,3 +130,6 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .meet-row .row-actions { flex-wrap: wrap; }
 .meet-row input { min-width: 180px; }
 .banner { background: #fff6e8; border: 1px solid #f3d9a9; border-radius: 10px; padding: 8px 12px; }
+.trk-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+.trk-thumbs img { height: 70px; border-radius: 8px; background: #eee; }
+.crow select[multiple] { min-height: 120px; }

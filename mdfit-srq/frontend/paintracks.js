@@ -83,5 +83,13 @@
     if (opts.autoplay !== false) { const first = dlg.querySelector("[data-vid]"); if (first) first.click(); }
   }
 
-  window.MDFitTracks = { TRACKS, forPoint, steps, card, render, open, img };
+  // Admin edits (saved on the server) replace the built-in tracks; an empty list means "use the built-in ones"
+  const BUILTIN = TRACKS.slice();
+  function setTracks(list) { TRACKS.splice(0, TRACKS.length, ...(Array.isArray(list) && list.length ? list : BUILTIN)); }
+  const cfg = window.MDFIT_CONFIG;
+  const ready = cfg && cfg.apiUrl && window.fetch
+    ? fetch(cfg.apiUrl + "/api/content", { cache: "no-cache" }).then((r) => r.json()).then((c) => setTracks(c.tracks)).catch(() => {})
+    : Promise.resolve();
+
+  window.MDFitTracks = { TRACKS, BUILTIN, setTracks, ready, forPoint, steps, card, render, open, img };
 })();

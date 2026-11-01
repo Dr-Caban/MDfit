@@ -330,3 +330,21 @@ test("health-app batch vitals and app config", async (t) => {
   const cfgr = (await s.call("GET", "/api/app/config")).body;
   assert.equal(cfgr.apiVersion, 1); assert.equal(cfgr.features.healthSync, true);
 });
+
+test("pain tracks are admin-editable and fall back to the built-in set", async (t) => {
+  const s = await start(); t.after(s.close);
+  assert.deepEqual((await s.call("GET", "/api/content")).body.tracks, [], "empty = built-in tracks");
+  const adm = await s.adminToken();
+  const track = { id: "new-knee", title: "Patellar tendon → front of knee", region: "Knee", img: ["https://drive.google.com/file/d/1ABCdefGHIjklMNOpqrSTUvwx/view"], pts: ["vmo", "rectus-femoris"], note: "Load the tendon slowly.",
+    levels: [{ title: "Level 1 · Isometrics", videos: [{ name: "Spanish squat hold", id: "https://drive.google.com/file/d/1ZYXwvuTSRqpoNMLkjiHGFedcba/view" }, { name: "Wall sit", id: "" }] }] };
+  const r = await s.call("PUT", "/api/admin/content", { tracks: [track] }, adm);
+  assert.equal(r.status, 200);
+  const saved = (await s.call("GET", "/api/content")).body.tracks[0];
+  assert.deepEqual(saved.img, ["1ABCdefGHIjklMNOpqrSTUvwx"], "Drive links become file ids");
+  assert.equal(saved.levels[0].videos[0].id, "1ZYXwvuTSRqpoNMLkjiHGFedcba");
+  assert.equal(saved.levels[0].videos[1].id, null, "blank link = coming soon");
+  assert.equal((await s.call("PUT", "/api/admin/content", { tracks: [{ ...track, pts: [] }] }, adm)).status, 400);
+  assert.equal((await s.call("PUT", "/api/admin/content", { tracks: [{ ...track, img: ["not a link"] }] }, adm)).status, 400);
+  await s.call("PUT", "/api/admin/content", { tracks: [] }, adm);
+  assert.deepEqual((await s.call("GET", "/api/content")).body.tracks, [], "reset to built-in");
+});
