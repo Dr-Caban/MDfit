@@ -7,7 +7,7 @@ info:
     Errors return `{ "error": "message" }`. Dates are YYYY-MM-DD in the clinic time zone (America/New_York).
     See docs/ios-api.md for the full guide.
 servers:
-  - url: https://mdfit-api-production.up.railway.app
+  - url: https://mdfit-srq.vercel.app
 security:
   - bearer: []
 tags:

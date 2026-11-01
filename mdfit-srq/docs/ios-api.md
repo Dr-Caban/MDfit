@@ -2,7 +2,8 @@
 
 The iOS app uses the **same backend as the website**. Every feature in the web app (`/account`) is available over JSON, so the iPhone app and the website always show the same account, workouts, rewards, pain log, programs and membership.
 
-- **Base URL:** `https://mdfit-api-production.up.railway.app`
+- **Base URL:** `https://mdfit-srq.vercel.app` (all API calls go through the site's edge guard: US only, bots blocked. The Railway address refuses direct calls.)
+- **User agent:** send a normal app user agent such as `MDFit-iOS/1.0 CFNetwork Darwin`. Generic HTTP-library user agents are blocked as scrapers.
 - **Catalog (static):** `https://mdfit-srq.vercel.app/data/catalog.json`
 - **Machine-readable spec:** [`openapi.yaml`](openapi.yaml). Import it into Postman, or generate Swift models with `swift-openapi-generator`.
 
