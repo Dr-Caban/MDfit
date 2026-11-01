@@ -15,12 +15,12 @@ for (const f of ["app/exercises.js", "app/library.js", "app/generator.js", "pain
 }
 const W = ctx.window, L = W.MDFitLib, G = W.MDFitGen, M = W.MDFitMuscles, T = W.MDFitTracks;
 const exercises = W.MDFIT_EXERCISES.map((e) => ({
-  ...e, category: L.category(e), joint: L.joint(e), muscle: L.muscle(e),
+  ...e, kind: L.kind(e), category: L.category(e), joint: L.joint(e), muscle: L.muscle(e),
   video: { preview: `https://drive.google.com/file/d/${e.id}/preview`, mp4: `https://drive.usercontent.google.com/download?id=${e.id}&export=download`, thumbnail: `https://drive.google.com/thumbnail?id=${e.id}&sz=w640` }
 }));
 const body = {
   exercises,
-  library: { categories: L.CATEGORIES, joints: L.JOINTS, muscles: L.MUSCLES, locations: G.LOCATIONS.map((l) => ({ ...l, exerciseIds: G.byLocation(l.id).map((e) => e.id) })) },
+  library: { kinds: L.KINDS, categoriesByKind: L.CAT_BY_KIND, categories: L.CATEGORIES, joints: L.JOINTS, muscles: L.MUSCLES, locations: G.LOCATIONS.map((l) => ({ ...l, exerciseIds: G.byLocation(l.id).map((e) => e.id) })) },
   generator: { goals: G.GOALS, locations: G.LOCATIONS, levels: G.LEVELS, lengths: G.LENGTHS, perRound: G.PER_ROUND, rounds: G.ROUNDS, restEx: G.REST_EX, restRound: G.REST_ROUND, addons: G.ADDONS, defaults: G.DEFAULTS, source: "/app/generator.js" },
   pain: { muscles: M.MUSCLES, aggravators: M.AGGRAVATORS, spots: M.SPOTS, maps: M.MAPS, bodyImage: { url: "/assets/pain/body-figures.webp", width: 1182, height: 1073 } },
   reports: W.MDFIT_MUSCLE_REPORTS,

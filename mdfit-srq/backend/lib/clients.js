@@ -444,7 +444,7 @@ function mountClients(ctx) {
       const last = (c.painLog || []).slice(-1)[0];
       return { id: c.id, name: c.name, email: c.email, phone: c.phone, createdAt: c.createdAt, lastLoginAt: c.lastLoginAt,
         visits: mine.filter((a) => a.status === "completed").length, next: next ? { date: next.date, time: next.time, typeName: next.typeName } : null,
-        lastPain: last ? { date: last.date, area: last.area, level: last.level } : null, hasPlan: Boolean(c.plan && (c.plan.guides.length || c.plan.exercises.length || c.plan.notes)) };
+        lastPain: last ? { date: last.date, area: last.area, level: last.level } : null, hasPlan: Boolean(c.plan && (c.plan.guides.length || c.plan.exercises.length || c.plan.notes)), membership: activeMembership(c) };
     }).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)));
   });
 

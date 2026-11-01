@@ -237,7 +237,8 @@
   const choice = { ...prefs, addons: { ...prefs.addons } };
   // type "cards" = big tiles, "pills" = number chips. Each step reads/writes choice[key].
   const STEPS = [
-    { key: "goal", title: "Workout goal / type", sub: "Choose the primary focus.", type: "cards", items: Gen.GOALS.map((g) => ({ v: g.id, html: `${svgIc(g.icon)}<b>${esc(g.label)}</b>` })) },
+    { key: "type", title: "Session type", sub: "Rehab sessions use only Dr. Jared's corrective movements, kept gentle. Workouts train strength and conditioning.", type: "cards", items: Gen.TYPES.map((t) => ({ v: t.id, html: `${svgIc(t.id === "rehab" ? "mobility" : "full")}<b>${esc(t.label)}</b><small>${esc(t.hint)}</small>` })) },
+    { key: "goal", title: "Focus area", sub: "Choose the primary focus.", type: "cards", items: Gen.GOALS.map((g) => ({ v: g.id, html: `${svgIc(g.icon)}<b>${esc(g.label)}</b>` })) },
     { key: "location", title: "Location", sub: "Where will you be working out?", type: "cards", items: Gen.LOCATIONS.map((l) => ({ v: l.id, html: `${svgIc(l.icon)}<b>${esc(l.label)}</b>` })) },
     { key: "level", title: "Difficulty level", sub: "Match the workout to your current ability.", type: "cards", items: Gen.LEVELS.map((l) => ({ v: l.id, html: `${bars(l.bars)}<b>${l.label}</b><small>${l.hint}</small>` })) },
     { key: "length", title: "Workout length", sub: "Sets exercises, rounds and rest to fit. Fine-tune below.", type: "pills", items: Gen.LENGTHS.map((n) => ({ v: n, html: `<b>${n}</b><small>min</small>` })) },
@@ -295,7 +296,7 @@
     const w = current, loc = Gen.LOCATIONS.find((l) => l.id === w.location);
     $("#generated").hidden = false;
     $("#gen-title").textContent = w.title;
-    $("#gen-meta").textContent = `About ${w.minutes} min · ${planLine(w)} · ${w.levelLabel} · ${loc ? loc.label : ""}. Tap any exercise to watch Dr. Jared demo it.`;
+    $("#gen-meta").textContent = `About ${w.minutes} min · ${planLine(w)} · ${w.levelLabel} · ${loc ? loc.label : ""}. Tap any exercise to watch Dr. Jared demo it.${w.note ? " " + w.note : ""}`;
     const swapLi = (block) => (e, i) => `<li class="ex-swap">${exLi(e).slice(4, -5)}<button type="button" class="swap-btn" data-swap="${block}" data-i="${i}" aria-label="Swap ${esc(e.name)} for another movement" title="Swap for another movement"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3 1.4-1.4L22 8l-5.6 5.4L15 12l3-3H7zm10 10H6l3 3-1.4 1.4L2 16l5.6-5.4L9 12l-3 3h11z"/></svg></button></li>`;
     const group = (label, list, block, note = "") => list.length ? `<li class="block-tag">${label}${note ? `<span>${note}</span>` : ""}</li>${list.map(swapLi(block)).join("")}` : "";
     $("#gen-list").innerHTML = group("Warm-up · plays once", w.warmup, "Warm-up")
@@ -379,11 +380,21 @@
 
   // ================= Videos: by location first, then Dr. Jared's categories, grouped by primary joint or muscle
   const LIB = window.MDFitLib;
+  const TRACK_IDS = new Set(((window.MDFitTracks || {}).TRACKS || []).flatMap((t) => t.levels.flatMap((l) => l.videos.map((v) => v.id))).filter(Boolean));
   const CATS = ["All", "♥ Favorites", ...LIB.CATEGORIES];
   EX.forEach((e) => { e.libCat = LIB.category(e); e.joint = LIB.joint(e); e.muscle = LIB.muscle(e); });
   const LOCS = [{ id: "", label: "Everywhere" }, ...Gen.LOCATIONS.map((l) => ({ id: l.id, label: l.label }))];
   const locIds = Object.fromEntries(Gen.LOCATIONS.map((l) => [l.id, new Set(Gen.byLocation(l.id).map((e) => e.id))]));
-  const vf = { q: "", cat: "All", region: "", loc: "", by: "joint" };
+  const vf = { q: "", cat: "All", region: "", loc: "", by: "joint", kind: "Exercise" };
+  EX.forEach((e) => { e.kind = LIB.kind(e); });
+  const catsFor = () => ["All", "♥ Favorites", ...(vf.kind === "All" ? LIB.CATEGORIES : LIB.CAT_BY_KIND[vf.kind])];
+  function renderCats() { $("#vid-cats").innerHTML = catsFor().map((c) => `<button type="button" class="chip" role="tab" data-cat="${esc(c)}" aria-selected="${c === vf.cat}">${esc(c)}</button>`).join(""); }
+  $("#vid-kind").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-kind]"); if (!b) return;
+    vf.kind = b.dataset.kind; vf.cat = "All"; $$("#vid-kind button").forEach((x) => x.setAttribute("aria-selected", x === b));
+    $("#vid-kind-note").textContent = KIND_NOTE[vf.kind]; renderCats(); renderVideos();
+  });
+  const KIND_NOTE = { Exercise: "Strength training and specialty movements for building fitness.", Rehab: "Dr. Jared's corrective work: rehabilitation, stretching and mobility. Keep pain at 3/10 or lower.", All: "Every video in the library." };
   $("#vid-locs").innerHTML = LOCS.map((l) => `<button type="button" role="tab" data-loc="${l.id}" aria-selected="${l.id === ""}">${esc(l.label)}</button>`).join("");
   $("#vid-locs").addEventListener("click", (e) => {
     const b = e.target.closest("[data-loc]"); if (!b) return;
@@ -398,7 +409,7 @@
   });
   $("#vid-count").textContent = EX.length;
   $("#lib-count").textContent = `${EX.length} exercises`;
-  $("#vid-cats").innerHTML = CATS.map((c) => `<button type="button" class="chip" role="tab" data-cat="${esc(c)}" aria-selected="${c === "All"}">${esc(c)}</button>`).join("");
+  renderCats();
   $("#vid-cats").addEventListener("click", (e) => {
     const c = e.target.closest("[data-cat]");
     if (!c) return;
@@ -410,7 +421,7 @@
   $("#vid-search").addEventListener("input", (e) => { vf.q = e.target.value.trim().toLowerCase(); renderVideos(); });
   const isFav = (id) => lib.favorites.includes(id);
   const heart = (id) => `<button type="button" class="heart" data-fav="${id}" aria-pressed="${isFav(id)}" aria-label="${isFav(id) ? "Remove from" : "Add to"} favorites"><svg viewBox="0 0 24 24"><path d="M12 21 10.6 19.7C5.4 15 2 11.9 2 8.1 2 5 4.4 2.6 7.5 2.6c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1C19.6 2.6 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z"/></svg></button>`;
-  const vcard = (e) => `<div class="vwrap"><button type="button" class="vcard" data-video="${e.id}">${thumbImg(e.id)}<div><b>${esc(e.name)}</b><span>${esc(e.libCat)} · L${e.level}</span></div></button>${heart(e.id)}</div>`;
+  const vcard = (e) => `<div class="vwrap"><button type="button" class="vcard" data-video="${e.id}">${thumbImg(e.id)}<div><b>${esc(e.name)}</b><span>${esc(e.libCat)} · L${e.level}${TRACK_IDS.has(e.id) ? ` · <i class="in-track">Pain track</i>` : ""}</span></div></button>${heart(e.id)}</div>`;
   // Favorites live on the account (not the phone), so they follow the client to any device
   document.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-fav]");
@@ -424,7 +435,7 @@
   });
   function renderVideos() {
     const key = vf.by;
-    const list = EX.filter((e) => (vf.cat === "All" || (vf.cat === "♥ Favorites" ? isFav(e.id) : e.libCat === vf.cat)) && (!vf.region || e[key] === vf.region)
+    const list = EX.filter((e) => (vf.kind === "All" || e.kind === vf.kind) && (vf.cat === "All" || (vf.cat === "♥ Favorites" ? isFav(e.id) : e.libCat === vf.cat)) && (!vf.region || e[key] === vf.region)
       && (!vf.loc || locIds[vf.loc].has(e.id))
       && (!vf.q || [e.name, e.region, e.cat, e.libCat, e.joint, e.muscle].join(" ").toLowerCase().includes(vf.q)))
       .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));

@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=e59cb426">
+  <link rel="stylesheet" href="app/app.css?v=a0892be3">
   <link rel="stylesheet" href="guides.css?v=eb045f99">
 </head>
 <body class="mdapp">
@@ -136,6 +136,12 @@
       </header>
       <button type="button" class="intro-btn" data-intro="library"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Start here: how to use the library</button>
       <div class="vid-filters">
+      <div class="seg kind-seg" id="vid-kind" role="tablist" aria-label="Exercise or rehab">
+        <button type="button" data-kind="Exercise" aria-selected="true">Exercise</button>
+        <button type="button" data-kind="Rehab" aria-selected="false">Rehab</button>
+        <button type="button" data-kind="All" aria-selected="false">All</button>
+      </div>
+      <p class="muted small kind-note" id="vid-kind-note">Strength training and specialty movements for building fitness.</p>
       <div class="seg loc-seg" id="vid-locs" role="tablist" aria-label="Where you train"></div>
       <input type="search" id="vid-search" class="search" placeholder="Search exercises" aria-label="Search exercises">
       <div class="chips" id="vid-cats" role="tablist" aria-label="Category"></div>
@@ -429,12 +435,12 @@
   <script src="config.js?v=f7c994b0"></script>
   <script src="common.js?v=303aeac7"></script>
   <script src="app/exercises.js?v=7d154684"></script>
-  <script src="app/library.js?v=ab606ae7"></script>
-  <script src="app/generator.js?v=8d04d26f"></script>
+  <script src="app/library.js?v=4e053a85"></script>
+  <script src="app/generator.js?v=3009bd34"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=76c79be0"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
-  <script src="account.js?v=3c850ed0"></script>
+  <script src="account.js?v=a9a238ec"></script>
 </body>
 </html>

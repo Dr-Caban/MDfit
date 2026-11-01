@@ -5,12 +5,14 @@
   const SPECIALTY = /burpee|snatch|clean|thruster|wall ball|jump|dash|sled|bike|muscle up|handstand|turkish|crab|bear|spider|sprawl|heavy bag|slam|carry|ghd|pistol|walk out|blaster|tutorial|habit|walk break/i;
   const STRETCH = /stretch|release|child|fold|surrender|open book|thread the needle|couch|breathing|pole squat/i;
   const REHAB = /rotator cuff|eccentric|neuroglide|nods|chin glide|cars|liftoff|clamshell|reset|external rotation|internal rotation|shoulder drop|scapular|floor slide|wrist|knee circles|core brace|balance|march|heel walk|toe walk|vibration/i;
+  // Categories nest under the two kinds: Exercise = Strength training + Specialty movements (power & conditioning);
+  // Rehab = Rehabilitation + Stretching + Mobility.
+  const CAT_BY_KIND = { Exercise: ["Strength training", "Specialty movements"], Rehab: ["Rehabilitation", "Stretching", "Mobility"] };
   function category(e) {
-    if (e.cat === "Power" || SPECIALTY.test(e.name) || e.cat === "Lifestyle" || e.cat === "Desk & posture") return "Specialty movements";
+    if (kind(e) === "Exercise") return e.cat === "Power" || (SPECIALTY.test(e.name) && e.cc !== "STR") || e.cc === "PWR" ? "Specialty movements" : "Strength training";
     if (STRETCH.test(e.name)) return "Stretching";
-    if (["Rehab", "Neuroglide", "Posture"].includes(e.cat) || REHAB.test(e.name)) return "Rehabilitation";
-    if (e.cat === "Strength" || e.cat === "Activation" || /swing|hip thrust|split squat|trx squat|pulldown/i.test(e.name)) return "Strength training";
-    return "Mobility";
+    if (e.cc === "MOB" || e.cat === "Mobility") return /neuroglide|cars|liftoff|clamshell|knee circles/i.test(e.name) ? "Rehabilitation" : "Mobility";
+    return "Rehabilitation";
   }
 
   const JOINTS = ["Shoulders", "Elbows", "Wrists & hands", "Neck", "Spine & back", "Core", "Hips", "Knees", "Ankles & feet", "Full body", "Desk & lifestyle"];
@@ -37,5 +39,19 @@
   const MUSCLES = ["Neck & traps", "Chest", "Back & lats", "Shoulders (delts & cuff)", "Biceps", "Triceps", "Forearms & grip", "Core & abs", "Upper back & spine", "Hip flexors", "Glutes", "Hamstrings", "Quads", "Calves & feet", "Full body"];
   function muscle(e) { for (const [m, re] of MUSCLE_RULES) if (re.test(e.name)) return m; return "Full body"; }
 
-  window.MDFitLib = { CATEGORIES, JOINTS, MUSCLES, category, joint, muscle };
+  // Rehab vs exercise, from Dr. Jared's own file labels (_RHB rehab, _STR strength, _PWR power, _ACT activation, _MOB mobility)
+  // RHB / neuroglides / posture = rehab. STR / PWR = exercise. ACT and MOB split by what the movement is for:
+  // corrective activation and joint mobility are rehab; conditioning and athletic movements are exercise.
+  const KINDS = ["Exercise", "Rehab"];
+  const ACT_REHAB = /chin glide|nods|core brace|floor slide|scapular|rotator cuff|heel walk|toe walk|march|balance|wrist circles|constant glute|glute walk|glute kick|glute bridge/i;
+  const MOB_EXERCISE = /burpee|snatch|crab|spider|sprawl|turkish|wall ball|heavy bag|pistol|dash|box jump|muscle up|handstand|ghd|pike bear|walk out|swing|hip thrust|bulgarian|cossack|trx squat|straight arm pulldown/i;
+  function kind(e) {
+    if (["RHB", "NG", "POS", "ERG", "LIF"].includes(e.cc)) return "Rehab";
+    if (["STR", "PWR"].includes(e.cc)) return "Exercise";
+    if (e.cc === "ACT") return ACT_REHAB.test(e.name) ? "Rehab" : "Exercise";
+    if (e.cc === "MOB") return MOB_EXERCISE.test(e.name) ? "Exercise" : "Rehab";
+    return e.cat === "Rehab" ? "Rehab" : "Exercise";
+  }
+
+  window.MDFitLib = { CATEGORIES, CAT_BY_KIND, JOINTS, MUSCLES, KINDS, category, joint, muscle, kind };
 })();

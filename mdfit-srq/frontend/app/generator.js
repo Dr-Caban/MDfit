@@ -82,7 +82,7 @@
     return out;
   }
 
-  const DEFAULTS = { goal: "full", location: "home", level: "intermediate", length: 45, perRound: 8, rounds: 5, restEx: 15, restRound: 45,
+  const DEFAULTS = { type: "workout", goal: "full", location: "home", level: "intermediate", length: 45, perRound: 8, rounds: 5, restEx: 15, restRound: 45,
     addons: { warmup: true, cooldown: true } };
 
   // Estimated minutes for a plan, used for the summary and to fit rounds to a target length
@@ -97,62 +97,85 @@
     return { perRound, rounds, restEx, restRound };
   }
 
+  // Rehab vs exercise follows Dr. Jared's file labels (see app/library.js). Rehab moves never fill a workout's main circuit;
+  // they belong in warm-ups, cool-downs and rehab sessions. Rehab sessions use rehab moves only, low levels, rehab dosing.
+  const LIBK = () => (window.MDFitLib && window.MDFitLib.kind) || (() => "Exercise");
+  const isEx = (e) => LIBK()(e) === "Exercise", isRehab = (e) => LIBK()(e) === "Rehab";
+  function rehabRx(e) {
+    const n = e.name;
+    if (/hold|engagement|brace/i.test(n)) return "3 × 30-sec hold";
+    if (/eccentric|drop/i.test(n)) return "3 × 8 slow (3-sec lowering)";
+    if (/stretch|release|surrender|child|fold|breathing|open book|thread/i.test(n)) return "2 × 30 sec each side";
+    if (/cars|circles|liftoff|neuroglide|rotation|switch|cat cow|flow/i.test(n)) return "2 × 8 slow each side";
+    if (/walk|march|balance/i.test(n)) return "2 × 30 sec";
+    return "2 × 12 controlled";
+  }
+  const TYPES = [{ id: "workout", label: "Workout", hint: "Strength, power and conditioning" }, { id: "rehab", label: "Rehab session", hint: "Corrective work for pain and recovery" }];
+
   function generate(input = {}) {
     const o = { ...DEFAULTS, ...input, addons: { ...DEFAULTS.addons, ...(input.addons || {}) }, seed: input.seed ?? Date.now() };
+    const rehab = o.type === "rehab";
     const G = GOALS.find((g) => g.id === o.goal) || GOALS[2];
     const L = LEVELS.find((l) => l.id === o.level) || LEVELS[1];
-    const perRound = Math.min(10, Math.max(1, Number(o.perRound) || 5)), rounds = Math.min(10, Math.max(1, Number(o.rounds) || 1));
+    // Rehab: up to 6 moves, up to 3 rounds, and never above level 4
+    const perRound = Math.min(rehab ? 6 : 10, Math.max(1, Number(o.perRound) || 5)), rounds = Math.min(rehab ? 3 : 10, Math.max(1, Number(o.rounds) || 1));
     const rand = rng(o.seed), taken = new Set();
     let pool = byLocation(o.location);
     if (o.addons.bodyweight) pool = pool.filter((e) => !needsGym(e));
     if (pool.length < perRound + 4) pool = EX.filter((e) => !needsGym(e));
     const inRegion = (e) => !G.regions || G.regions.includes(e.rc) || (G.id === "full" && e.rc === "FB");
     const inBand = (e, lo = L.min, hi = L.max) => e.level >= lo && e.level <= hi;
-    // Warm-ups and cool-downs stay easy (level 4 or below) whatever the session level
     const easy = (e) => e.level <= Math.min(L.max, 4);
     const nWarm = o.addons.warmup ? (o.length <= 15 ? 1 : 2) : 0, nCool = o.addons.cooldown ? (o.length <= 20 ? 1 : 2) : 0;
 
-    let warm = pick(pool.filter((e) => WARM.includes(e.cat) && inRegion(e) && easy(e)), nWarm, rand, taken);
-    if (warm.length < nWarm) warm.push(...pick(pool.filter((e) => WARM.includes(e.cat) && easy(e)), nWarm - warm.length, rand, taken));
+    // Warm-up: rehab-side prep (mobility / activation), easy, in the region when possible
+    const warmOK = (e) => WARM.includes(e.cat) && easy(e) && isRehab(e);
+    let warm = pick(pool.filter((e) => warmOK(e) && inRegion(e)), nWarm, rand, taken);
+    if (warm.length < nWarm) warm.push(...pick(pool.filter(warmOK), nWarm - warm.length, rand, taken));
+    // Mobility and balance add-ons are rehab-side work: they go in the warm-up, not the main circuit
+    if (!rehab && o.addons.mobility && !G.mobility) warm.push(...pick(pool.filter((e) => e.cat === "Mobility" && isRehab(e) && inRegion(e) && easy(e)), 1, rand, taken));
+    if (!rehab && o.addons.balance) warm.push(...pick(pool.filter((e) => BALANCE.test(e.name) && easy(e)), 1, rand, taken));
 
-    // Add-ons each claim one circuit slot (while slots remain)
     const circuit = [];
     const slot = (list) => { if (circuit.length < perRound) circuit.push(...list.slice(0, perRound - circuit.length)); };
-    if (o.addons.mobility && !G.mobility) slot(pick(pool.filter((e) => e.cat === "Mobility" && inRegion(e) && e.level <= L.max), 1, rand, taken));
-    if (o.addons.core && G.id !== "core") slot(pick(pool.filter((e) => ["CO", "SP"].includes(e.rc) && MAIN.includes(e.cat) && e.level <= L.max), 1, rand, taken));
-    if (o.addons.balance) slot(pick(pool.filter((e) => BALANCE.test(e.name) && e.level <= L.max), 1, rand, taken));
-    if (o.addons.sport && !G.mobility) slot(pick(pool.filter((e) => e.cat === "Power" && inBand(e, Math.max(1, L.min - 1), L.max)), 1, rand, taken));
-
     const need = () => perRound - circuit.length;
-    if (G.mobility) {
-      // Recovery stays gentle: level 5 max (some "mobility" videos are athletic drills)
-      const mob = pool.filter((e) => [...COOL, "Activation", "Posture"].includes(e.cat) && e.level <= Math.min(L.max, 5));
-      slot(pick(mob, need(), rand, taken));
+    if (rehab || G.mobility) {
+      const lvl = Math.min(L.max, rehab ? 4 : 5);
+      const rp = pool.filter((e) => isRehab(e) && e.level <= lvl);
+      slot(pick(rp.filter(inRegion), need(), rand, taken));
+      if (need() > 0) slot(pick(rp, need(), rand, taken));
     } else {
-      const mainPool = pool.filter((e) => MAIN.includes(e.cat) && inRegion(e) && inBand(e));
+      if (o.addons.core && G.id !== "core") slot(pick(pool.filter((e) => ["CO", "SP"].includes(e.rc) && isEx(e) && e.level <= L.max), 1, rand, taken));
+      if (o.addons.sport) slot(pick(pool.filter((e) => (e.cat === "Power" || e.cc === "PWR") && isEx(e) && inBand(e, Math.max(1, L.min - 1), L.max)), 1, rand, taken));
+      const mainPool = pool.filter((e) => isEx(e) && inRegion(e) && inBand(e));
       if (G.id === "full") {
-        // Full body: mix lower, upper and whole-body so it isn't all one area
         const groups = [["FB", "CO"], ["HP", "LB", "KN"], ["SH", "UB", "EL"]].map((rc) => mainPool.filter((e) => rc.includes(e.rc)));
         for (let i = 0; need() > 0 && i < perRound * 3; i++) slot(pick(groups[i % 3], 1, rand, taken));
       } else slot(pick(mainPool, need(), rand, taken));
-      // Not enough at this level/location: widen the level band, then any region
-      if (need() > 0) slot(pick(pool.filter((e) => MAIN.includes(e.cat) && inRegion(e)), need(), rand, taken));
-      if (need() > 0) slot(pick(pool.filter((e) => MAIN.includes(e.cat) && e.level <= L.max), need(), rand, taken));
+      // Not enough at this level/location: widen the level band, then any region (still exercise only)
+      if (need() > 0) slot(pick(pool.filter((e) => isEx(e) && inRegion(e)), need(), rand, taken));
+      if (need() > 0) slot(pick(pool.filter((e) => isEx(e) && e.level <= L.max), need(), rand, taken));
+      if (need() > 0) slot(pick(EX.filter((e) => isEx(e) && !needsGym(e) && e.level <= L.max), need(), rand, taken));
     }
-    if (need() > 0) slot(pick(pool.filter((e) => e.level <= L.max), need(), rand, taken));
 
-    let cool = pick(pool.filter((e) => COOL.includes(e.cat) && inRegion(e) && easy(e)), nCool, rand, taken);
-    if (cool.length < nCool) cool.push(...pick(pool.filter((e) => COOL.includes(e.cat) && easy(e)), nCool - cool.length, rand, taken));
+    // Cool-down: stretching / mobility from the rehab side
+    const coolOK = (e) => COOL.includes(e.cat) && easy(e) && isRehab(e);
+    let cool = pick(pool.filter((e) => coolOK(e) && inRegion(e)), nCool, rand, taken);
+    if (cool.length < nCool) cool.push(...pick(pool.filter(coolOK), nCool - cool.length, rand, taken));
 
-    const tag = (arr, block) => arr.map((e) => ({ ...e, block, sets: prescription(e, L.id) }));
+    const rx = (e) => (rehab || isRehab(e) ? rehabRx(e) : prescription(e, L.id));
+    const tag = (arr, block) => arr.map((e) => ({ ...e, block, sets: block === "Circuit" ? rx(e) : (isRehab(e) ? rehabRx(e) : prescription(e, L.id)) }));
     const w = tag(warm, "Warm-up"), c = tag(circuit, "Circuit"), d = tag(cool, "Cool-down");
+    const restEx = rehab ? Math.max(30, Number(o.restEx) || 0) : Number(o.restEx) || 0, restRound = rehab ? Math.max(60, Number(o.restRound) || 0) : Number(o.restRound) || 0;
     const work = c.length ? Math.round(c.reduce((s, e) => s + workSecs(e.sets), 0) / c.length) : 45;
     return {
-      title: G.mobility ? "Mobility & Recovery Flow" : `${G.label} ${TITLES[L.id]}`,
-      goal: G.label, goalId: G.id, location: o.location, level: L.id, levelLabel: L.label,
-      perRound: c.length, rounds, restEx: Number(o.restEx) || 0, restRound: Number(o.restRound) || 0, addons: o.addons,
+      title: rehab ? `Rehab Session: ${G.label}` : G.mobility ? "Mobility & Recovery Flow" : `${G.label} ${TITLES[L.id]}`,
+      type: rehab ? "rehab" : "workout",
+      note: rehab ? "Rehab rules: slow and controlled, pain no higher than 3/10 during or after. Stop any move that causes sharp pain." : "",
+      goal: G.label, goalId: G.id, location: o.location, level: L.id, levelLabel: rehab ? "Rehab" : L.label,
+      perRound: c.length, rounds, restEx, restRound, addons: o.addons,
       warmup: w, circuit: c, cooldown: d, exercises: [...w, ...c, ...d],
-      minutes: estimate({ warm: w.length, cool: d.length, perRound: c.length, rounds, restEx: Number(o.restEx) || 0, restRound: Number(o.restRound) || 0, work }),
+      minutes: estimate({ warm: w.length, cool: d.length, perRound: c.length, rounds, restEx, restRound, work }),
       seed: o.seed, createdAt: new Date().toISOString()
     };
   }
@@ -175,16 +198,18 @@
     const easy = (e) => e.level <= Math.min(L.max, 4);
     const tiers = key === "warmup" ? [(e) => WARM.includes(e.cat) && easy(e) && e.rc === old.rc, (e) => WARM.includes(e.cat) && easy(e)]
       : key === "cooldown" ? [(e) => COOL.includes(e.cat) && easy(e) && e.rc === old.rc, (e) => COOL.includes(e.cat) && easy(e)]
+      : w.type === "rehab" ? [(e) => isRehab(e) && e.rc === old.rc && e.level <= 4, (e) => isRehab(e) && e.level <= 4]
       : [(e) => e.cat === old.cat && e.rc === old.rc && e.level >= L.min && e.level <= L.max,
          (e) => e.cat === old.cat && e.level >= L.min && e.level <= L.max,
          (e) => e.rc === old.rc && MAIN.includes(e.cat) && e.level <= L.max,
          (e) => old.cat === e.cat && e.level <= L.max];
     const rand = rng(seed);
+    const fits = key === "circuit" ? (w.type === "rehab" ? isRehab : isEx) : isRehab;
     for (const t of tiers) {
-      const c = pool.filter(t);
+      const c = pool.filter((e) => t(e) && fits(e));
       if (c.length) {
         const n = c[Math.floor(rand() * c.length)];
-        const list = w[key].slice(); list[index] = { ...n, block, sets: prescription(n, L.id) };
+        const list = w[key].slice(); list[index] = { ...n, block, sets: w.type === "rehab" || isRehab(n) ? rehabRx(n) : prescription(n, L.id) };
         const out = { ...w, [key]: list };
         out.exercises = [...out.warmup, ...out.circuit, ...out.cooldown];
         return out;
@@ -193,5 +218,5 @@
     return w;
   }
 
-  window.MDFitGen = { byLocation, swap, stepSecs, GOALS, LOCATIONS, LEVELS, LENGTHS, PER_ROUND, ROUNDS, REST_EX, REST_ROUND, ADDONS, DEFAULTS, generate, presetFor, estimate, prescription, needsGym };
+  window.MDFitGen = { TYPES, rehabRx, byLocation, swap, stepSecs, GOALS, LOCATIONS, LEVELS, LENGTHS, PER_ROUND, ROUNDS, REST_EX, REST_ROUND, ADDONS, DEFAULTS, generate, presetFor, estimate, prescription, needsGym };
 })();
