@@ -1008,9 +1008,11 @@
       const r = await apiAuth("POST", "/api/me/workouts", { title: P.w.title.slice(0, 80), goal: P.w.goal, minutes, exercises: Math.min(50, P.w.exercises.length),
         key: workoutKey(P.w), seconds: Math.max(1, Math.min(18000, secsUsed)), lifts, ...(hr ? { hrAvg: hr.avg, hrMax: hr.max, source: HR.name || "Heart-rate strap" } : {}) });
       stats = { ...r.stats, recent: [r.workout, ...((stats && stats.recent) || [])].slice(0, 10) };
-      $("#done-msg").outerHTML = `<div class="stats3"><div><b>${r.stats.streak}</b><span>Day streak</span></div><div><b>${minutes}</b><span>Minutes</span></div><div><b>${hr ? hr.avg : r.stats.workouts}</b><span>${hr ? "Avg bpm" : "Workouts"}</span></div></div>`;
+      // Heart-rate numbers only appear when a device recorded them; nobody is expected to type them in.
+      $("#done-msg").outerHTML = `<div class="stats3"><div><b>${r.stats.streak}</b><span>Day streak</span></div><div><b>${minutes}</b><span>Minutes</span></div><div><b>${r.stats.workouts}</b><span>Workouts</span></div></div>
+        ${hr ? `<div class="stats3 dev-stats"><div><b>${hr.avg}</b><span>Avg heart rate</span></div><div><b>${hr.max}</b><span>Max heart rate</span></div><div><b>${esc(HR.name || "Device")}</b><span>Source</span></div></div>` : ""}`;
       allWorkouts.push(r.workout);
-      numbersForm($("#done-form"), r.workout, "Add your numbers so you can compare this session later. Copy them from your watch if you wore one.");
+      numbersForm($("#done-form"), r.workout, "How hard was that?");
       renderStats(); renderActivity(); renderNotes(); renderCalendar(); renderPerf(); loadParticipation();
       loadRewards(true);
     } catch (err) { $("#done-msg").textContent = "Couldn't save this workout: " + err.message; }
@@ -1032,7 +1034,15 @@
 
   // ---- Performance: daily vitals + side-by-side comparison of saved workouts
   let vitals = [];
-  const VITALS = [["restingHr", "Resting HR", "bpm", -1], ["hrv", "HRV", "ms", 1], ["vo2max", "VO2 max", "", 1], ["weight", "Body weight", "lb", 0]];
+  const VITALS = [["restingHr", "Resting HR", "bpm", -1, true], ["hrv", "HRV", "ms", 1, true], ["vo2max", "VO2 max", "", 1, true], ["weight", "Body weight", "lb", 0, false]];
+  const DEVICE_KEYS = ["restingHr", "hrv", "vo2max"];
+  // A smart device counts as connected once a heart-rate strap/watch has paired in this browser, or a workout or
+  // reading has come in from a device or health app. Until then heart-rate, HRV, VO2 max and calorie fields stay hidden.
+  function hasDevice() {
+    if (HR.dev) return true;
+    try { if (localStorage.getItem("mdfit-device")) return true; } catch {}
+    return allWorkouts.some((w) => w.source) || vitals.some((v) => v.source && v.source !== "manual");
+  }
   const latestOf = (k) => [...vitals].reverse().find((v) => v[k] !== undefined);
   function spark(k) {
     const pts = vitals.filter((v) => v[k] !== undefined).slice(-30);
@@ -1043,7 +1053,10 @@
   }
   function renderPerf() {
     if (!$("#perf-card")) return;
-    $("#vitals").innerHTML = VITALS.map(([k, label, unit, good]) => {
+    const dev = hasDevice();
+    $(".perf-sub").textContent = dev ? "Heart rate · HRV · VO2 max · weights" : "Body weight · workouts";
+    $$(".dev-only", $("#vitals-form")).forEach((el) => { el.hidden = !dev; });
+    $("#vitals").innerHTML = VITALS.filter(([k, , , , devOnly]) => !devOnly || dev || latestOf(k)).map(([k, label, unit, good]) => {
       const last = latestOf(k), first = vitals.find((v) => v[k] !== undefined);
       const diff = last && first && last !== first ? Math.round((last[k] - first[k]) * 10) / 10 : null;
       const cls = diff === null || !good || !diff ? "" : diff * good > 0 ? "up-good" : "up-bad";
@@ -1072,7 +1085,7 @@
       return `<span class="${good ? (d * good > 0 ? "up-good" : "up-bad") : ""}">${d > 0 ? "+" : ""}${fmt(d)}</span>`;
     };
     $("#cmp-table").innerHTML = `<table><thead><tr><th></th><th>${a.date.slice(5)}</th><th>${b.date.slice(5)}</th><th>Change</th></tr></thead><tbody>
-      ${rows.map(([label, show, num, good]) => `<tr><th>${label}</th><td>${show(a) ?? "--"}</td><td>${show(b) ?? "--"}</td><td>${delta(num(a), num(b), good, label === "Time" ? (d) => `${Math.round(d)}s` : undefined)}</td></tr>`).join("")}
+      ${rows.filter(([label, show]) => label === "Time" || show(a) || show(b)).map(([label, show, num, good]) => `<tr><th>${label}</th><td>${show(a) ?? "--"}</td><td>${show(b) ?? "--"}</td><td>${delta(num(a), num(b), good, label === "Time" ? (d) => `${Math.round(d)}s` : undefined)}</td></tr>`).join("")}
       ${names.map((n) => `<tr class="lift"><th>${esc(n)}</th><td>${liftW(a, n) ?? "--"}</td><td>${liftW(b, n) ?? "--"}</td><td>${delta(liftW(a, n), liftW(b, n), 1, (d) => `${d} lb`)}</td></tr>`).join("")}
       </tbody></table>${a === b ? `<p class="muted small">Only one session so far. Do this workout again (or save it to My Programs) to compare.</p>` : ""}`;
     $("#cmp-edit-wrap").hidden = false;
@@ -1093,20 +1106,21 @@
     const f = (k, label, ph, step = 1) => `<label>${label}<input name="${k}" type="number" inputmode="decimal" step="${step}" placeholder="${ph}" value="${w[k] ?? ""}"></label>`;
     host.innerHTML = `<form class="nums-form" novalidate>
       <p class="small">${esc(intro)}</p>
-      <div class="nums-grid">${f("hrAvg", "Avg heart rate", "bpm")}${f("hrMax", "Max heart rate", "bpm")}${f("hrv", "HRV", "ms")}${f("vo2max", "VO2 max", "ml/kg/min", 0.1)}${f("calories", "Calories", "kcal")}</div>
+      ${hasDevice() ? `<div class="nums-grid">${f("hrAvg", "Avg heart rate", "bpm")}${f("hrMax", "Max heart rate", "bpm")}${f("hrv", "HRV", "ms")}${f("vo2max", "VO2 max", "ml/kg/min", 0.1)}${f("calories", "Calories", "kcal")}</div>` : ""}
       <div class="rpe" role="radiogroup" aria-label="Effort, 1 easy to 10 max">${Array.from({ length: 10 }, (_, i) => `<button type="button" role="radio" data-rpe="${i + 1}" class="${w.rpe === i + 1 ? "on" : ""}">${i + 1}</button>`).join("")}</div>
       <p class="rpe-cap small muted">Effort: 1 = easy, 10 = all-out</p>
-      <button class="btn-gold sm" type="submit">Save numbers</button><span class="nums-msg small"></span></form>`;
+      <button class="btn-gold sm" type="submit">Save</button><span class="nums-msg small"></span></form>`;
     const form = $("form", host); let rpe = w.rpe;
     form.addEventListener("click", (e) => { const b = e.target.closest("[data-rpe]"); if (!b) return; rpe = Number(b.dataset.rpe); $$("[data-rpe]", form).forEach((x) => x.classList.toggle("on", x === b)); });
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const body = {}; ["hrAvg", "hrMax", "hrv", "vo2max", "calories"].forEach((k) => { const v = form[k].value.trim(); if (v) body[k] = Number(v); });
+      const body = {}; ["hrAvg", "hrMax", "hrv", "vo2max", "calories"].forEach((k) => { const v = form[k] && form[k].value.trim(); if (v) body[k] = Number(v); });
       if (rpe) body.rpe = rpe;
       try {
         const up = await apiAuth("PATCH", `/api/me/workouts/${w.id}`, body);
         Object.assign(w, up); const i = allWorkouts.findIndex((x) => x.id === w.id); if (i >= 0) allWorkouts[i] = up;
-        $(".nums-msg", form).textContent = "Saved."; renderPerf();
+        renderPerf(); // may redraw this form, so confirm on whichever form is showing now
+        const m = $(".nums-msg", host); if (m) m.textContent = "Saved.";
       } catch (err) { $(".nums-msg", form).textContent = err.message; }
     });
   }
@@ -1126,6 +1140,8 @@
       await ch.startNotifications();
       dev.addEventListener("gattserverdisconnected", () => { HR.dev = null; HR.bpm = 0; renderHrBtn(); });
       HR.dev = dev; HR.name = dev.name || "Heart-rate strap"; renderHrBtn();
+      try { localStorage.setItem("mdfit-device", HR.name); } catch {}
+      renderPerf();
     },
     summary(since) {
       const xs = HR.samples.filter(([t]) => t >= since).map(([, b]) => b).filter((b) => b >= 30 && b <= 230);

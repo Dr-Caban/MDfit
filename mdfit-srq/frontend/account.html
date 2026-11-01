@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=b8470064">
+  <link rel="stylesheet" href="app/app.css?v=5d652d0b">
   <link rel="stylesheet" href="guides.css?v=0f55d5cd">
 </head>
 <body class="mdapp">
@@ -294,25 +294,25 @@
             <div class="cal-day" id="cal-day"></div>
           </div>
           <div class="card perf-card" id="perf-card">
-            <div class="card-head"><span class="label accent">Performance</span><span class="muted small">Heart rate · HRV · VO2 max · weights</span></div>
+            <div class="card-head"><span class="label accent">Performance</span><span class="muted small perf-sub">Body weight · workouts</span></div>
             <div class="vitals" id="vitals"></div>
             <details class="vitals-add"><summary>Log today's readings</summary>
               <form id="vitals-form" class="nums-form" novalidate>
                 <div class="nums-grid">
-                  <label>Resting heart rate<input name="restingHr" type="number" inputmode="numeric" placeholder="bpm"></label>
-                  <label>HRV<input name="hrv" type="number" inputmode="numeric" placeholder="ms"></label>
-                  <label>VO2 max<input name="vo2max" type="number" step="0.1" inputmode="decimal" placeholder="ml/kg/min"></label>
+                  <label class="dev-only">Resting heart rate<input name="restingHr" type="number" inputmode="numeric" placeholder="bpm"></label>
+                  <label class="dev-only">HRV<input name="hrv" type="number" inputmode="numeric" placeholder="ms"></label>
+                  <label class="dev-only">VO2 max<input name="vo2max" type="number" step="0.1" inputmode="decimal" placeholder="ml/kg/min"></label>
                   <label>Body weight<input name="weight" type="number" step="0.1" inputmode="decimal" placeholder="lb"></label>
                   <label>Sleep<input name="sleep" type="number" step="0.1" inputmode="decimal" placeholder="hours"></label>
                 </div>
                 <button class="btn-gold sm" type="submit">Save readings</button><span class="nums-msg small"></span>
-                <p class="small muted">Copy these from your watch (Apple Health, Garmin, Whoop, Oura, Fitbit). Direct watch sync is on the way.</p>
+                <p class="small muted dev-only">Copy these from your watch or ring (Apple Health, Garmin, Whoop, Oura, Fitbit).</p>
               </form>
             </details>
             <h3 class="perf-h">Compare workouts</h3>
             <div class="cmp-pick"><label>This session<select id="cmp-a" class="select"></select></label><label>Compared with<select id="cmp-b" class="select"></select></label></div>
             <div id="cmp-table" class="cmp-table"></div>
-            <details class="vitals-add" id="cmp-edit-wrap"><summary>Add or fix numbers for this session</summary><div id="cmp-edit"></div></details>
+            <details class="vitals-add" id="cmp-edit-wrap"><summary>Edit this session</summary><div id="cmp-edit"></div></details>
           </div>
         </div>
         <div class="col-side">
@@ -475,6 +475,6 @@
   <script src="paintracks.js?v=1c44032f"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
-  <script src="account.js?v=c47e90ce"></script>
+  <script src="account.js?v=51e7e9b3"></script>
 </body>
 </html>

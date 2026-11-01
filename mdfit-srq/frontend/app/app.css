@@ -899,3 +899,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .send-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent); display: grid; place-items: center; cursor: pointer; }
 .send-btn svg { width: 18px; height: 18px; fill: var(--navy); }
 .chat-fine { text-align: center; color: var(--on-navy) !important; margin: 2px 0 0; }
+/* Device-only metrics (heart rate, HRV, VO2 max, calories) stay hidden until a watch/strap/ring is connected */
+.dev-only[hidden] { display: none !important; }
+.dev-stats { margin-top: 10px; }
+.dev-stats b { font-size: 20px; overflow-wrap: anywhere; }
