@@ -525,17 +525,17 @@
   }
   $$(".mode-seg [data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
   // Tap the muscle on Dr. Jared's anatomy figure (zoomed crops from painmuscles.js MAPS)
-  let mapView = "shoulder-front", mapPick = null;
+  let mapView = "body-front", mapPick = null;
   function renderMap() {
     const mp = MUS.MAPS[mapView], [x, y, w, h] = mp.box;
     $("#muscle-map").innerHTML = `
       <div class="map-tabs">${Object.entries(MUS.MAPS).map(([k, v]) => `<button type="button" class="chip" data-map="${k}" aria-selected="${k === mapView}">${esc(v.label)}</button>`).join("")}</div>
-      <div class="map-stage" style="aspect-ratio:${w}/${h}">
+      <div class="map-stage ${mapView.startsWith("body") ? "dense" : ""}" style="aspect-ratio:${w}/${h}">
         <img src="assets/pain/body-figures.webp" alt="" style="width:${(1182 / w) * 100}%;left:${(-x / w) * 100}%;top:${(-y / h) * 100}%">
         ${Object.entries(mp.pts).map(([id, [px, py, deep]]) => `<button type="button" class="mdot ${deep ? "deep" : ""} ${id === mapPick ? "on" : ""}" data-pick="${id}" style="left:${((px - x) / w) * 100}%;top:${((py - y) / h) * 100}%" aria-label="${esc(MUS.MUSCLES[id].name)}${deep ? " (deep)" : ""}"></button>`).join("")}
       </div>
       <div class="map-pick">${mapPick ? `<div><b>${esc(MUS.MUSCLES[mapPick].name)}</b><span>${esc(MUS.MUSCLES[mapPick].refers.split(/[.;]/)[0])}</span></div><button type="button" class="btn-gold sm" data-report="${mapPick}">Open report</button>`
-        : `<p class="muted small">Tap a point on the muscle that hurts. Navy points are deep muscles under the surface.</p>`}</div>`;
+        : `<p class="muted small">Tap a point on the muscle that hurts. Navy points are deep muscles under the surface.${mapView.startsWith("body") ? " Use the Shoulder views to zoom in." : ""}</p>`}</div>`;
   }
   $("#muscle-map").addEventListener("click", (e) => {
     const t = e.target.closest("[data-map]"), d = e.target.closest("[data-pick]");

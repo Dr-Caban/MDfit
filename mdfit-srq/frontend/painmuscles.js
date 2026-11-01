@@ -107,6 +107,8 @@
 
   // Tap-a-muscle maps: [x, y, deep] in px of assets/pain/body-figures.webp (1182×1073); box = the zoomed crop [x, y, w, h]
   const MAPS = {
+    "body-front": { label: "Body · front", box: [40, 0, 520, 1073], pts: { "temporalis": [255, 70], "masseter": [264, 116], "scm": [268, 158], "scalenes": [254, 182, 1], "upper-trap": [228, 186], "subclavius": [250, 207, 1], "pec-major-clav": [212, 222], "ant-delt": [178, 222], "lat-delt": [140, 228], "pec-minor": [205, 252, 1], "pec-major-stern": [240, 262], "coracobrachialis": [162, 288, 1], "biceps-long": [134, 305], "biceps-short": [152, 322], "serratus": [190, 345], "intercostals": [222, 320, 1], "supinator": [100, 398, 1], "brachioradialis": [93, 425], "wrist-ext": [80, 452], "wrist-flex": [118, 440], "finger-flex": [104, 475], "psoas": [262, 468, 1], "iliacus": [232, 500, 1], "tfl": [204, 528], "adductor-longus": [262, 578], "rectus-femoris": [240, 622], "vastus-lateralis": [196, 645], "vastus-intermedius": [226, 672, 1], "vmo": [264, 705], "tib-ant": [214, 830], "peroneals": [198, 880], "tib-post": [222, 920, 1], "foot-intrinsics": [232, 1042] } },
+    "body-back": { label: "Body · back", box: [600, 0, 582, 1073], pts: { "occipitalis": [905, 58], "suboccipitals": [890, 105, 1], "splenius": [884, 136, 1], "levator": [852, 168, 1], "upper-trap": [828, 186], "supraspinatus": [830, 207, 1], "rhomboid-minor": [884, 222, 1], "middle-trap": [860, 236], "post-delt": [784, 232], "infraspinatus": [830, 262], "rhomboid-major": [872, 262, 1], "subscapularis": [848, 286, 1], "teres-minor": [800, 268], "teres-major": [808, 298], "lower-trap": [884, 312], "triceps-long": [776, 300], "triceps-lateral": [758, 325], "triceps-medial": [772, 372, 1], "lats": [832, 350], "finger-ext": [712, 455], "iliocostalis": [852, 415], "longissimus": [880, 440], "ql": [848, 462, 1], "multifidus": [898, 470, 1], "glute-med": [828, 505], "glute-min": [812, 535, 1], "piriformis": [872, 522, 1], "glute-max": [862, 565], "adductor-magnus": [893, 642], "biceps-femoris": [835, 672], "medial-hamstrings": [878, 672], "popliteus": [860, 762, 1], "gastroc": [850, 822], "soleus": [856, 905] } },
     "shoulder-front": { label: "Shoulder · front", box: [110, 150, 200, 250], pts: { "upper-trap": [228, 184], "subclavius": [250, 207, 1], "pec-major-clav": [212, 222], "ant-delt": [178, 222], "lat-delt": [140, 228],
       "pec-minor": [205, 252, 1], "pec-major-stern": [240, 262], "coracobrachialis": [162, 288, 1], "biceps-long": [134, 305], "biceps-short": [152, 322], "serratus": [190, 345] } },
     "shoulder-back": { label: "Shoulder · back", box: [740, 145, 190, 255], pts: { "levator": [852, 168, 1], "upper-trap": [828, 186], "supraspinatus": [830, 207, 1], "rhomboid-minor": [884, 222, 1], "middle-trap": [860, 236],
@@ -136,5 +138,18 @@
     return [...score.entries()].sort((a, b) => b[1] - a[1]).map(([id, s]) => ({ id, ...M[id], score: s, spots: why.get(id), matches: M[id].worse.filter((w) => aggr.includes(w)) }));
   }
 
-  window.MDFitMuscles = { MUSCLES: M, AGGRAVATORS, SPOTS, MAPS, rank };
+  // Muscle -> body area name used by the intake form and the pain log (the area where it ranks highest)
+  const AREA_NAME = { "head": "Neck", "neck": "Neck", "head-b": "Neck", "neck-b": "Neck", "shoulder": "Shoulder", "shoulder-b": "Shoulder",
+    "chest": "Other", "elbow": "Elbow / wrist / hand", "wrist": "Elbow / wrist / hand", "upper-back": "Upper back", "low-back": "Lower back",
+    "hip": "Hip", "thigh": "Hip", "glute": "Hip", "hamstring": "Hip", "knee": "Knee", "ankle": "Ankle / foot", "calf": "Ankle / foot", "heel": "Ankle / foot" };
+  function areaOf(id) {
+    let best = null, rankAt = Infinity;
+    for (const [area, spots] of Object.entries(SPOTS)) for (const sp of spots) {
+      const i = sp[1].indexOf(id);
+      if (i >= 0 && i < rankAt) { rankAt = i; best = area; }
+    }
+    return AREA_NAME[best] || "Other";
+  }
+
+  window.MDFitMuscles = { MUSCLES: M, AGGRAVATORS, SPOTS, MAPS, rank, areaOf };
 })();

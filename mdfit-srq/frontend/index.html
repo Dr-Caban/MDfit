@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=0f3d372d">
+  <link rel="stylesheet" href="styles.css?v=1086b1d3">
   <link rel="stylesheet" href="guides.css?v=e075f0a0">
   <script type="application/ld+json">
   {
@@ -173,20 +173,24 @@
       <div class="wrap">
         <p class="eyebrow">Find the source</p>
         <h2 class="h2">Tap where it hurts.</h2>
-        <p class="sub">Pain often starts somewhere else. Tap a point on the body map to see which muscles commonly send pain there, and open his guide for it.</p>
+        <p class="sub">Pain often starts somewhere else. Tap the exact muscle that hurts: 66 muscles, front and back. See where it sends pain, then take its self-check and get Dr. Jared's protocol.</p>
         <div class="painmap">
           <div class="painmap-figure">
+            <div class="pm-toggle" role="group" aria-label="Body view"><button type="button" data-pmview="front">Front</button><button type="button" data-pmview="back">Back</button></div>
+            <div class="pm-legend"><span><i></i>Muscle</span><span><i class="deep"></i>Deep muscle</span></div>
+            <div class="pm-viewport">
             <div class="pm-stage">
               <img class="pm-figures" src="assets/pain/body-figures.webp" srcset="assets/pain/body-figures-760.webp 760w, assets/pain/body-figures.webp 1182w" sizes="(max-width: 960px) 100vw, 680px" alt="Anatomy figures, front and back views, with tappable pain points" width="1182" height="1073" loading="lazy">
               <img class="pm-logo" src="assets/logo.webp" alt="MD Fit" width="160" height="160">
               <div class="hotspots"></div>
             </div>
+            </div>
             <div class="pm-views" aria-hidden="true"><span>Front</span><span>Back</span></div>
           </div>
           <aside class="painmap-panel" aria-live="polite">
             <p class="eyebrow">How it works</p>
-            <h3>Tap an orange point</h3>
-            <p class="muted">Forehead, neck, shoulder, elbow, wrist, hip, groin, knee, ankle, base of skull, low back, glute, hamstring or calf: each one shows the usual suspects and Dr. Jared's guide.</p>
+            <h3>Tap the muscle that hurts</h3>
+            <p class="muted">Every point is a real muscle: all three heads of the deltoid, each part of the trapezius, the rotator cuff, hamstrings, calves and more. Orange points are surface muscles; navy points are deep muscles that sit underneath.</p>
             <div class="painmap-cta"><a href="#book" class="btn">Book an evaluation</a></div>
           </aside>
         </div>
@@ -369,8 +373,8 @@
   <script src="common.js?v=303aeac7"></script>
   <script src="booking.js?v=68ec2207"></script>
   <script src="app.js?v=b3f275ee"></script>
-  <script src="painmuscles.js?v=5252f624"></script>
+  <script src="painmuscles.js?v=2fbec21d"></script>
   <script src="guides.js?v=3f48694d"></script>
-  <script src="painmap.js?v=ece240d7"></script>
+  <script src="painmap.js?v=829949e0"></script>
 </body>
 </html>

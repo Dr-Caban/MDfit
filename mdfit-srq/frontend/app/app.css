@@ -628,3 +628,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .map-pick span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .map-pick p { grid-column: 1 / -1; margin: 0; }
 .list-label { display: block; margin: 4px 2px 8px; }
+.map-stage.dense { max-width: 360px; }
+.map-stage.dense .mdot { width: 20px; height: 20px; }
+.map-stage.dense .mdot::after { inset: 4px; border-width: 1.5px; }
+.map-stage.dense .mdot.on::after { inset: -2px; }
