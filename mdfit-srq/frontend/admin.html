@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=3c67b41b">
-  <link rel="stylesheet" href="admin.css?v=314387d8">
+  <link rel="stylesheet" href="admin.css?v=760e5f44">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -38,6 +38,8 @@
           <button data-tab="bookings">Bookings</button>
           <button data-tab="subs">Subscribers</button>
           <button data-tab="reviews">Reviews</button>
+          <button data-tab="members">Members</button>
+          <button data-tab="content">Content</button>
           <button data-tab="hours">Booking</button>
           <button data-tab="settings">Settings</button>
           <button id="logout" class="link">Log out</button>
@@ -161,6 +163,46 @@
         <div id="reviews-list" class="stack"></div>
       </section>
 
+      <section data-panel="members" hidden>
+        <p class="muted">Membership requests and members. Turn a membership on after payment; set "paid through" so it locks again if they stop paying. Schedule 1-on-1 requests here (paste a Google Meet or Zoom link).</p>
+        <div id="members-list" class="stack"></div>
+      </section>
+
+      <section data-panel="content" hidden>
+        <form id="content-form" class="form" novalidate>
+          <h2>Monthly live Q&amp;A</h2>
+          <div class="grid2">
+            <label>Title<input name="live_title" maxlength="120"></label>
+            <label>Date<input name="live_date" type="date"></label>
+            <label>Start time<input name="live_time" type="time"></label>
+            <label>Length (minutes)<input name="live_minutes" type="number" min="15" max="240"></label>
+            <label>Join link (Google Meet, Zoom, YouTube Live)<input name="live_joinUrl" placeholder="https://meet.google.com/…"></label>
+            <label>Who can join<select name="live_access"><option value="free">Everyone with an account</option><option value="member">Members</option><option value="premium">Premium only</option></select></label>
+          </div>
+          <label>Notes shown to members<textarea name="live_notes" rows="2" maxlength="1000"></textarea></label>
+          <p class="muted">Past recordings, one per line: <code>Title | YYYY-MM-DD | https://link</code></p>
+          <textarea name="live_recordings" rows="3"></textarea>
+
+          <h2>Lectures</h2>
+          <p class="muted">YouTube, Vimeo and Google Drive links play inside the app. "Download" can be a Drive or Dropbox link to a PDF or video file.</p>
+          <div class="rows" id="rows-lectures"></div><button class="btn btn-sm btn-line" type="button" data-add="lectures">+ Add a lecture</button>
+
+          <h2>Health tips</h2>
+          <div class="rows" id="rows-recommendations"></div><button class="btn btn-sm btn-line" type="button" data-add="recommendations">+ Add a tip</button>
+
+          <h2>Membership tiers</h2>
+          <p class="muted">Tiers with 1-on-1 sessions count as Premium (unlock premium content and the session request form).</p>
+          <div class="rows" id="rows-tiers"></div><button class="btn btn-sm btn-line" type="button" data-add="tiers">+ Add a tier</button>
+
+          <h2>Premade programs</h2>
+          <p class="muted">Days, one per line: <code>Name | focus (upper, lower, full, core, mobility) | minutes (15/20/30/45/60/90) | rounds</code>. Change the seed number to get a different mix of exercises.</p>
+          <div class="rows" id="rows-programs"></div><button class="btn btn-sm btn-line" type="button" data-add="programs">+ Add a program</button>
+
+          <button class="btn" type="submit">Save content</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+      </section>
+
       <section data-panel="subs" hidden>
         <div class="bar"><button class="btn btn-sm btn-line" data-csv="/api/admin/subscribers.csv">Download CSV</button></div>
         <div class="table-wrap"><table id="subs-table"></table></div>
@@ -224,6 +266,6 @@
   </div>
 
   <script src="config.js?v=f7c994b0"></script>
-  <script src="admin.js?v=f14daaa2"></script>
+  <script src="admin.js?v=708de1b9"></script>
 </body>
 </html>

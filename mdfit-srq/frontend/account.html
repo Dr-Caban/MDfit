@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=706eba74">
+  <link rel="stylesheet" href="app/app.css?v=10c92915">
   <link rel="stylesheet" href="guides.css?v=1b0dd001">
 </head>
 <body class="mdapp">
@@ -148,6 +148,54 @@
       </div>
       <div class="vgrid" id="vgrid"></div>
       <p class="muted small center" id="vid-empty" hidden>No exercises match. Try another filter.</p>
+    </section>
+
+    <!-- ================= PROGRAMS ================= -->
+    <section class="view" id="view-programs" data-view="programs" hidden>
+      <header class="hero">
+        <div><h1>Premade <em>Programs</em></h1><p>Multi-week plans from Dr. Jared. Same sessions each week so you can see your progress.</p></div>
+      </header>
+      <div class="chips" id="prog-cats" role="tablist" aria-label="Program type"></div>
+      <div class="prog-grid" id="prog-grid"></div>
+      <div id="prog-detail" hidden></div>
+    </section>
+
+    <!-- ================= LEARN: lectures + live Q&A ================= -->
+    <section class="view" id="view-learn" data-view="learn" hidden>
+      <header class="hero">
+        <div><h1>Learn &amp; <em>Live</em></h1><p>Lectures on health, wellness, hormones and inflammation, plus a monthly live Q&amp;A with Dr. Jared.</p></div>
+      </header>
+      <div class="card live-card" id="live-card"></div>
+      <div class="card-head lect-head"><span class="label accent">Lectures</span></div>
+      <div class="chips" id="lect-topics" role="tablist" aria-label="Topic"></div>
+      <div class="lect-grid" id="lect-grid"></div>
+    </section>
+
+    <!-- ================= MEMBERSHIP / PREMIUM ================= -->
+    <section class="view" id="view-premium" data-view="premium" hidden>
+      <header class="hero">
+        <div><h1>Membership &amp; <em>1-on-1</em></h1><p>Unlock every program, the lecture library and live Q&amp;A, or work with Dr. Jared directly.</p></div>
+      </header>
+      <div id="my-membership"></div>
+      <div class="tier-grid" id="tier-grid"></div>
+      <div class="card" id="meetings-card" hidden>
+        <div class="card-head"><span class="label accent">Your 1-on-1 sessions</span><span class="muted small" id="meet-left"></span></div>
+        <form id="meet-form" class="nums-form" novalidate>
+          <label class="full">What do you want to work on?<textarea name="topic" rows="2" maxlength="500" required placeholder="e.g. Build my next 4 weeks around my shoulder"></textarea></label>
+          <label class="full">Times that work for you<input name="times" maxlength="300" required placeholder="e.g. Tue or Thu after 5pm"></label>
+          <button class="btn-gold sm" type="submit">Request a session</button><span class="nums-msg small"></span>
+        </form>
+        <ul class="meet-list" id="meet-list"></ul>
+      </div>
+    </section>
+
+    <!-- ================= HEALTH TIPS ================= -->
+    <section class="view" id="view-tips" data-view="tips" hidden>
+      <header class="hero">
+        <div><h1>Health <em>Tips</em></h1><p>Dr. Jared's everyday recommendations, from your feet to your sleep.</p></div>
+      </header>
+      <div class="chips" id="tip-areas" role="tablist" aria-label="Area"></div>
+      <div class="tips" id="tips"></div>
     </section>
 
     <!-- ================= PAIN TOOL ================= -->
@@ -302,12 +350,28 @@
     <a class="side-brand" href="/"><img src="assets/logo.webp" alt="" width="48" height="48"><span><b>MD Fit</b><small>Physical Rehabilitation &amp; Fitness</small></span></a>
     <button type="button" data-tab="home" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg><span class="short">Home</span><span class="long">Dashboard</span></button>
     <button type="button" data-tab="generate"><svg viewBox="0 0 24 24"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><span class="short">Workout</span><span class="long">Workout Generator</span></button>
-    <button type="button" data-tab="videos"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg><span class="short">Videos</span><span class="long">Video Library</span></button>
+    <button type="button" data-tab="programs"><svg viewBox="0 0 24 24"><path d="M19 3h-4.2A3 3 0 0 0 12 1a3 3 0 0 0-2.8 2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-7 0a1 1 0 1 1-1 1 1 1 0 0 1 1-1zm-2 14-4-4 1.4-1.4 2.6 2.6 6.6-6.6L18 9z"/></svg><span class="short">Programs</span><span class="long">Programs</span></button>
+    <button type="button" data-tab="videos" class="ov"><svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg><span class="short">Videos</span><span class="long">Video Library</span></button>
     <button type="button" data-tab="pain"><svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg><span class="short">Pain</span><span class="long">Pain Tool</span></button>
+    <button type="button" data-tab="learn" class="ov"><svg viewBox="0 0 24 24"><path d="M12 3 1 9l11 6 9-4.9V17h2V9zM5 13.2v4L12 21l7-3.8v-4L12 17z"/></svg><span class="short">Learn</span><span class="long">Lectures &amp; Live Q&amp;A</span></button>
     <button type="button" data-tab="progress"><svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg><span class="short">Progress</span><span class="long">Progress Tracking</span></button>
-    <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg><span class="short">Profile</span><span class="long">My Profile</span></button>
+    <button type="button" data-tab="premium" class="ov"><svg viewBox="0 0 24 24"><path d="M5 16 3 5l5.5 5L12 4l3.5 6L21 5l-2 11zm14 3a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1h14z"/></svg><span class="short">Membership</span><span class="long">Membership &amp; 1-on-1</span></button>
+    <button type="button" data-tab="tips" class="ov"><svg viewBox="0 0 24 24"><path d="M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9zm3-19a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/></svg><span class="short">Tips</span><span class="long">Health Tips</span></button>
+    <button type="button" data-tab="profile" class="ov"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg><span class="short">Profile</span><span class="long">My Profile</span></button>
+    <button type="button" class="more-btn" id="more-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 2 2 2 2 0 0 0-2-2zm6 0a2 2 0 1 0 2 2 2 2 0 0 0-2-2zm6 0a2 2 0 1 0 2 2 2 2 0 0 0-2-2z"/></svg><span class="short">More</span></button>
     <div class="side-foot"><p class="side-tag">Move better<br>Feel stronger<br>Live more</p><a class="side-book" href="/book">Book a visit</a><a href="tel:+19413130562">941-313-0562</a></div>
   </nav>
+
+  <dialog class="sheet more-sheet" id="more-sheet" aria-label="More">
+    <div class="sheet-head"><b>More</b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="more-list" id="more-list"></div>
+  </dialog>
+
+  <dialog class="sheet" id="lecture-dialog">
+    <div class="sheet-head"><b id="lec-title"></b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="frame"><iframe id="lec-frame" title="Lecture" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+    <p class="muted small" id="lec-meta"></p>
+  </dialog>
 
   <!-- Workout player -->
   <div class="player" id="player" hidden role="dialog" aria-modal="true" aria-label="Workout">
@@ -348,6 +412,6 @@
   <script src="paintracks.js?v=59a63eff"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=3f48694d"></script>
-  <script src="account.js?v=d2739fbe"></script>
+  <script src="account.js?v=5e58e2a4"></script>
 </body>
 </html>

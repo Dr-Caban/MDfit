@@ -262,3 +262,43 @@ test("workout performance numbers, later edits and daily vitals", async (t) => {
   assert.equal(v.status, 201);
   assert.deepEqual(v.body.map((x) => [x.date, x.restingHr, x.hrv, x.vo2max]), [["2026-10-01", 58, 55, 42]], "same day merges");
 });
+
+test("member content: locked links, membership requests, admin grants tiers, monthly 1-on-1 allowance", async (t) => {
+  const s = await start(); t.after(s.close);
+  const pub = (await s.call("GET", "/api/content")).body;
+  assert.ok(pub.programs.length >= 5 && pub.recommendations.some((r) => r.id === "pillow-progression"));
+  assert.equal(pub.programs.find((p) => p.id === "hypertrophy-4").locked, true);
+  assert.equal(pub.programs.find((p) => p.id === "mobility-daily").locked, false);
+  const adm = await s.adminToken();
+  // admin adds a lecture link and a live session link
+  const c0 = (await s.call("GET", "/api/admin/content", undefined, adm)).body;
+  c0.lectures[0].url = "https://www.youtube.com/watch?v=abc123";
+  assert.equal((await s.call("PUT", "/api/admin/content", { lectures: [{ ...c0.lectures[0], url: "http://insecure" }] }, adm)).status, 400);
+  assert.equal((await s.call("PUT", "/api/admin/content", { lectures: c0.lectures, live: { date: "2026-11-20", joinUrl: "https://meet.google.com/abc-defg-hij" } }, adm)).status, 200);
+  assert.equal((await s.call("GET", "/api/content")).body.lectures[0].url, "", "member link hidden from the public");
+  assert.equal((await s.call("GET", "/api/content")).body.live.joinUrl, "");
+  const tok = (await signup(s)).body.token;
+  let mine = (await s.call("GET", "/api/me/content", undefined, tok)).body;
+  assert.equal(mine.access, "free");
+  assert.equal(mine.live.locked, true);
+  assert.equal((await s.call("POST", "/api/me/meetings", { topic: "shoulder plan", times: "weekday evenings" }, tok)).status, 403);
+  assert.equal((await s.call("POST", "/api/me/membership/request", { tier: "premium", note: "Want help with my shoulder" }, tok)).status, 201);
+  const members = (await s.call("GET", "/api/admin/members", undefined, adm)).body;
+  assert.equal(members[0].request.tier, "premium");
+  assert.equal((await s.call("PUT", `/api/admin/clients/${members[0].id}/membership`, { tier: "premium", until: "2026-12-31" }, adm)).status, 200);
+  mine = (await s.call("GET", "/api/me/content", undefined, tok)).body;
+  assert.equal(mine.access, "premium");
+  assert.equal(mine.live.joinUrl, "https://meet.google.com/abc-defg-hij");
+  assert.equal(mine.lectures[0].url, "https://www.youtube.com/watch?v=abc123");
+  const m1 = await s.call("POST", "/api/me/meetings", { topic: "Shoulder program", times: "Tue or Thu after 5" }, tok);
+  assert.equal(m1.status, 201);
+  assert.equal((await s.call("POST", "/api/me/meetings", { topic: "Knee plan", times: "Mon 6pm" }, tok)).status, 201);
+  assert.equal((await s.call("POST", "/api/me/meetings", { topic: "Third", times: "any" }, tok)).status, 409, "premium allows 2 a month");
+  const sch = await s.call("PATCH", `/api/admin/clients/${members[0].id}/meetings/${m1.body.id}`, { status: "scheduled", when: "Nov 12, 5:30 PM", link: "https://meet.google.com/xyz" }, adm);
+  assert.equal(sch.body.status, "scheduled");
+  const mm = (await s.call("GET", "/api/me/meetings", undefined, tok)).body;
+  assert.equal(mm.usedThisMonth, 2); assert.equal(mm.allowance, 2);
+  // expired membership locks again
+  await s.call("PUT", `/api/admin/clients/${members[0].id}/membership`, { tier: "premium", until: "2026-10-31" }, adm);
+  assert.equal((await s.call("GET", "/api/me/content", undefined, tok)).body.access, "free");
+});

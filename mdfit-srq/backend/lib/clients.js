@@ -67,7 +67,8 @@ function mountClients(ctx) {
   const signupLimit = limiter(10, 60 * 60 * 1000);
   const loginFails = limiter(10, 15 * 60 * 1000);
 
-  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan() });
+  const activeMembership = (c) => (c.membership && (!c.membership.until || c.membership.until >= today()) ? c.membership : null);
+  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c) });
   const session = (c) => {
     const exp = Date.now() + SESSION_DAYS * 864e5;
     return { token: signToken({ sub: c.id, role: "client", pwv: c.pwv || 0, exp }, cfg.sessionSecret), expiresAt: new Date(exp).toISOString(), client: pub(c) };
@@ -424,6 +425,7 @@ function mountClients(ctx) {
     activity("client_deleted", { id: req.params.id });
     res.json({ ok: true });
   });
+  return { me, clients, save, today };
 }
 
 module.exports = { mountClients, GUIDE_IDS, workoutStats };

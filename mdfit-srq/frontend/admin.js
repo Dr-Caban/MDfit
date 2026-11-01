@@ -51,7 +51,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, settings: loadSettings };
+  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, members: loadMembers, content: loadContent, settings: loadSettings };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -406,6 +406,115 @@
   $("#reviews-list").addEventListener("click", run(async (e) => {
     const b = e.target.closest("[data-st]"); if (!b) return;
     await api("PATCH", `/api/admin/feedback/${b.closest("[data-id]").dataset.id}`, { status: b.dataset.st }); toast("Updated."); loadReviews();
+  }));
+
+  // ---- Members: requests, tiers, 1-on-1 scheduling
+  let contentCache = null;
+  async function loadMembers() {
+    const [list, c] = await Promise.all([api("GET", "/api/admin/members"), api("GET", "/api/admin/content")]);
+    contentCache = c;
+    const opts = (sel) => `<option value="">No membership</option>` + c.tiers.map((t) => `<option value="${t.id}"${t.id === sel ? " selected" : ""}>${esc(t.name)} ($${t.price}/mo)</option>`).join("");
+    $("#members-list").innerHTML = list.length ? list.map((m) => `
+      <article class="item" data-id="${m.id}">
+        <div class="item-head"><b>${esc(m.name)}</b> <span class="muted">${esc(m.email)} ${esc(m.phone || "")}</span> ${m.membership ? `<span class="pill approved">${esc(m.tier)}</span>` : ""}</div>
+        ${m.request ? `<p class="banner">Requested <b>${esc((c.tiers.find((t) => t.id === m.request.tier) || {}).name || m.request.tier)}</b> on ${when(m.request.at)}${m.request.note ? `: “${esc(m.request.note)}”` : ""}</p>` : ""}
+        <div class="row-actions mem-row"><select data-tier>${opts(m.membership ? m.membership.tier : (m.request || {}).tier)}</select>
+          <label>Paid through <input type="date" data-until value="${m.membership && m.membership.until || ""}"></label><button class="mini" data-save-mem>Save membership</button></div>
+        ${m.meetings.length ? `<h4>1-on-1 sessions</h4>${m.meetings.map((x) => `<div class="meet-row" data-mid="${x.id}">
+          <p><b>${esc(x.topic)}</b> <span class="pill ${x.status === "done" ? "approved" : x.status === "cancelled" ? "hidden" : "pending"}">${x.status}</span><br><span class="muted small">Asked ${when(x.createdAt)} · prefers ${esc(x.times)}</span></p>
+          <div class="row-actions"><input data-when placeholder="When, e.g. Nov 12, 5:30 PM" value="${esc(x.when)}"><input data-link placeholder="https://meet.google.com/…" value="${esc(x.link)}">
+          <select data-mst>${["requested", "scheduled", "done", "cancelled"].map((st) => `<option${st === x.status ? " selected" : ""}>${st}</option>`).join("")}</select><button class="mini" data-save-meet>Save</button></div></div>`).join("")}` : ""}
+      </article>`).join("") : `<p class="muted">No members or requests yet. Clients request a membership from the Membership tab in their app.</p>`;
+  }
+  $("#members-list").addEventListener("click", run(async (e) => {
+    const card = e.target.closest("[data-id]"); if (!card) return;
+    if (e.target.matches("[data-save-mem]")) {
+      await api("PUT", `/api/admin/clients/${card.dataset.id}/membership`, { tier: $("[data-tier]", card).value || null, until: $("[data-until]", card).value });
+      toast("Membership saved."); loadMembers();
+    }
+    if (e.target.matches("[data-save-meet]")) {
+      const r = e.target.closest("[data-mid]");
+      await api("PATCH", `/api/admin/clients/${card.dataset.id}/meetings/${r.dataset.mid}`, { when: $("[data-when]", r).value, link: $("[data-link]", r).value, status: $("[data-mst]", r).value });
+      toast("Session saved. The client gets an email when it's scheduled."); loadMembers();
+    }
+  }));
+
+  // ---- Content editor: live Q&A, lectures, tips, tiers, programs
+  const ctf = $("#content-form");
+  const FIELDS = {
+    lectures: { blank: { id: "", title: "", topic: "Health", minutes: 0, url: "", downloadUrl: "", access: "free", summary: "" }, html: (x, c) => `
+      <label>Title<input data-f="title" value="${esc(x.title)}" maxlength="120"></label>
+      <label>Topic<select data-f="topic">${c.topics.map((t) => `<option${t === x.topic ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label>Video link<input data-f="url" value="${esc(x.url)}" placeholder="https://youtu.be/…"></label>
+      <label>Download link<input data-f="downloadUrl" value="${esc(x.downloadUrl)}" placeholder="optional"></label>
+      <label>Minutes<input data-f="minutes" type="number" min="0" value="${x.minutes}"></label>
+      <label>Access<select data-f="access">${["free", "member", "premium"].map((a) => `<option${a === x.access ? " selected" : ""}>${a}</option>`).join("")}</select></label>
+      <label class="wide">Summary<input data-f="summary" value="${esc(x.summary)}" maxlength="500"></label>` },
+    recommendations: { blank: { id: "", area: "", title: "", body: "", link: "" }, html: (x) => `
+      <label>Area<input data-f="area" value="${esc(x.area)}" placeholder="Feet, Low back…" maxlength="40"></label>
+      <label class="wide">Title<input data-f="title" value="${esc(x.title)}" maxlength="120"></label>
+      <label class="wide">Text<textarea data-f="body" rows="3" maxlength="2000">${esc(x.body)}</textarea></label>
+      <label class="wide">Link (optional)<input data-f="link" value="${esc(x.link)}"></label>` },
+    tiers: { blank: { id: "", name: "", price: 0, meetings: 0, meetingMinutes: 45, perks: [] }, html: (x) => `
+      <label>Name<input data-f="name" value="${esc(x.name)}" maxlength="60"></label>
+      <label>Price per month ($)<input data-f="price" type="number" min="0" value="${x.price}"></label>
+      <label>1-on-1 sessions per month<input data-f="meetings" type="number" min="0" max="31" value="${x.meetings}"></label>
+      <label>Session length (min)<input data-f="meetingMinutes" type="number" min="0" max="180" value="${x.meetingMinutes}"></label>
+      <label class="wide">Perks, one per line<textarea data-f="perks" rows="3">${esc(x.perks.join("\n"))}</textarea></label>` },
+    programs: { blank: { id: "", title: "", category: "Strength", level: "beginner", location: "home", weeks: 4, seed: Math.floor(Math.random() * 90000) + 1000, access: "free", summary: "", notes: "", days: [{ name: "Day 1", goal: "full", length: 30 }] }, html: (x, c) => `
+      <label>Title<input data-f="title" value="${esc(x.title)}" maxlength="80"></label>
+      <label>Category<select data-f="category">${c.categories.map((t) => `<option${t === x.category ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label>Level<select data-f="level">${["beginner", "intermediate", "advanced", "elite"].map((t) => `<option${t === x.level ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label>Where<select data-f="location">${["home", "gym", "outdoor", "office"].map((t) => `<option${t === x.location ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label>Weeks<input data-f="weeks" type="number" min="1" max="52" value="${x.weeks}"></label>
+      <label>Seed<input data-f="seed" type="number" min="1" value="${x.seed}"></label>
+      <label>Access<select data-f="access">${["free", "member", "premium"].map((a) => `<option${a === x.access ? " selected" : ""}>${a}</option>`).join("")}</select></label>
+      <label class="wide">Summary<input data-f="summary" value="${esc(x.summary)}" maxlength="400"></label>
+      <label class="wide">Coaching notes<textarea data-f="notes" rows="2" maxlength="1000">${esc(x.notes)}</textarea></label>
+      <label class="wide">Days<textarea data-f="days" rows="4">${esc(x.days.map((d) => [d.name, d.goal, d.length, d.rounds || ""].join(" | ")).join("\n"))}</textarea></label>` }
+  };
+  const slugify = (x) => x.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "item";
+  function addRow(kind, x, c) {
+    const row = document.createElement("div"); row.className = "crow"; row.dataset.id = x.id || ""; row.dataset.extra = JSON.stringify(kind === "programs" ? { days: x.days } : {});
+    row.innerHTML = `<div class="crow-grid">${FIELDS[kind].html(x, c)}</div><button type="button" class="link svc-del" data-del-row>Remove</button>`;
+    $("#rows-" + kind).append(row);
+  }
+  async function loadContent() {
+    const c = await api("GET", "/api/admin/content");
+    c.topics = ["Health", "Wellness", "Hormones", "Inflammation", "Pain science", "Nutrition", "Sleep & recovery"];
+    c.categories = ["Hypertrophy", "Strength", "Anti-inflammatory", "Weight loss", "Mobility", "Rehabilitation", "Desk & posture", "Performance"];
+    contentCache = c;
+    ["title", "date", "time", "minutes", "joinUrl", "access", "notes"].forEach((k) => (ctf["live_" + k].value = c.live[k] ?? ""));
+    ctf.live_recordings.value = c.live.recordings.map((r) => [r.title, r.date, r.url].join(" | ")).join("\n");
+    Object.keys(FIELDS).forEach((k) => { $("#rows-" + k).innerHTML = ""; c[k].forEach((x) => addRow(k, x, c)); });
+  }
+  ctf.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-add]"); if (a) addRow(a.dataset.add, { ...FIELDS[a.dataset.add].blank }, contentCache);
+    if (e.target.closest("[data-del-row]") && confirm("Remove this item?")) e.target.closest(".crow").remove();
+  });
+  function readRows(kind) {
+    const used = new Set();
+    return $$("#rows-" + kind + " .crow").map((r) => {
+      const o = {}; $$("[data-f]", r).forEach((el) => (o[el.dataset.f] = el.type === "number" ? Number(el.value) : el.value.trim()));
+      const base = o.title || o.name || "item"; let id = r.dataset.id || slugify(base), n = 2; while (used.has(id)) id = slugify(base) + "-" + n++; used.add(id); o.id = id;
+      if (kind === "tiers") o.perks = o.perks.split("\n").map((x) => x.trim()).filter(Boolean);
+      if (kind === "programs") o.days = o.days.split("\n").map((x) => x.trim()).filter(Boolean).map((line) => {
+        const [name, goal = "full", length = "30", rounds = ""] = line.split("|").map((y) => y.trim());
+        return { name, goal, length: Number(length), ...(rounds ? { rounds: Number(rounds) } : {}) };
+      });
+      return o;
+    });
+  }
+  ctf.addEventListener("submit", run(async (e) => {
+    e.preventDefault();
+    const msg = $(".form-msg", ctf); msg.className = "form-msg"; msg.textContent = "";
+    const live = {}; ["title", "date", "time", "joinUrl", "access", "notes"].forEach((k) => (live[k] = ctf["live_" + k].value.trim()));
+    live.minutes = Number(ctf.live_minutes.value || 60);
+    live.recordings = ctf.live_recordings.value.split("\n").map((x) => x.trim()).filter(Boolean).map((l) => { const [title, date = "", url = ""] = l.split("|").map((y) => y.trim()); return { title, date, url }; });
+    try {
+      await api("PUT", "/api/admin/content", { live, lectures: readRows("lectures"), recommendations: readRows("recommendations"), tiers: readRows("tiers"), programs: readRows("programs") });
+      msg.className = "form-msg ok"; msg.textContent = "Saved. The app updates immediately."; loadContent();
+    } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
   }));
 
   // ---- CSV downloads (need the auth header, so fetch then save)

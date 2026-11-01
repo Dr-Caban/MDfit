@@ -10,6 +10,7 @@ const { createNotifier } = require("./lib/notify");
 const { createCal, verifySignature, normaliseBooking } = require("./lib/cal");
 const { createPlaces } = require("./lib/google");
 const { mountClients } = require("./lib/clients");
+const { mountContent } = require("./lib/content");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
@@ -775,7 +776,8 @@ function createApp(cfg = loadConfig()) {
 
   admin.get("/activity", (req, res) => res.json(store.read("activity", []).slice(0, 200)));
 
-  mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime });
+  const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime });
+  mountContent({ app, admin, store, notify, activity, ...cl });
 
   app.use("/api/admin", admin);
 

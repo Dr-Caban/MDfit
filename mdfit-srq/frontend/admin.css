@@ -119,3 +119,14 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .pill.hidden { background: #f6e3e3; color: #c62828; }
 .pill.pending { background: #f3ecd9; color: #8a6d1d; }
 .row-actions { display: flex; gap: 8px; }
+.rows { display: grid; gap: 10px; margin-bottom: 10px; }
+.crow { border: 1px solid #e4ded1; border-radius: 12px; padding: 12px; display: grid; gap: 6px; }
+.crow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.crow-grid .wide { grid-column: 1 / -1; }
+.crow .svc-del { justify-self: end; padding: 0; }
+.mem-row { flex-wrap: wrap; align-items: center; margin: 8px 0; }
+.mem-row label { display: inline-flex; gap: 6px; align-items: center; }
+.meet-row { border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px; }
+.meet-row .row-actions { flex-wrap: wrap; }
+.meet-row input { min-width: 180px; }
+.banner { background: #fff6e8; border: 1px solid #f3d9a9; border-radius: 10px; padding: 8px 12px; }

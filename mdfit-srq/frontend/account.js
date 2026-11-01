@@ -26,7 +26,7 @@
   }
 
   // ================= Tabs (hash routing so the back button and refresh work)
-  const TABS = ["home", "generate", "videos", "pain", "progress", "profile"];
+  const TABS = ["home", "generate", "programs", "videos", "pain", "learn", "progress", "premium", "tips", "profile"];
   // Hash is "#tab" or "#pain/muscle/<id>" (deep link to a muscle report)
   function show(hash) {
     let [tab, sub, arg] = String(hash).split("/");
@@ -38,12 +38,18 @@
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
     if (tab === "videos") renderVideos();
     if (tab === "progress") renderCalendar();
+    if (["programs", "learn", "premium", "tips"].includes(tab)) renderContent(tab, sub);
+    $("#more-btn").classList.toggle("on", $$(".tabbar .ov").some((b) => b.dataset.tab === tab));
+    const ms = $("#more-sheet"); if (ms.open) ms.close();
     window.scrollTo(0, 0);
   }
   const go = (tab) => { if (location.hash !== "#" + tab) history.pushState(null, "", "#" + tab); show(tab); };
   window.addEventListener("hashchange", () => show(location.hash.slice(1)));
   $$(".tabbar [data-tab]").forEach((b) => b.addEventListener("click", () => go(b.dataset.tab)));
   document.addEventListener("click", (e) => { const g = e.target.closest("[data-goto]"); if (g) go(g.dataset.goto); });
+  // Phones show five tabs plus "More"; the rest live in a sheet
+  $("#more-list").innerHTML = $$(".tabbar .ov").map((b) => `<button type="button" data-goto="${b.dataset.tab}">${b.querySelector("svg").outerHTML}<span>${b.querySelector(".long").innerHTML}</span></button>`).join("");
+  $("#more-btn").addEventListener("click", () => $("#more-sheet").showModal());
 
   // ================= Dialogs: exercise videos, guides, intros
   const vd = $("#video-dialog");
@@ -1093,6 +1099,163 @@
   });
   $("#p-close").addEventListener("click", () => { if (P.done || confirm("End this workout? It won't be saved.")) closePlayer(); });
 
+  // ================= Member content: programs, lectures + live Q&A, membership & 1-on-1, health tips
+  let C = null, contentLoading = null;
+  const loadContent = () => (contentLoading = apiAuth("GET", "/api/me/content").then((d) => (C = d)).catch(() => api("/api/content").then((d) => (C = { ...d, access: "free" }))));
+  const money = (n) => "$" + Number(n).toLocaleString("en-US");
+  const lockBadge = `<span class="lock" title="Members"><svg viewBox="0 0 24 24"><path d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zm-7-2a2 2 0 0 1 4 0v2h-4z"/></svg> Members</span>`;
+  const unlockBtn = (what) => `<button type="button" class="btn-gold sm" data-goto="premium">Unlock ${what} with a membership</button>`;
+  async function renderContent(tab, sub) {
+    if (!C) { await (contentLoading || loadContent()); }
+    if (!C) return;
+    ({ programs: renderProgramsView, learn: renderLearn, premium: renderPremium, tips: renderTips })[tab](sub);
+  }
+
+  // ---- Programs: each day is a generator session with a fixed seed, so the same session repeats each week and can be compared
+  let progCat = "All";
+  const progDayWorkout = (p, i) => {
+    const d = p.days[i];
+    const w = Gen.generate({ goal: d.goal, location: p.location, level: p.level, length: d.length, ...Gen.presetFor(d.length),
+      ...(d.rounds ? { rounds: d.rounds } : {}), ...(d.restEx !== undefined ? { restEx: d.restEx } : {}), ...(d.restRound !== undefined ? { restRound: d.restRound } : {}),
+      addons: { warmup: true, cooldown: true }, seed: p.seed + (d.seedOffset || 0) + i * 101 });
+    return { ...w, title: `${p.title}: ${d.name}`, key: `prog-${p.id}-d${i}` };
+  };
+  const doneCount = (p, i) => allWorkouts.filter((w) => w.key === `prog-${p.id}-d${i}`).length;
+  function renderProgramsView(sub) {
+    const cats = ["All", ...C.categories.filter((c) => C.programs.some((p) => p.category === c))];
+    $("#prog-cats").innerHTML = cats.map((c) => `<button type="button" class="chip" data-pcat="${esc(c)}" aria-selected="${c === progCat}">${esc(c)}</button>`).join("");
+    const list = C.programs.filter((p) => progCat === "All" || p.category === progCat);
+    $("#prog-grid").innerHTML = list.map((p) => {
+      const sessions = p.weeks * p.days.length, done = p.days.reduce((n, _, i) => n + doneCount(p, i), 0);
+      return `<button type="button" class="prog-card" data-prog="${p.id}">
+        <span class="pc-cat">${esc(p.category)}</span>${p.locked ? lockBadge : ""}
+        <b>${esc(p.title)}</b><p>${esc(p.summary)}</p>
+        <span class="pc-meta">${p.weeks} weeks · ${p.days.length} days/week · ${esc(p.level[0].toUpperCase() + p.level.slice(1))} · ${esc((Gen.LOCATIONS.find((l) => l.id === p.location) || {}).label || "")}</span>
+        ${done ? `<span class="pc-bar"><i style="width:${Math.min(100, Math.round((done / sessions) * 100))}%"></i></span><span class="pc-done">${done} of ${sessions} sessions done</span>` : ""}
+      </button>`;
+    }).join("");
+    const open = sub && C.programs.find((p) => p.id === sub);
+    $("#prog-grid").hidden = !!open; $("#prog-cats").hidden = !!open; $("#prog-detail").hidden = !open;
+    if (open) renderProgram(open);
+  }
+  function renderProgram(p) {
+    const wk = (i) => Math.min(p.weeks, doneCount(p, i) + 1);
+    $("#prog-detail").innerHTML = `<button type="button" class="link-sm back-link" data-goto="programs">‹ All programs</button>
+      <div class="card prog-head"><span class="pc-cat">${esc(p.category)}</span>${p.locked ? lockBadge : ""}<h2>${esc(p.title)}</h2><p>${esc(p.summary)}</p>
+        <p class="muted small">${p.weeks} weeks · ${p.days.length} sessions a week · ${esc(p.level)} · ${esc((Gen.LOCATIONS.find((l) => l.id === p.location) || {}).label || "")}</p>
+        ${p.notes ? `<p class="prog-notes">${esc(p.notes)}</p>` : ""}</div>
+      ${p.days.map((d, i) => { const w = progDayWorkout(p, i); return `<div class="card prog-day">
+        <div class="pd-top"><div><span class="label accent">Day ${i + 1} · Week ${wk(i)} of ${p.weeks}</span><h3>${esc(d.name)}</h3>
+          <p class="muted small">About ${w.minutes} min · ${w.circuit.length} exercises × ${w.rounds} rounds · warm-up and cool-down included</p></div>
+          ${p.locked ? "" : `<button type="button" class="btn-blue sm" data-prog-start="${i}"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Start</button>`}</div>
+        <ol class="pd-ex">${w.circuit.map((e) => `<li>${esc(e.name)} <span>${esc(e.sets)}</span></li>`).join("")}</ol></div>`; }).join("")}
+      ${p.locked ? `<div class="locked-note">${unlockBtn("this program")}</div>` : ""}`;
+    $("#prog-detail").dataset.id = p.id;
+  }
+  $("#prog-cats").addEventListener("click", (e) => { const b = e.target.closest("[data-pcat]"); if (!b) return; progCat = b.dataset.pcat; renderProgramsView(); });
+  $("#prog-grid").addEventListener("click", (e) => { const b = e.target.closest("[data-prog]"); if (b) go("programs/" + b.dataset.prog); });
+  $("#prog-detail").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-prog-start]"); if (!b) return;
+    const p = C.programs.find((x) => x.id === $("#prog-detail").dataset.id);
+    if (p && !p.locked) startPlayer(progDayWorkout(p, Number(b.dataset.progStart)));
+  });
+
+  // ---- Learn: live Q&A + lectures
+  let lectTopic = "All";
+  const embedUrl = (u) => {
+    const y = u.match(/(?:youtube\.com\/(?:watch\?v=|live\/|embed\/)|youtu\.be\/)([\w-]{6,})/);
+    if (y) return `https://www.youtube-nocookie.com/embed/${y[1]}?autoplay=1&rel=0`;
+    const d = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+    if (d) return `https://drive.google.com/file/d/${d[1]}/preview`;
+    const v = u.match(/vimeo\.com\/(\d+)/);
+    if (v) return `https://player.vimeo.com/video/${v[1]}?autoplay=1`;
+    return "";
+  };
+  function liveIcs(L) {
+    const start = zonedToUtc(L.date, L.time), end = new Date(start.getTime() + L.minutes * 60000), st = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+    const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//MD Fit//Live//EN", "BEGIN:VEVENT", `UID:live-${L.date}@mdfit`, `DTSTAMP:${st(new Date())}`, `DTSTART:${st(start)}`, `DTEND:${st(end)}`, `SUMMARY:${L.title}`, `DESCRIPTION:${L.joinUrl || "Join from the Learn tab in the MD Fit app."}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+  }
+  function renderLearn() {
+    const L = C.live, has = L.date && L.date >= todayInTz();
+    $("#live-card").innerHTML = `<div class="live-top"><span class="live-dot"></span><span class="label accent">Monthly live Q&amp;A</span>${L.locked ? lockBadge : ""}</div>
+      <h2>${esc(L.title)}</h2>
+      ${has ? `<p class="live-when">${esc(fmtDate(L.date))} at ${esc(fmtTime(L.time))} · ${L.minutes} min</p>` : `<p class="live-when">Next date coming soon</p>`}
+      <p class="muted small">${esc(L.notes)}</p>
+      <div class="live-actions">${L.locked ? unlockBtn("live Q&amp;A") : `${L.joinUrl && has ? `<a class="btn-gold sm" href="${esc(L.joinUrl)}" target="_blank" rel="noopener">Join live</a>` : ""}${has ? `<a class="btn-ghost sm" href="${liveIcs(L)}" download="mdfit-live-qa.ics">Add to calendar</a>` : ""}`}</div>
+      ${!L.locked && L.recordings.length ? `<details class="recs"><summary>Past sessions (${L.recordings.length})</summary><ul>${L.recordings.map((r) => `<li><button type="button" class="link-sm" data-lec-url="${esc(r.url)}" data-lec-title="${esc(r.title)}">${esc(r.title)}</button> <span class="muted small">${esc(r.date)}</span></li>`).join("")}</ul></details>` : ""}`;
+    const topics = ["All", ...C.topics.filter((t) => C.lectures.some((l) => l.topic === t))];
+    $("#lect-topics").innerHTML = topics.map((t) => `<button type="button" class="chip" data-ltopic="${esc(t)}" aria-selected="${t === lectTopic}">${esc(t)}</button>`).join("");
+    $("#lect-grid").innerHTML = C.lectures.filter((l) => lectTopic === "All" || l.topic === lectTopic).map((l) => {
+      const ready = l.url || l.hasVideo;
+      return `<article class="lect">
+        <span class="pc-cat">${esc(l.topic)}</span>${l.locked ? lockBadge : ""}
+        <h3>${esc(l.title)}</h3><p>${esc(l.summary)}</p>
+        <div class="lect-actions">${!ready ? `<span class="soon">Coming soon</span>` : l.locked ? unlockBtn("this lecture") :
+          `<button type="button" class="btn-blue sm" data-lec-url="${esc(l.url)}" data-lec-title="${esc(l.title)}"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg> Watch${l.minutes ? ` · ${l.minutes} min` : ""}</button>`}
+          ${!l.locked && l.downloadUrl ? `<a class="btn-ghost sm" href="${esc(l.downloadUrl)}" target="_blank" rel="noopener">Download</a>` : ""}</div>
+      </article>`;
+    }).join("");
+  }
+  $("#lect-topics").addEventListener("click", (e) => { const b = e.target.closest("[data-ltopic]"); if (!b) return; lectTopic = b.dataset.ltopic; renderLearn(); });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-lec-url]"); if (!b) return;
+    const u = b.dataset.lecUrl, em = embedUrl(u);
+    if (!em) return window.open(u, "_blank", "noopener");
+    $("#lec-title").textContent = b.dataset.lecTitle; $("#lec-frame").src = em;
+    $("#lec-meta").innerHTML = `<a href="${esc(u)}" target="_blank" rel="noopener">Open in a new tab</a>`;
+    $("#lecture-dialog").showModal();
+  });
+  $("#lecture-dialog").addEventListener("close", () => ($("#lec-frame").src = "about:blank"));
+
+  // ---- Membership & 1-on-1
+  async function renderPremium() {
+    const m = C.membership, cur = m && C.tiers.find((t) => t.id === m.tier);
+    const req = client && client.membershipRequest;
+    $("#my-membership").innerHTML = cur && C.access !== "free"
+      ? `<div class="card mem-on"><span class="label accent">Your membership</span><h2>${esc(cur.name)}</h2><p class="muted small">Member since ${esc(m.since)}${m.until ? ` · paid through ${esc(m.until)}` : ""}</p></div>`
+      : `<p class="muted mem-pitch">Pick a membership below and tap <b>Request</b>. Dr. Jared confirms it and sends payment details. Online checkout is coming soon.</p>`;
+    $("#tier-grid").innerHTML = C.tiers.map((t, i) => `<article class="tier${i === 1 ? " featured" : ""}${cur && cur.id === t.id ? " current" : ""}">
+      ${i === 1 ? `<span class="tag">Most popular</span>` : ""}
+      <h3>${esc(t.name)}</h3><p class="tier-price"><b>${money(t.price)}</b>/month</p>
+      ${t.meetings ? `<p class="tier-meet">${t.meetings} remote 1-on-1 sessions a month · ${t.meetingMinutes} min each</p>` : ""}
+      <ul>${t.perks.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${cur && cur.id === t.id ? `<span class="tier-cur">Your plan</span>` : `<button type="button" class="${i === 1 ? "btn-gold" : "btn-ghost"} sm" data-tier="${t.id}">Request ${esc(t.name)}</button>`}
+    </article>`).join("");
+    const mc = $("#meetings-card");
+    mc.hidden = C.access !== "premium";
+    if (mc.hidden) return;
+    const d = await apiAuth("GET", "/api/me/meetings").catch(() => null); if (!d) return;
+    $("#meet-left").textContent = `${Math.max(0, d.allowance - d.usedThisMonth)} of ${d.allowance} left this month · ${d.minutes} min each`;
+    $("#meet-form button").disabled = d.usedThisMonth >= d.allowance;
+    $("#meet-list").innerHTML = d.meetings.map((x) => `<li><b>${esc(x.topic)}</b><span class="pill ${x.status}">${x.status}</span>
+      <span class="muted small">${x.when ? esc(x.when) : `Asked for: ${esc(x.times)}`}</span>${x.link && x.status === "scheduled" ? `<a class="btn-gold sm" href="${esc(x.link)}" target="_blank" rel="noopener">Join</a>` : ""}</li>`).join("");
+  }
+  $("#tier-grid").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-tier]"); if (!b) return;
+    const t = C.tiers.find((x) => x.id === b.dataset.tier);
+    const note = prompt(`Request ${t.name} (${money(t.price)}/month)?\nAdd a note for Dr. Jared (optional):`, "");
+    if (note === null) return;
+    try { await apiAuth("POST", "/api/me/membership/request", { tier: t.id, note }); b.outerHTML = `<span class="tier-cur">Requested. Dr. Jared will be in touch.</span>`; toast("Request sent to Dr. Jared."); }
+    catch (err) { toast(err.message); }
+  });
+  $("#meet-form").addEventListener("submit", async (e) => {
+    e.preventDefault(); const f = e.target;
+    try { await apiAuth("POST", "/api/me/meetings", { topic: f.topic.value, times: f.times.value }); f.reset(); $(".nums-msg", f).textContent = "Requested. You'll get an email when it's scheduled."; renderPremium(); }
+    catch (err) { $(".nums-msg", f).textContent = err.message; }
+  });
+
+  // ---- Health tips
+  let tipArea = "All";
+  function renderTips() {
+    const areas = ["All", ...new Set(C.recommendations.map((r) => r.area))];
+    $("#tip-areas").innerHTML = areas.map((a) => `<button type="button" class="chip" data-tarea="${esc(a)}" aria-selected="${a === tipArea}">${esc(a)}</button>`).join("");
+    const list = C.recommendations.filter((r) => tipArea === "All" || r.area === tipArea);
+    $("#tips").innerHTML = [...new Set(list.map((r) => r.area))].map((a) => `<section class="tip-group"><h3>${esc(a)}</h3>
+      ${list.filter((r) => r.area === a).map((r) => `<details class="tip"><summary>${esc(r.title)}</summary><p>${esc(r.body)}</p>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">Learn more</a>` : ""}</details>`).join("")}</section>`).join("");
+  }
+  $("#tip-areas").addEventListener("click", (e) => { const b = e.target.closest("[data-tarea]"); if (!b) return; tipArea = b.dataset.tarea; renderTips(); });
+
   // ================= Progress: rewards (XP, levels, badges), calendar, pain tracker
   const BADGE_IC = {
     bolt: '<path d="M7 2v11h3v9l7-12h-4l4-8z"/>', dumbbell: '<path d="M20.6 14.9 22 13.4 20.6 12l-3.6 3.6L8.4 7l3.6-3.6L10.6 2 9.1 3.4 7.7 2 5.6 4.1 4.1 2.6 2.7 4.1l1.4 1.4L2 7.7l1.4 1.4L2 10.6 3.4 12 7 8.4l8.6 8.6-3.6 3.6 1.4 1.4 1.4-1.4 1.4 1.4 2.1-2.1 1.5 1.4 1.4-1.4-1.4-1.4 2.1-2.1z"/>',
@@ -1207,6 +1370,7 @@
     if (sched.status === "fulfilled") classes = sched.value.sessions || [];
     if (wl.status === "fulfilled") allWorkouts = wl.value;
     apiAuth("GET", "/api/me/vitals").then((v) => { vitals = v; renderPerf(); }).catch(() => renderPerf());
+    loadContent().then(() => { const t = location.hash.slice(1).split("/"); if (["programs", "learn", "premium", "tips"].includes(t[0])) renderContent(t[0], t[1]); });
     if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }
     renderStats(); renderEvents(); renderActivity(); renderNotes(); renderCalendar();
     loadRewards();
