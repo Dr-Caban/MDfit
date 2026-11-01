@@ -1,4 +1,4 @@
-/* MD Fit client app (/account). Same brand as the main site: navy, cream, orange, gold; Libre Baskerville + Montserrat. */
+/* MD Fit client app (/account). Same brand as the main site: navy, cream, light blue, gold; Libre Baskerville + Montserrat. */
 :root {
   --navy: #0A1A2E;
   --navy-2: #10233b;
@@ -10,11 +10,11 @@
   --text: #424244;
   --heading: #0A1A2E;
   --muted: #6b6a6e;
-  --accent: #FF7A00;       /* orange fills */
-  --accent-hover: #EB6F00;
-  --accent-text: #B4530A;  /* orange text on light (AA) */
-  --accent-bright: #FF8F26;/* orange on navy */
-  --accent-soft: #FFF0E0;
+  --accent: #7AAFD7;       /* light blue fills */
+  --accent-hover: #6AA2CD;
+  --accent-text: #2F6E9E;  /* deeper blue text on light (AA) */
+  --accent-bright: #8EC0E6;/* light blue on navy */
+  --accent-soft: #EAF3FA;
   --gold: #C8A763;
   --gold-soft: #f6efdf;
   --ok: #2e7d4f;
@@ -215,7 +215,7 @@ svg { fill: currentColor; }
 .ex:hover { background: var(--gold-soft); }
 .thumb { position: relative; width: 76px; aspect-ratio: 4/3; border-radius: 9px; overflow: hidden; background: var(--navy-3); display: grid; place-items: center; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
-.thumb::after { content: ""; position: absolute; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,122,0,.95) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230A1A2E' d='M9 7v10l8-5z'/%3E%3C/svg%3E") center/18px no-repeat; }
+.thumb::after { content: ""; position: absolute; width: 26px; height: 26px; border-radius: 50%; background: rgba(122,175,215,.95) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230A1A2E' d='M9 7v10l8-5z'/%3E%3C/svg%3E") center/18px no-repeat; }
 .ex span { color: var(--muted); font-size: 13px; }
 .ex b { display: block; font-size: 15px; color: var(--navy); }
 .ex .sets { color: var(--accent-text); font-weight: 700; }
@@ -619,10 +619,10 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .map-stage { position: relative; width: 100%; max-width: 420px; margin: 0 auto; overflow: hidden; border-radius: 14px; background: var(--navy); }
 .map-stage img { position: absolute; max-width: none; height: auto; pointer-events: none; }
 .mdot { position: absolute; width: 26px; height: 26px; transform: translate(-50%, -50%); border-radius: 50%; border: 0; padding: 0; background: transparent; cursor: pointer; }
-.mdot::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(255,122,0,.3); transition: inset .15s; }
+.mdot::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(122,175,215,.3); transition: inset .15s; }
 .mdot.deep::after { background: var(--navy); border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,167,99,.35); }
 .mdot:hover::after, .mdot:focus-visible::after { inset: 3px; }
-.mdot.on::after { inset: 1px; box-shadow: 0 0 0 6px rgba(255,122,0,.45); }
+.mdot.on::after { inset: 1px; box-shadow: 0 0 0 6px rgba(122,175,215,.45); }
 .map-pick { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-top: 12px; min-height: 44px; }
 .map-pick b { display: block; color: var(--navy); font: 700 17px var(--display); }
 .map-pick span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
@@ -652,7 +652,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 @media (min-width: 1000px) { .player { grid-template-rows: auto auto auto auto; } .p-opts { width: min(980px, 92vw); margin: 0 auto; padding: 0 20px 12px; background: var(--navy); } }
 .ex-swap { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .swap-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line, #e4ded1); background: var(--card, #fff); display: grid; place-items: center; cursor: pointer; }
-.swap-btn svg { width: 20px; height: 20px; fill: var(--accent-text, #b85500); }
+.swap-btn svg { width: 20px; height: 20px; fill: var(--accent-text, #2F6E9E); }
 .swap-btn:hover { background: var(--gold-soft, #f6eedb); }
 .ex-swap.swapped .ex { animation: swapflash .9s ease; }
 @keyframes swapflash { from { background: var(--gold-soft, #f6eedb); box-shadow: 0 0 0 2px var(--gold, #C8A763); } to { box-shadow: none; } }
@@ -668,7 +668,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .vital b small { font: 600 12px var(--body, inherit); color: var(--muted); }
 .vital em { font-style: normal; font-size: 11.5px; color: var(--muted); }
 .spark { width: 100%; height: 26px; margin-top: 4px; }
-.spark path { fill: none; stroke: var(--accent, #FF7A00); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.spark path { fill: none; stroke: var(--accent, #7AAFD7); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .up-good { color: #2e7d4f !important; font-weight: 700; }
 .up-bad { color: #c62828 !important; font-weight: 700; }
 .dz { color: var(--muted); }
@@ -680,7 +680,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .nums-grid input { font: inherit; font-size: 15px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); width: 100%; box-sizing: border-box; }
 .rpe { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
 .rpe button { font: 700 13px var(--body, inherit); padding: 8px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--navy); cursor: pointer; }
-.rpe button.on { background: var(--accent, #FF7A00); color: #fff; border-color: var(--accent, #FF7A00); }
+.rpe button.on { background: var(--accent, #7AAFD7); color: var(--navy); border-color: var(--accent, #7AAFD7); }
 .rpe-cap { margin: -4px 0 0; }
 .nums-msg { margin-left: 10px; }
 .btn-gold.sm { padding: 9px 16px; font-size: 14px; justify-self: start; }
@@ -737,7 +737,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .prog-card p { margin: 0; color: var(--muted); font-size: 14px; }
 .pc-meta, .pc-done { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .pc-bar { height: 6px; border-radius: 6px; background: var(--card-2); overflow: hidden; }
-.pc-bar i { display: block; height: 100%; background: var(--accent, #FF7A00); }
+.pc-bar i { display: block; height: 100%; background: var(--accent, #7AAFD7); }
 .back-link { margin-bottom: 10px; display: inline-block; }
 .prog-head h2 { font: 700 24px/1.2 var(--display); color: var(--navy); margin: 6px 0; }
 .prog-notes { background: var(--gold-soft); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 8px 0 0; }
@@ -777,7 +777,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .tier h3 { font: 700 20px/1.2 var(--display); color: var(--navy); margin: 0; }
 .tier-price { margin: 0; color: var(--muted); }
 .tier-price b { font: 700 30px/1.1 var(--display); color: var(--navy); }
-.tier-meet { margin: 0; font-weight: 700; color: var(--accent-bright, #FF7A00); font-size: 14px; }
+.tier-meet { margin: 0; font-weight: 700; color: var(--accent-bright, #7AAFD7); font-size: 14px; }
 .tier ul { margin: 6px 0 8px; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
 .tier-cur { font-weight: 700; color: var(--gold); }
 .tier .btn-gold, .tier .btn-ghost { justify-self: start; }
@@ -799,6 +799,6 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .part-rows > div { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 14px; }
 .part-rows b small { font-weight: 600; color: var(--muted); font-size: 12px; }
 .pbar { grid-column: 1 / -1; height: 8px; border-radius: 8px; background: var(--card-2); overflow: hidden; }
-.pbar i { display: block; height: 100%; background: var(--accent, #FF7A00); border-radius: 8px; }
+.pbar i { display: block; height: 100%; background: var(--accent, #7AAFD7); border-radius: 8px; }
 .part-week { margin: 10px 0 0; font-size: 14px; }
 @media (max-width: 350px) { .tabbar button, .more-btn { font-size: 9.5px; letter-spacing: -.1px; } .tabbar svg, .more-btn svg { width: 23px; height: 23px; } }

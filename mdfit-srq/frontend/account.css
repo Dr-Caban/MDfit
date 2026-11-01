@@ -20,7 +20,7 @@
 /* ---- Dashboard */
 .account-page { background: var(--cream); }
 .acct-nav { display: flex; gap: 10px; align-items: center; }
-.acct-hero { background: radial-gradient(800px 400px at 90% 0%, rgba(255,122,0,.16), transparent 60%), var(--ink); color: #fff; padding: 36px 0 44px; }
+.acct-hero { background: radial-gradient(800px 400px at 90% 0%, rgba(122,175,215,.16), transparent 60%), var(--ink); color: #fff; padding: 36px 0 44px; }
 .acct-hero h1 { font: 700 clamp(30px, 4.5vw, 44px)/1.1 var(--display); margin: 0 0 18px; color: #fff; }
 .acct-hero .eyebrow { color: var(--accent-bright); }
 .next-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: var(--radius); padding: 20px 22px; max-width: 640px; }
