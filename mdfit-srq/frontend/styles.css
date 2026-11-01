@@ -539,5 +539,5 @@ dialog .book-when { margin: -6px 0 4px; }
 /* Pain map regions (unnamed, wider than the muscles) */
 .pm-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .pm-region { fill: rgba(122,175,215,.10); stroke: rgba(255,255,255,.55); stroke-width: 1.6; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .15s, stroke .15s; outline: none; }
-.pm-region:hover, .pm-region:focus-visible { fill: rgba(122,175,215,.42); stroke: #fff; }
-.pm-region[aria-pressed="true"] { fill: rgba(122,175,215,.6); stroke: #fff; stroke-width: 2.4; }
+/* Hover / tap: the whole region lights up solid gold and glows */
+.pm-region:hover, .pm-region:focus-visible, .pm-region[aria-pressed="true"] { fill: rgba(232,192,98,.88); stroke: #FFE7A8; stroke-width: 2.4; filter: url(#pm-glow); }

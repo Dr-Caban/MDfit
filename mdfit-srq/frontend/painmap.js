@@ -31,7 +31,7 @@
   if (!root) return;
   const sideWord = (r) => (r.side === "center" ? "" : ` (${r.side} side)`);
   $(".hotspots", root).outerHTML = `<svg class="pm-regions" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Body regions">
-    <defs><mask id="pm-body" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><image href="assets/pain/body-mask.png" width="${W}" height="${H}"/></mask></defs>
+    <defs><filter id="pm-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="9" result="b"/><feFlood flood-color="#F2CF7A" flood-opacity=".95"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter><mask id="pm-body" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><image href="assets/pain/body-mask.png" width="${W}" height="${H}"/></mask></defs>
     <g mask="url(#pm-body)">${REGIONS.map((r, i) => `<path class="pm-region" d="${PATH[r.id]}" data-region="${r.id}" tabindex="0" role="button" aria-pressed="false" aria-label="Region ${i + 1}, ${r.view} of body${sideWord(r)}"/>`).join("")}</g></svg>`;
 
   // Phones: show one figure at a time, big enough to tap the right area
