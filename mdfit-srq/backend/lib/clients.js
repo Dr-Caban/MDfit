@@ -302,21 +302,40 @@ function mountClients(ctx) {
   // Daily readings: resting heart rate, HRV, VO2 max, body weight (from a watch or entered by hand)
   const VITALS_MAX = 1500;
   me.get("/vitals", (req, res) => res.json(req.client.vitals || []));
-  me.post("/vitals", (req, res) => {
-    const b = req.body || {};
+  function vitalIn(b) {
     const date = b.date === undefined ? today() : String(b.date);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today()) fail("Date must be today or earlier (YYYY-MM-DD).");
     const v = { restingHr: optNum(b.restingHr, "Resting heart rate", 25, 150), hrv: optNum(b.hrv, "HRV", 5, 300), vo2max: optNum(b.vo2max, "VO2 max", 10, 95, 1),
       weight: optNum(b.weight, "Body weight", 50, 800, 1), sleep: optNum(b.sleep, "Sleep hours", 0, 24, 1) };
     Object.keys(v).forEach((k) => v[k] === undefined && delete v[k]);
-    if (!Object.keys(v).length) fail("Enter at least one reading.");
+    return { date, v };
+  }
+  function mergeVitals(c, rows, source) {
+    const byDate = new Map((c.vitals || []).map((x) => [x.date, x]));
+    rows.forEach(({ date, v }) => byDate.set(date, { ...(byDate.get(date) || {}), ...v, date, source }));
+    c.vitals = [...byDate.values()].sort((x, y) => (x.date < y.date ? -1 : 1)).slice(-VITALS_MAX);
+  }
+  me.post("/vitals", (req, res) => {
+    const b = req.body || {};
+    const r = vitalIn(b);
+    if (!Object.keys(r.v).length) fail("Enter at least one reading.");
     const list = clients();
     const c = list.find((x) => x.id === req.client.id);
-    const rest = (c.vitals || []).filter((x) => x.date !== date);
-    const prev = (c.vitals || []).find((x) => x.date === date) || {};
-    c.vitals = [...rest, { ...prev, ...v, date, source: b.source ? text(b.source, "Source", { max: 40 }) : prev.source || "manual" }].sort((x, y) => (x.date < y.date ? -1 : 1)).slice(-VITALS_MAX);
+    const prev = (c.vitals || []).find((x) => x.date === r.date) || {};
+    mergeVitals(c, [r], b.source ? text(b.source, "Source", { max: 40 }) : prev.source || "manual");
     save(list);
     res.status(201).json(c.vitals);
+  });
+  // Bulk upload from a phone's health store (Apple Health / HealthKit, Health Connect): one row per day, up to 400 days
+  me.post("/vitals/batch", (req, res) => {
+    const b = req.body || {};
+    if (!Array.isArray(b.readings) || !b.readings.length || b.readings.length > 400) fail("Send 1 to 400 daily readings.");
+    const rows = b.readings.map(vitalIn).filter((r) => Object.keys(r.v).length);
+    const list = clients();
+    const c = list.find((x) => x.id === req.client.id);
+    mergeVitals(c, rows, text(b.source || "Health app", "Source", { max: 40 }));
+    save(list);
+    res.status(201).json({ saved: rows.length, total: c.vitals.length });
   });
 
   me.get("/stats", (req, res) => {

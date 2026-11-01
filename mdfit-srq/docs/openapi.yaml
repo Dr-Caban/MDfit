@@ -1,0 +1,501 @@
+openapi: 3.0.3
+info:
+  title: MD Fit API
+  version: "1.0.0-draft"
+  description: |
+    Backend for the MD Fit website and iOS app. One account works on both.
+    Errors return `{ "error": "message" }`. Dates are YYYY-MM-DD in the clinic time zone (America/New_York).
+    See docs/ios-api.md for the full guide.
+servers:
+  - url: https://mdfit-api-production.up.railway.app
+security:
+  - bearer: []
+tags:
+  - name: App
+  - name: Auth
+  - name: Workouts
+  - name: Vitals
+  - name: Pain
+  - name: Library
+  - name: Appointments
+  - name: Content
+  - name: Reviews
+
+paths:
+  /api/app/config:
+    get:
+      tags: [App]
+      security: []
+      summary: Launch check (API version, minimum supported iOS build, feature switches)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiVersion: { type: integer, example: 1 }
+                  minIosBuild: { type: integer, example: 1 }
+                  timeZone: { type: string, example: America/New_York }
+                  features: { type: object, additionalProperties: { type: boolean } }
+
+  /api/site:
+    get:
+      tags: [App]
+      security: []
+      summary: Business info, services and prices, payment plans, appointment types
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object } } } }
+
+  /api/clients/signup:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                email: { type: string, format: email }
+                phone: { type: string }
+                password: { type: string, minLength: 8 }
+      responses:
+        "201": { $ref: "#/components/responses/Session" }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /api/clients/login:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Session" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/clients/forgot:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { email: { type: string } } } } } }
+      responses:
+        "200": { description: Always OK (doesn't reveal whether the email exists) }
+  /api/clients/reset:
+    post:
+      tags: [Auth]
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { token: { type: string }, password: { type: string, minLength: 8 } } } } } }
+      responses:
+        "200": { $ref: "#/components/responses/Session" }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/me:
+    get:
+      tags: [Auth]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { client: { $ref: "#/components/schemas/Client" } } } } } }
+        "401": { $ref: "#/components/responses/Error" }
+    put:
+      tags: [Auth]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string }, phone: { type: string } } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { client: { $ref: "#/components/schemas/Client" } } } } } }
+  /api/me/password:
+    put:
+      tags: [Auth]
+      description: Signs out every other device.
+      requestBody: { content: { application/json: { schema: { type: object, required: [current, password], properties: { current: { type: string }, password: { type: string, minLength: 8 } } } } } }
+      responses:
+        "200": { $ref: "#/components/responses/Session" }
+        "400": { $ref: "#/components/responses/Error" }
+
+  /api/me/workouts:
+    get:
+      tags: [Workouts]
+      responses:
+        "200": { description: Every workout, oldest first, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Workout" } } } } }
+    post:
+      tags: [Workouts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [title, minutes]
+                  properties:
+                    title: { type: string, maxLength: 80 }
+                    goal: { type: string }
+                    minutes: { type: integer, minimum: 1, maximum: 300 }
+                    exercises: { type: integer, minimum: 0, maximum: 50 }
+                    key: { type: string, description: "Groups repeat sessions for comparison, e.g. prog-hypertrophy-4-d0" }
+                - $ref: "#/components/schemas/WorkoutMetrics"
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workout: { $ref: "#/components/schemas/Workout" }
+                  stats: { $ref: "#/components/schemas/Stats" }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/me/workouts/{id}:
+    patch:
+      tags: [Workouts]
+      summary: Add or correct heart rate, HRV, VO2 max, effort, calories or lifts after the workout
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/WorkoutMetrics" } } } }
+      responses:
+        "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/Workout" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/me/stats:
+    get:
+      tags: [Workouts]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Stats" } } } }
+  /api/me/rewards:
+    get:
+      tags: [Workouts]
+      summary: XP, level, daily goal and badges (recomputed from history)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object } } } }
+  /api/me/participation:
+    get:
+      tags: [Workouts]
+      summary: Participation score (half attendance, half home workouts) and the credit it earns
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score: { type: integer, minimum: 0, maximum: 100 }
+                  earnedPct: { type: number }
+                  creditPct: { type: number }
+                  attendance: { type: integer, nullable: true }
+                  attendTarget: { type: integer }
+                  homePerWeek: { type: number }
+                  homeTarget: { type: number }
+                  thisWeek: { type: integer }
+                  leftThisWeek: { type: integer }
+
+  /api/me/vitals:
+    get:
+      tags: [Vitals]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Vital" } } } } }
+    post:
+      tags: [Vitals]
+      requestBody: { content: { application/json: { schema: { $ref: "#/components/schemas/VitalIn" } } } }
+      responses:
+        "201": { description: All vitals, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Vital" } } } } }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/me/vitals/batch:
+    post:
+      tags: [Vitals]
+      summary: Bulk upload from Apple Health (HealthKit). Same-day readings merge.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [readings]
+              properties:
+                source: { type: string, example: Apple Health }
+                readings: { type: array, minItems: 1, maxItems: 400, items: { $ref: "#/components/schemas/VitalIn" } }
+      responses:
+        "201": { description: OK, content: { application/json: { schema: { type: object, properties: { saved: { type: integer }, total: { type: integer } } } } } }
+
+  /api/me/pain:
+    get:
+      tags: [Pain]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PainEntry" } } } } }
+    post:
+      tags: [Pain]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [area, level]
+              properties:
+                area: { type: string, enum: [Neck, Shoulder, Upper back, Lower back, Hip, Knee, Ankle / foot, Elbow / wrist / hand, Other] }
+                level: { type: integer, minimum: 0, maximum: 10 }
+                note: { type: string, maxLength: 500 }
+                date: { type: string, format: date }
+      responses:
+        "201": { description: Saved, content: { application/json: { schema: { $ref: "#/components/schemas/PainEntry" } } } }
+  /api/me/pain/{id}:
+    delete:
+      tags: [Pain]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: OK } }
+
+  /api/me/library:
+    get:
+      tags: [Library]
+      responses:
+        "200": { $ref: "#/components/responses/Library" }
+  /api/me/favorites/{exerciseId}:
+    parameters: [{ name: exerciseId, in: path, required: true, schema: { type: string } }]
+    put: { tags: [Library], responses: { "200": { $ref: "#/components/responses/Library" } } }
+    delete: { tags: [Library], responses: { "200": { $ref: "#/components/responses/Library" } } }
+  /api/me/programs:
+    post:
+      tags: [Library]
+      summary: Save a generated workout to My Programs
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string, maxLength: 60 }, workout: { type: object } } } } } }
+      responses: { "201": { $ref: "#/components/responses/Library" } }
+  /api/me/programs/{id}:
+    delete:
+      tags: [Library]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { $ref: "#/components/responses/Library" } }
+
+  /api/availability:
+    get:
+      tags: [Appointments]
+      security: []
+      parameters:
+        - { name: type, in: query, schema: { type: string, example: eval } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 31 } }
+      responses:
+        "200": { description: Open slots per day, content: { application/json: { schema: { type: object } } } }
+  /api/appointments:
+    post:
+      tags: [Appointments]
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [typeId, date, time, name, email, phone]
+              properties:
+                typeId: { type: string }
+                date: { type: string, format: date }
+                time: { type: string, example: "09:30" }
+                name: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                notes: { type: string }
+                areas: { type: array, items: { type: string } }
+                painLevel: { type: integer, minimum: 0, maximum: 10 }
+                rewardCode: { type: string, description: Required for typeId plan-review }
+      responses:
+        "201": { description: Booked }
+        "409": { $ref: "#/components/responses/Error" }
+  /api/me/appointments:
+    get:
+      tags: [Appointments]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { upcoming: { type: array, items: { type: object } }, past: { type: array, items: { type: object } } } } } } }
+  /api/me/appointments/{id}/cancel:
+    post:
+      tags: [Appointments]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: Cancelled } }
+
+  /api/content:
+    get:
+      tags: [Content]
+      security: []
+      summary: Programs, lectures, live Q&A, tiers and tips (members-only links blank)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Content" } } } }
+  /api/me/content:
+    get:
+      tags: [Content]
+      summary: Same as /api/content, with links unlocked for the member's access level
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Content" } } } }
+  /api/me/membership/request:
+    post:
+      tags: [Content]
+      requestBody: { content: { application/json: { schema: { type: object, required: [tier], properties: { tier: { type: string }, note: { type: string, maxLength: 500 } } } } } }
+      responses: { "201": { description: Request sent to Dr. Jared } }
+  /api/me/meetings:
+    get:
+      tags: [Content]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meetings: { type: array, items: { $ref: "#/components/schemas/Meeting" } }
+                  allowance: { type: integer }
+                  minutes: { type: integer }
+                  usedThisMonth: { type: integer }
+    post:
+      tags: [Content]
+      requestBody: { content: { application/json: { schema: { type: object, required: [topic, times], properties: { topic: { type: string }, times: { type: string } } } } } }
+      responses:
+        "201": { description: Requested, content: { application/json: { schema: { $ref: "#/components/schemas/Meeting" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+
+  /api/feedback:
+    get:
+      tags: [Reviews]
+      security: []
+      responses: { "200": { description: Approved public reviews } }
+    post:
+      tags: [Reviews]
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, rating, text]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                text: { type: string, minLength: 10, maxLength: 2000 }
+                publish: { type: boolean }
+      responses:
+        "201": { description: Thanks + reward code, content: { application/json: { schema: { type: object, properties: { rewardCode: { type: string }, bookUrl: { type: string } } } } } }
+  /api/feedback/reward/{code}:
+    get:
+      tags: [Reviews]
+      security: []
+      parameters: [{ name: code, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: "{ valid, used, type }" }, "404": { $ref: "#/components/responses/Error" } }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { type: object, properties: { error: { type: string } } } } }
+    Session:
+      description: Signed in
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              token: { type: string }
+              expiresAt: { type: string, format: date-time }
+              client: { $ref: "#/components/schemas/Client" }
+    Library:
+      description: Favorites and saved programs
+      content: { application/json: { schema: { type: object, properties: { favorites: { type: array, items: { type: string } }, programs: { type: array, items: { type: object } } } } } }
+  schemas:
+    Client:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        createdAt: { type: string, format: date-time }
+        plan: { type: object }
+        membership:
+          nullable: true
+          type: object
+          properties: { tier: { type: string }, since: { type: string }, until: { type: string } }
+    WorkoutMetrics:
+      type: object
+      properties:
+        seconds: { type: integer, maximum: 18000 }
+        hrAvg: { type: integer, minimum: 30, maximum: 230 }
+        hrMax: { type: integer, minimum: 30, maximum: 240 }
+        hrv: { type: integer, minimum: 5, maximum: 300 }
+        vo2max: { type: number, minimum: 10, maximum: 95 }
+        rpe: { type: integer, minimum: 1, maximum: 10 }
+        calories: { type: integer }
+        source: { type: string, example: Apple Watch }
+        lifts:
+          type: array
+          maxItems: 40
+          items: { type: object, properties: { name: { type: string }, weight: { type: number }, reps: { type: integer } } }
+    Workout:
+      allOf:
+        - $ref: "#/components/schemas/WorkoutMetrics"
+        - type: object
+          properties:
+            id: { type: string }
+            title: { type: string }
+            goal: { type: string }
+            minutes: { type: integer }
+            exercises: { type: integer }
+            key: { type: string }
+            date: { type: string, format: date }
+            completedAt: { type: string, format: date-time }
+    Stats:
+      type: object
+      properties:
+        streak: { type: integer }
+        bestStreak: { type: integer }
+        workouts: { type: integer }
+        hours: { type: number }
+        week: { type: array, items: { type: boolean } }
+    VitalIn:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        restingHr: { type: integer, minimum: 25, maximum: 150 }
+        hrv: { type: integer, minimum: 5, maximum: 300 }
+        vo2max: { type: number, minimum: 10, maximum: 95 }
+        weight: { type: number, minimum: 50, maximum: 800 }
+        sleep: { type: number, minimum: 0, maximum: 24 }
+        source: { type: string }
+    Vital:
+      allOf:
+        - $ref: "#/components/schemas/VitalIn"
+        - type: object
+          properties: { source: { type: string } }
+    PainEntry:
+      type: object
+      properties:
+        id: { type: string }
+        date: { type: string, format: date }
+        area: { type: string }
+        level: { type: integer }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+    Meeting:
+      type: object
+      properties:
+        id: { type: string }
+        month: { type: string, example: 2026-11 }
+        topic: { type: string }
+        times: { type: string }
+        status: { type: string, enum: [requested, scheduled, done, cancelled] }
+        when: { type: string }
+        link: { type: string }
+        minutes: { type: integer }
+    Content:
+      type: object
+      properties:
+        access: { type: string, enum: [free, member, premium] }
+        programs: { type: array, items: { type: object } }
+        lectures: { type: array, items: { type: object } }
+        live: { type: object }
+        tiers: { type: array, items: { type: object } }
+        recommendations: { type: array, items: { type: object } }

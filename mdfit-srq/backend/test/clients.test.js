@@ -317,3 +317,16 @@ test("participation score and credit tiers", () => {
   assert.equal(low.earnedPct, 0);
   assert.equal(participation({ visits: [], workouts: [], targets: T, today: "2026-11-02" }).score, 50, "no visits yet: attendance not held against them");
 });
+
+test("health-app batch vitals and app config", async (t) => {
+  const s = await start(); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  assert.equal((await s.call("POST", "/api/me/vitals/batch", { readings: [] }, tok)).status, 400);
+  const r = await s.call("POST", "/api/me/vitals/batch", { source: "Apple Health", readings: [{ date: "2026-10-30", restingHr: 57, hrv: 64 }, { date: "2026-10-31", vo2max: 43.2 }, { date: "2026-11-01" }] }, tok);
+  assert.equal(r.status, 201); assert.equal(r.body.saved, 2);
+  await s.call("POST", "/api/me/vitals", { date: "2026-10-30", weight: 180 }, tok);
+  const v = (await s.call("GET", "/api/me/vitals", undefined, tok)).body;
+  assert.deepEqual(v.find((x) => x.date === "2026-10-30"), { date: "2026-10-30", restingHr: 57, hrv: 64, weight: 180, source: "Apple Health" });
+  const cfgr = (await s.call("GET", "/api/app/config")).body;
+  assert.equal(cfgr.apiVersion, 1); assert.equal(cfgr.features.healthSync, true);
+});

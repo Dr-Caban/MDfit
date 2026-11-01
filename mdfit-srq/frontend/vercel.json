@@ -2,6 +2,19 @@
   "cleanUrls": true,
   "headers": [
     {
+      "source": "/data/(.*)\\.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    },
+    {
       "source": "/:page(account|book|login|admin|cancel)",
       "headers": [
         {

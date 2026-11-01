@@ -407,6 +407,13 @@ function createApp(cfg = loadConfig()) {
     res.json({ valid: !f.rewardUsedAt, used: !!f.rewardUsedAt, name: f.name, email: f.email, type: PLAN_REVIEW });
   });
 
+  // Native apps check this on launch: API version, the oldest app build still supported, and which features are on
+  app.get("/api/app/config", (req, res) => {
+    res.set("Cache-Control", "no-cache");
+    res.json({ apiVersion: 1, minIosBuild: Number(env("MIN_IOS_BUILD", "1")) || 1, timeZone: cfg.tz,
+      features: { payments: false, healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false } });
+  });
+
   app.get("/api/availability", (req, res) => {
     const s = settings();
     const type = s.appointmentTypes.find((t) => t.id === req.query.type) || (req.query.type === PLAN_REVIEW.id ? PLAN_REVIEW : s.appointmentTypes[0]);
