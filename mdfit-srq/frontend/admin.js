@@ -405,9 +405,30 @@
       const [sec, key] = el.name.split(".");
       el.value = s[sec][key] ?? "";
     });
-    sf.packages.value = s.packages.map((p) => [`${p.name} | ${p.price} | ${p.unit}`, ...p.features].join("\n")).join("\n\n");
+    $("#svc-rows").innerHTML = ""; s.services.forEach(addSvc);
+    const P = s.plans;
+    ["gold", "silver", "silverPayments", "ext12", "ext24", "guaranteeMin"].forEach((k) => (sf["plan_" + k].value = P[k]));
+    ["creditPct", "attendPct", "homePerWeek"].forEach((k) => (sf["plan_" + k].value = P.participation[k]));
+    sf.plan_packageSizes.value = P.packageSizes.join(", ");
     sf.testimonials.value = s.testimonials.map((t) => `${t.name} | ${t.quote}`).join("\n");
   }
+  function addSvc(v = { id: "", name: "", rate: 0, protocol: true, description: "" }) {
+    const row = document.createElement("div");
+    row.className = "svc-row";
+    row.innerHTML = `
+      <label>Name<input data-f="name" maxlength="60" required></label>
+      <label>Rate ($/hr)<input data-f="rate" type="number" min="0" max="10000"></label>
+      <label class="check"><input type="checkbox" data-f="protocol"> Protocol</label>
+      <label class="svc-desc">Description<input data-f="description" maxlength="300"></label>
+      <button type="button" class="link svc-del" aria-label="Remove service">Remove</button>`;
+    row.dataset.id = v.id;
+    $("[data-f=name]", row).value = v.name; $("[data-f=rate]", row).value = v.rate;
+    $("[data-f=protocol]", row).checked = v.protocol; $("[data-f=description]", row).value = v.description;
+    $(".svc-del", row).addEventListener("click", () => row.remove());
+    $("#svc-rows").append(row);
+  }
+  $("#svc-add").addEventListener("click", () => addSvc());
+  const slug = (x) => x.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "service";
   sf.addEventListener("submit", run(async (e) => {
     e.preventDefault();
     const msg = $(".form-msg", sf);
@@ -415,8 +436,18 @@
     const body = { business: {}, coach: {}, rating: {} };
     $$("input[name*='.'], textarea[name*='.']", sf).forEach((el) => { const [sec, key] = el.name.split("."); body[sec][key] = el.value; });
     body.rating.count = Number(body.rating.count || 0);
-    body.packages = sf.packages.value.split(/\n\s*\n/).map((blk) => blk.split("\n").map((x) => x.trim()).filter(Boolean)).filter((l) => l.length)
-      .map(([head, ...features]) => { const [name, price = "", unit = ""] = head.split("|").map((x) => x.trim()); return { name, price, unit, features }; });
+    const used = new Set();
+    body.services = $$(".svc-row", sf).map((r) => {
+      const name = $("[data-f=name]", r).value.trim();
+      let id = r.dataset.id || slug(name), n = 2; while (used.has(id)) id = slug(name) + "-" + n++; used.add(id);
+      return { id, name, rate: Number($("[data-f=rate]", r).value || 0), unit: "hour", protocol: $("[data-f=protocol]", r).checked, description: $("[data-f=description]", r).value.trim() };
+    });
+    const num = (k) => Number(sf["plan_" + k].value);
+    body.plans = {
+      gold: num("gold"), silver: num("silver"), silverPayments: num("silverPayments"), ext12: num("ext12"), ext24: num("ext24"), guaranteeMin: num("guaranteeMin"),
+      packageSizes: sf.plan_packageSizes.value.split(/[,\s]+/).filter(Boolean).map(Number),
+      participation: { creditPct: num("creditPct"), attendPct: num("attendPct"), homePerWeek: num("homePerWeek") }
+    };
     body.testimonials = sf.testimonials.value.split("\n").map((x) => x.trim()).filter(Boolean)
       .map((line) => { const i = line.indexOf("|"); return i < 0 ? { name: "", quote: line } : { name: line.slice(0, i).trim(), quote: line.slice(i + 1).trim() }; });
     try {

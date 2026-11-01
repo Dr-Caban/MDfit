@@ -110,3 +110,8 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 @media (max-width: 860px) { .client-grid { grid-template-columns: 1fr; } .guide-picks { grid-template-columns: 1fr; } }
 .guide-picks label.check { display: flex; gap: 8px; align-items: center; font-weight: 500; }
 .guide-picks label.check input { width: auto; margin: 0; }
+.svc-rows { display: grid; gap: 10px; margin-bottom: 10px; }
+.svc-row { display: grid; grid-template-columns: 1.4fr 120px auto 2fr auto; gap: 10px; align-items: end; padding: 12px; border: 1px solid #e4ded1; border-radius: 12px; }
+.svc-row .check { padding-bottom: 10px; }
+.svc-del { color: #c62828; padding-bottom: 10px; }
+@media (max-width: 800px) { .svc-row { grid-template-columns: 1fr 1fr; } .svc-desc { grid-column: 1 / -1; } }

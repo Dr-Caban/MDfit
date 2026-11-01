@@ -49,14 +49,7 @@
     options($("#lead-form [name=duration]"), o.durations, true);
     options($("#lead-form [name=surgery]"), o.surgery, true);
 
-    $(".pricing").innerHTML = s.packages.map((p, i) => `
-      <article class="plan${i === 0 ? " featured" : ""}">
-        ${i === 0 ? `<span class="tag">Start here</span>` : ""}
-        <h3>${esc(p.name)}</h3>
-        <div><span class="price">${esc(p.price || "Call")}</span> <span class="unit">${esc(p.price ? p.unit : `for pricing · ${p.unit}`)}</span></div>
-        <ul>${p.features.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
-        <a href="#book" class="btn${i === 0 ? "" : " btn-line"}">${i === 0 ? "Book an evaluation" : "Get started"}</a>
-      </article>`).join("");
+    if (window.MDFitPricing) window.MDFitPricing.mount($(".pricing-app"), s);
     if (b.bookingNote) $("#pricing-sub").textContent = b.bookingNote;
 
     $(".coach-bio").innerHTML = s.coach.bio.split(/\n{2,}/).map((p) => `<p>${esc(p)}</p>`).join("");
