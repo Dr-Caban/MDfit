@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=19e95ee3">
-  <link rel="stylesheet" href="admin.css?v=25a993d5">
+  <link rel="stylesheet" href="admin.css?v=da499201">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -37,6 +37,7 @@
           <button data-tab="classes">Classes</button>
           <button data-tab="bookings">Bookings</button>
           <button data-tab="subs">Subscribers</button>
+          <button data-tab="messages">Messages <span class="pill pending" id="admin-msg-count" hidden></span></button>
           <button data-tab="reviews">Reviews</button>
           <button data-tab="members">Members</button>
           <button data-tab="content">Content</button>
@@ -158,6 +159,13 @@
         <div class="table-wrap"><table id="bookings-table"></table></div>
       </section>
 
+      <section data-panel="messages" hidden>
+        <div class="msg-admin">
+          <div class="msg-threads" id="msg-threads"></div>
+          <div class="msg-thread" id="msg-thread"><p class="muted">Pick a conversation.</p></div>
+        </div>
+      </section>
+
       <section data-panel="reviews" hidden>
         <p class="muted">Reviews left on the website. Everyone who leaves one gets a free 30-minute plan review code, whatever their rating. Approve a review to show it on the homepage (only if they agreed).</p>
         <div id="reviews-list" class="stack"></div>
@@ -274,6 +282,6 @@
   <script src="config.js?v=f7c994b0"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=76c79be0"></script>
-  <script src="admin.js?v=62eddf0d"></script>
+  <script src="admin.js?v=d7aeba89"></script>
 </body>
 </html>

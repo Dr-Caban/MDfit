@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=a0892be3">
+  <link rel="stylesheet" href="app/app.css?v=0101a816">
   <link rel="stylesheet" href="guides.css?v=eb045f99">
 </head>
 <body class="mdapp">
@@ -198,6 +198,26 @@
       </div>
     </section>
 
+    <!-- ================= MESSAGES ================= -->
+    <section class="view" id="view-messages" data-view="messages" hidden>
+      <header class="hero">
+        <div><h1>Message <em>Dr. Jared</em></h1><p>Ask questions about your pain, your plan or what to do next.</p></div>
+      </header>
+      <div class="card msg-gate" id="msg-gate" hidden>
+        <h3>Messaging is part of membership</h3>
+        <p class="muted">Members can message Dr. Jared directly with questions about their pain, programs and progress.</p>
+        <button type="button" class="btn-gold sm" data-goto="premium">See memberships</button>
+      </div>
+      <div class="chat card" id="chat">
+        <div class="chat-list" id="chat-list" aria-live="polite"></div>
+        <form class="chat-form" id="chat-form" novalidate>
+          <textarea name="body" rows="2" maxlength="2000" placeholder="Write to Dr. Jared…" aria-label="Your message"></textarea>
+          <button class="btn-gold sm" type="submit">Send</button>
+        </form>
+        <p class="muted tiny">For emergencies call 911. Messages aren't monitored around the clock; Dr. Jared replies as soon as he can.</p>
+      </div>
+    </section>
+
     <!-- ================= HEALTH TIPS ================= -->
     <section class="view" id="view-tips" data-view="tips" hidden>
       <header class="hero">
@@ -368,6 +388,7 @@
     <button type="button" data-tab="learn" class="ov"><svg viewBox="0 0 24 24"><path d="M12 3 1 9l11 6 9-4.9V17h2V9zM5 13.2v4L12 21l7-3.8v-4L12 17z"/></svg><span class="short">Learn</span><span class="long">Lectures &amp; Live Q&amp;A</span></button>
     <button type="button" data-tab="progress"><svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg><span class="short">Progress</span><span class="long">Progress Tracking</span></button>
     <button type="button" data-tab="premium" class="ov"><svg viewBox="0 0 24 24"><path d="M5 16 3 5l5.5 5L12 4l3.5 6L21 5l-2 11zm14 3a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1h14z"/></svg><span class="short">Membership</span><span class="long">Membership &amp; 1-on-1</span></button>
+    <button type="button" data-tab="messages" class="ov"><svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></svg><span class="short">Messages</span><span class="long">Message Dr. Jared</span><i class="tab-badge" id="msg-badge" hidden></i></button>
     <button type="button" data-tab="tips" class="ov"><svg viewBox="0 0 24 24"><path d="M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9zm3-19a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z"/></svg><span class="short">Tips</span><span class="long">Health Tips</span></button>
     <button type="button" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12zm0 2c-3.3 0-9 1.7-9 5v2h18v-2c0-3.3-5.7-5-9-5z"/></svg><span class="short">Profile</span><span class="long">My Profile</span></button>
     <button type="button" class="more-btn" id="more-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24"><path d="M6 10a2 2 0 1 0 2 2 2 2 0 0 0-2-2zm6 0a2 2 0 1 0 2 2 2 2 0 0 0-2-2zm6 0a2 2 0 1 0 2 2 2 2 0 0 0-2-2z"/></svg><span class="short">More</span></button>
@@ -441,6 +462,6 @@
   <script src="paintracks.js?v=76c79be0"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
-  <script src="account.js?v=a9a238ec"></script>
+  <script src="account.js?v=bbc89066"></script>
 </body>
 </html>

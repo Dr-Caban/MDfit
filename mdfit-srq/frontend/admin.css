@@ -133,3 +133,19 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .trk-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
 .trk-thumbs img { height: 70px; border-radius: 8px; background: #eee; }
 .crow select[multiple] { min-height: 120px; }
+.msg-admin { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.msg-threads { display: grid; gap: 6px; max-height: 75vh; overflow-y: auto; }
+.msg-row { text-align: left; border: 1px solid #e4ded1; background: #fff; border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; cursor: pointer; font: inherit; }
+.msg-row.unread { border-color: #7AAFD7; background: #f1f7fc; }
+.msg-row.on { box-shadow: 0 0 0 2px #0A1A2E; }
+.msg-row small { color: #424244; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-thread { border: 1px solid #e4ded1; border-radius: 12px; padding: 14px; background: #fff; }
+.msg-log { max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.mb { max-width: 80%; padding: 9px 12px; border-radius: 14px; }
+.mb p { margin: 0; white-space: pre-wrap; }
+.mb small { color: #6b6a6e; font-size: 11.5px; }
+.mb.client { align-self: flex-start; background: #F3EFE6; }
+.mb.doctor { align-self: flex-end; background: #dbeaf6; }
+.msg-reply { display: grid; gap: 8px; }
+.msg-reply textarea { font: inherit; padding: 10px; border-radius: 10px; border: 1px solid #e4ded1; }
+@media (max-width: 800px) { .msg-admin { grid-template-columns: 1fr; } }

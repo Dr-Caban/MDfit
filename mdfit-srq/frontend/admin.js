@@ -51,7 +51,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, members: loadMembers, content: loadContent, settings: loadSettings };
+  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, messages: loadThreads, members: loadMembers, content: loadContent, settings: loadSettings };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -389,6 +389,34 @@
     if (!row || !e.target.matches("[data-del]") || !confirm("Remove this subscriber?")) return;
     await api("DELETE", `/api/admin/subscribers/${encodeURIComponent(row.dataset.email)}`); toast("Removed."); loadSubs();
   }));
+
+  // ---- Messages from members
+  let openThread = null;
+  async function loadThreads() {
+    const d = await api("GET", "/api/admin/messages");
+    const c = $("#admin-msg-count"); c.hidden = !d.unread; c.textContent = d.unread;
+    $("#msg-threads").innerHTML = d.threads.length ? d.threads.map((t) => `
+      <button type="button" class="msg-row${t.unread ? " unread" : ""}${t.clientId === openThread ? " on" : ""}" data-cid="${t.clientId}">
+        <b>${esc(t.name)}</b>${t.unread ? `<span class="pill pending">${t.unread} new</span>` : ""}
+        <small>${t.last.from === "doctor" ? "You: " : ""}${esc(t.last.body)}</small><small class="muted">${when(t.last.at)}${t.member ? "" : " · not a member"}</small></button>`).join("")
+      : `<p class="muted">No messages yet. Members can message you from the app.</p>`;
+    if (openThread) showThread(openThread);
+  }
+  async function showThread(cid) {
+    openThread = cid;
+    const d = await api("GET", `/api/admin/messages/${cid}`);
+    $("#msg-thread").innerHTML = `<div class="item-head"><b>${esc(d.client.name)}</b> <span class="muted">${esc(d.client.email)} ${esc(d.client.phone || "")}</span> ${d.client.member ? `<span class="pill approved">${esc(d.client.tier)}</span>` : `<span class="pill hidden">not a member</span>`}</div>
+      <div class="msg-log">${d.messages.map((m) => `<div class="mb ${m.from}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><small>${m.from === "doctor" ? "You" : esc(d.client.name.split(" ")[0])} · ${when(m.at)}</small></div>`).join("")}</div>
+      <form class="msg-reply" id="msg-reply"><textarea name="body" rows="3" maxlength="2000" placeholder="Reply to ${esc(d.client.name.split(" ")[0])}…"></textarea><button class="btn btn-sm" type="submit">Send reply</button></form>`;
+    const log = $(".msg-log"); log.scrollTop = log.scrollHeight;
+    $$("#msg-threads .msg-row").forEach((r) => r.classList.toggle("on", r.dataset.cid === cid));
+    $("#msg-reply").addEventListener("submit", run(async (e) => {
+      e.preventDefault(); const body = e.target.body.value.trim(); if (!body) return;
+      await api("POST", `/api/admin/messages/${cid}`, { body }); toast("Sent. They'll get an email that you replied."); showThread(cid);
+    }));
+  }
+  $("#msg-threads").addEventListener("click", (e) => { const r = e.target.closest("[data-cid]"); if (r) { showThread(r.dataset.cid).then(loadThreads); } });
+  setInterval(() => { if (token && !document.hidden) api("GET", "/api/admin/messages").then((d) => { const c = $("#admin-msg-count"); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {}); }, 60000);
 
   // ---- Reviews from the website
   async function loadReviews() {

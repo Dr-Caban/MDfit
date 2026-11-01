@@ -828,3 +828,22 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .kind-note { margin: 0 0 12px; }
 .in-track { font-style: normal; color: var(--accent-text); font-weight: 700; }
 @media (min-width: 1000px) { .kind-seg { max-width: 480px !important; } }
+
+/* Messages */
+.chat { display: grid; gap: 10px; }
+.chat-list { max-height: 55vh; min-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px; }
+.bubble { max-width: 82%; padding: 10px 12px; border-radius: 16px; font-size: 15px; line-height: 1.45; }
+.bubble p { margin: 0; white-space: pre-wrap; word-wrap: break-word; }
+.bubble span { display: block; margin-top: 4px; font-size: 11.5px; opacity: .7; }
+.bubble.me { align-self: flex-end; background: var(--accent); color: var(--navy); border-bottom-right-radius: 4px; }
+.bubble.dr { align-self: flex-start; background: var(--card-2); color: var(--text); border-bottom-left-radius: 4px; }
+.chat-empty { text-align: center; margin: auto; max-width: 300px; }
+.chat-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.chat-form textarea { font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text); resize: vertical; }
+.msg-gate h3 { font: 700 19px/1.25 var(--display); color: var(--navy); margin: 0 0 6px; }
+.tab-badge { position: absolute; top: 2px; right: 22%; min-width: 16px; height: 16px; border-radius: 8px; background: #c62828; color: #fff; font: 700 10px/16px var(--body, inherit); font-style: normal; text-align: center; padding: 0 4px; }
+.tabbar button { position: relative; }
+.more-btn { position: relative; }
+.more-btn.has-badge::after { content: ""; position: absolute; top: 4px; right: 30%; width: 9px; height: 9px; border-radius: 50%; background: #c62828; }
+.more-list [data-badge]:not([data-badge=""])::after { content: attr(data-badge); margin-left: auto; background: #c62828; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 12px; }
+@media (min-width: 1000px) { .tab-badge { position: static; margin-left: auto; } }

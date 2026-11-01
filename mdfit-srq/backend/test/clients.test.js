@@ -381,3 +381,27 @@ test("free accounts: one generated workout, then the paywall; a review gives 30%
   assert.equal((await s.call("GET", `/api/feedback/reward/${r.body.rewardCode}`)).body.used, true, "code is spent when the membership starts");
   assert.equal((await s.call("POST", "/api/me/generations", { workout }, tok)).body.member, true, "members generate freely");
 });
+
+test("messaging: members only, encrypted at rest, unread tracking both ways", async (t) => {
+  const s = await start(); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  assert.equal((await s.call("POST", "/api/me/messages", { body: "Hello" }, tok)).status, 402, "free accounts can't message");
+  const adm = await s.adminToken(), me = (await s.call("GET", "/api/me", undefined, tok)).body.client;
+  await s.call("PUT", `/api/admin/clients/${me.id}/membership`, { tier: "member" }, adm);
+  assert.equal((await s.call("POST", "/api/me/messages", { body: "   " }, tok)).status, 400);
+  const m = await s.call("POST", "/api/me/messages", { body: "My left shoulder clicks when I press overhead. Keep going?" }, tok);
+  assert.equal(m.status, 201);
+  const raw = require("fs").readFileSync(require("path").join(s.dataDir, "messages.json"), "utf8");
+  assert.ok(!raw.includes("shoulder clicks") && raw.includes("v1:"), "stored encrypted");
+  let th = (await s.call("GET", "/api/admin/messages", undefined, adm)).body;
+  assert.equal(th.unread, 1); assert.equal(th.threads[0].last.body.startsWith("My left shoulder"), true);
+  const conv = (await s.call("GET", `/api/admin/messages/${me.id}`, undefined, adm)).body;
+  assert.equal(conv.messages.length, 1);
+  assert.equal((await s.call("GET", "/api/admin/messages", undefined, adm)).body.unread, 0, "opening the thread marks it read");
+  await s.call("POST", `/api/admin/messages/${me.id}`, { body: "Yes, but drop the weight and add the cuff work from Level 2." }, adm);
+  assert.equal((await s.call("GET", "/api/me/messages/unread-count", undefined, tok)).body.unread, 1);
+  const mine = (await s.call("GET", "/api/me/messages", undefined, tok)).body;
+  assert.deepEqual(mine.messages.map((x) => x.from), ["client", "doctor"]);
+  await s.call("POST", "/api/me/messages/read", {}, tok);
+  assert.equal((await s.call("GET", "/api/me/messages/unread-count", undefined, tok)).body.unread, 0);
+});

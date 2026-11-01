@@ -11,6 +11,7 @@ const { createCal, verifySignature, normaliseBooking } = require("./lib/cal");
 const { createPlaces } = require("./lib/google");
 const { mountClients } = require("./lib/clients");
 const { mountContent } = require("./lib/content");
+const { mountMessages } = require("./lib/messages");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
@@ -790,6 +791,7 @@ function createApp(cfg = loadConfig()) {
 
   const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings });
   mountContent({ app, admin, store, notify, activity, ...cl });
+  mountMessages({ app, admin, store, notify, activity, cfg, limiter, ...cl });
 
   app.use("/api/admin", admin);
 

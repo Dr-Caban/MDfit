@@ -26,7 +26,7 @@
   }
 
   // ================= Tabs (hash routing so the back button and refresh work)
-  const TABS = ["home", "generate", "programs", "videos", "pain", "learn", "progress", "premium", "tips", "profile"];
+  const TABS = ["home", "generate", "programs", "videos", "pain", "learn", "progress", "premium", "messages", "tips", "profile"];
   // Hash is "#tab" or "#pain/muscle/<id>" (deep link to a muscle report)
   function show(hash) {
     let [tab, sub, arg] = String(hash).split("/");
@@ -40,6 +40,7 @@
     if (tab === "pain" && !show.painGuides && window.MDFitGuides.mountLibrary) { window.MDFitGuides.mountLibrary($("#pain-guides")); show.painGuides = true; }
     if (tab === "progress") renderCalendar();
     if (["programs", "learn", "premium", "tips"].includes(tab)) renderContent(tab, sub);
+    if (tab === "messages") openMessages(); else clearInterval(msgPoll);
     $("#more-btn").classList.toggle("on", $$(".tabbar .ov").some((b) => b.dataset.tab === tab));
     const ms = $("#more-sheet"); if (ms.open) ms.close();
     window.scrollTo(0, 0);
@@ -1149,6 +1150,34 @@
   });
   $("#p-close").addEventListener("click", () => { if (P.done || confirm("End this workout? It won't be saved.")) closePlayer(); });
 
+  // ================= Messages with Dr. Jared (members): poll while open, unread badge otherwise
+  let msgPoll = null, msgCount = -1;
+  const fmtWhen = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  async function loadMessages(scroll) {
+    let d; try { d = await apiAuth("GET", "/api/me/messages"); } catch { return; }
+    $("#msg-gate").hidden = d.member;
+    $("#chat-form").hidden = !d.member;
+    $("#chat").hidden = !d.member && !d.messages.length;
+    const list = $("#chat-list");
+    list.innerHTML = d.messages.length ? d.messages.map((m) => `<div class="bubble ${m.from === "client" ? "me" : "dr"}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span>${m.from === "doctor" ? "Dr. Jared · " : ""}${fmtWhen(m.at)}</span></div>`).join("")
+      : `<p class="muted small chat-empty">Start the conversation. Tell Dr. Jared what's going on, where it hurts, or what you'd like help with.</p>`;
+    if (scroll || d.messages.length !== msgCount) list.scrollTop = list.scrollHeight;
+    msgCount = d.messages.length;
+    if (d.unread) { await apiAuth("POST", "/api/me/messages/read", {}).catch(() => {}); setBadge(0); }
+  }
+  function openMessages() { loadMessages(true); clearInterval(msgPoll); msgPoll = setInterval(() => { if (!document.hidden) loadMessages(false); }, 20000); }
+  function setBadge(n) { const b = $("#msg-badge"); b.hidden = !n; b.textContent = n > 9 ? "9+" : n; $("#more-btn").classList.toggle("has-badge", !!n); const ml = $('#more-list [data-goto="messages"]'); if (ml) ml.dataset.badge = n || ""; }
+  const pollUnread = () => apiAuth("GET", "/api/me/messages/unread-count").then((r) => setBadge(r.unread)).catch(() => {});
+  setInterval(() => { if (!document.hidden && $("#view-messages").hidden) pollUnread(); }, 60000);
+  $("#chat-form").addEventListener("submit", async (e) => {
+    e.preventDefault(); const f = e.target, body = f.body.value.trim(); if (!body) return;
+    const btn = $("button", f); btn.disabled = true;
+    try { await apiAuth("POST", "/api/me/messages", { body }); f.reset(); loadMessages(true); }
+    catch (err) { if (/membership/i.test(err.message)) showPaywall("Messaging Dr. Jared is part of membership."); else toast(err.message); }
+    finally { btn.disabled = false; }
+  });
+  $("#chat-form textarea").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("#chat-form").requestSubmit(); });
+
   // ================= Paywall: subscribe, with 30% off the first month for leaving a review
   function renderAccessBadge() {
     const b = $("#free-badge"); if (!b) return;
@@ -1456,7 +1485,7 @@
     if (sched.status === "fulfilled") classes = sched.value.sessions || [];
     if (wl.status === "fulfilled") allWorkouts = wl.value;
     apiAuth("GET", "/api/me/vitals").then((v) => { vitals = v; renderPerf(); }).catch(() => renderPerf());
-    loadParticipation();
+    loadParticipation(); pollUnread();
     apiAuth("GET", "/api/me/access").then((a) => { access = a; renderToday(); renderAccessBadge(); }).catch(() => {});
     loadContent().then(() => { const t = location.hash.slice(1).split("/"); if (["programs", "learn", "premium", "tips"].includes(t[0])) renderContent(t[0], t[1]); });
     if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }
