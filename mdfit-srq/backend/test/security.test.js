@@ -118,3 +118,17 @@ test("Google Calendar: service-account token, freeBusy blocks slots, bookings be
   await new Promise((ok) => setTimeout(ok, 100));
   assert.ok(calls.some((c) => c[0] === "DELETE" && c[1].endsWith("/events/gevt123")), "cancelling removes the Google event");
 });
+
+test("rate limits: signed-in users are limited per account, so many patients on one Wi-Fi aren't blocked", async (t) => {
+  const s = await start({ edgeSecret: "e" }); t.after(s.close);
+  const edge = { "x-mdfit-edge": "e", "x-mdfit-client-ip": "198.51.100.20" };
+  const signup = async (n) => (await s.call("POST", "/api/clients/signup", { headers: edge, body: { name: "Gym User" + n, email: `gym${n}@example.com`, password: "gym-pass-123" } })).body.token;
+  const a = await signup(1), b = await signup(2);
+  let last;
+  for (let i = 0; i < 125; i++) last = await s.call("GET", "/api/me/library", { headers: { ...edge, authorization: "Bearer " + a } });
+  assert.equal(last.status, 200, "one account can make 125 calls (limit 240 per 10 s)");
+  for (let i = 0; i < 125; i++) last = await s.call("GET", "/api/me/library", { headers: { ...edge, authorization: "Bearer " + b } });
+  assert.equal(last.status, 200, "a second patient on the same Wi-Fi isn't affected");
+  for (let i = 0; i < 121; i++) last = await s.call("GET", "/api/content", { headers: edge });
+  assert.equal(last.status, 429, "anonymous traffic from that address is still capped at 120 per 10 s");
+});

@@ -43,9 +43,13 @@
     const f = e.target, msg = $(".form-msg", f);
     msg.className = "form-msg"; msg.textContent = "";
     try {
-      const out = await api("POST", "/api/admin/login", Object.fromEntries(new FormData(f)));
-      token = out.token; session.set(token); f.reset(); show();
-    } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+      const body = Object.fromEntries(new FormData(f)); if (!body.code) delete body.code;
+      const out = await api("POST", "/api/admin/login", body);
+      token = out.token; session.set(token); f.reset(); $("#code-row").hidden = true; show();
+    } catch (err) {
+      if (/code/i.test(err.message)) { $("#code-row").hidden = false; f.code.focus(); }
+      msg.className = "form-msg err"; msg.textContent = err.message;
+    }
   });
   function logout() { token = ""; session.set(""); $("#app").hidden = true; $("#login").hidden = false; }
   $("#logout").addEventListener("click", logout);
@@ -416,6 +420,13 @@
       <tr><td>${e.seq}</td><td>${when(e.ts)}</td><td>${esc(e.actor)}</td><td>${esc(e.action)}</td><td>${esc(e.subject || "")}</td><td><code title="${e.hash}">${e.hash.slice(0, 10)}…</code></td></tr>`), "No events yet.");
   }
   $("#audit-filter").addEventListener("change", run(loadAudit));
+  $("#anchor-check").addEventListener("click", run(async () => {
+    const v = await api("GET", `/api/admin/audit/verify?seq=${encodeURIComponent($("#anchor-seq").value.trim())}&head=${encodeURIComponent($("#anchor-head").value.trim())}`);
+    const a = v.anchor || {};
+    $("#audit-status").innerHTML = a.ok ? `<p class="banner ok">✓ Anchor #${a.seq} matches the live ledger, and the chain is ${v.ok ? "intact" : "BROKEN: " + esc(v.error)}.</p>`
+      : `<p class="banner bad">✗ ${esc(a.error || "That anchor does NOT match the live ledger. The log may have been rewritten. Contact your IT/security help.")}</p>`;
+  }));
+  $("#anchor-now").addEventListener("click", run(async () => { await api("POST", "/api/admin/audit/anchor"); toast("Anchor emailed to you (if there were new entries)."); }));
   $("#audit-verify").addEventListener("click", run(async () => {
     const v = await api("GET", "/api/admin/audit/verify");
     $("#audit-status").innerHTML = v.ok
@@ -620,7 +631,31 @@
 
   // ---- Settings
   const sf = $("#settings-form");
+  // ---- MFA
+  async function loadMfa() {
+    const st = await api("GET", "/api/admin/mfa");
+    $("#mfa-box").innerHTML = st.enabled
+      ? `<p class="banner ok">✓ Two-step login is on. ${st.recoveryLeft} recovery codes left.</p>
+         <div class="row-actions"><input type="password" id="mfa-pass" placeholder="Password"><input id="mfa-off-code" placeholder="Current code"><button class="mini danger" type="button" id="mfa-off">Turn off</button></div>`
+      : `<p class="banner">Two-step login is off. Turn it on so a stolen password alone can't open patient records.</p><button class="btn btn-sm" type="button" id="mfa-start">Set up two-step login</button>`;
+  }
+  document.addEventListener("click", run(async (e) => {
+    if (e.target.id === "mfa-start") {
+      const s = await api("POST", "/api/admin/mfa/setup");
+      $("#mfa-box").innerHTML = `<ol class="mfa-steps"><li>Open an authenticator app (Google Authenticator, 1Password, Authy, Microsoft Authenticator).</li>
+        <li>Add an account → <b>Enter a setup key</b>. Name: <b>MD Fit</b>. Key: <code class="mfa-secret">${esc(s.secret)}</code> (time-based). On a phone, you can also <a href="${esc(s.uri)}">tap here to add it</a>.</li>
+        <li>Type the 6-digit code it shows: <input id="mfa-code" inputmode="numeric" maxlength="6" style="width:110px"> <button class="btn btn-sm" type="button" id="mfa-confirm">Turn on</button></li></ol>`;
+    }
+    if (e.target.id === "mfa-confirm") {
+      const r = await api("POST", "/api/admin/mfa/enable", { code: $("#mfa-code").value.trim() });
+      $("#mfa-box").innerHTML = `<p class="banner ok">✓ Two-step login is on.</p><p><b>Save these recovery codes</b> somewhere safe (each works once if you lose your phone):</p><pre class="mfa-recovery">${r.recovery.join("\n")}</pre><button class="btn btn-sm btn-line" type="button" id="mfa-done">I saved them</button>`;
+    }
+    if (e.target.id === "mfa-done") loadMfa();
+    if (e.target.id === "mfa-off") { await api("POST", "/api/admin/mfa/disable", { password: $("#mfa-pass").value, code: $("#mfa-off-code").value.trim() }); toast("Two-step login turned off."); loadMfa(); }
+  }));
+
   async function loadSettings() {
+    loadMfa();
     const s = await api("GET", "/api/admin/settings");
     $$("input[name*='.'], textarea[name*='.']", sf).forEach((el) => {
       const [sec, key] = el.name.split(".");

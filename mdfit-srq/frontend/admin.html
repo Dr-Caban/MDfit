@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=43f8cd00">
-  <link rel="stylesheet" href="admin.css?v=6370fd43">
+  <link rel="stylesheet" href="admin.css?v=3d96929a">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -20,6 +20,7 @@
       <h1>Admin</h1>
       <label>Email<input name="email" type="email" required autocomplete="username"></label>
       <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
+      <label id="code-row" hidden>Authenticator code<input name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code or recovery code"></label>
       <button class="btn" type="submit">Log in</button>
       <p class="form-msg" role="status"></p>
     </form>
@@ -181,6 +182,10 @@
         <div class="bar"><button class="btn btn-sm" id="audit-verify" type="button">Verify chain</button>
           <select id="audit-filter"><option value="">All events</option><option value="auth.">Logins</option><option value="admin.view">Admin viewed records</option><option value="admin.change">Admin changes</option><option value="client.">Client activity</option><option value="payments">Payments</option></select></div>
         <div id="audit-status"></div>
+        <details class="audit-key"><summary>Check an anchor from your email</summary>
+          <div class="row-actions"><input id="anchor-seq" placeholder="Entry #" inputmode="numeric" style="width:110px"><input id="anchor-head" placeholder="Hash from the email" style="flex:1;min-width:240px"><button class="btn btn-sm" type="button" id="anchor-check">Check</button><button class="btn btn-sm btn-line" type="button" id="anchor-now">Send an anchor now</button></div>
+          <p class="muted small">Every night the newest ledger hash is emailed to you. If anyone ever rewrote the log, an old email's hash won't match.</p>
+        </details>
         <div class="table-wrap"><table id="audit-table"></table></div>
         <details class="audit-key"><summary>Public verification key</summary><pre id="audit-pub"></pre></details>
       </section>
@@ -243,6 +248,8 @@
 
       <section data-panel="settings" hidden>
         <form id="settings-form" class="form" novalidate>
+          <h2>Security</h2>
+          <div id="mfa-box" class="mfa-box"><span class="muted">Checking…</span></div>
           <h2>Business</h2>
           <div class="grid2">
             <label>Name<input name="business.name" maxlength="60"></label>
@@ -301,6 +308,6 @@
   <script src="config.js?v=73fb174c"></script>
   <script src="painmuscles.js?v=7a092add"></script>
   <script src="paintracks.js?v=76c79be0"></script>
-  <script src="admin.js?v=89fe4e42"></script>
+  <script src="admin.js?v=a55994a4"></script>
 </body>
 </html>

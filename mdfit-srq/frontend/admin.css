@@ -153,3 +153,6 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .banner.bad { background: #fde8e8; border-color: #f0aaaa; color: #a12020; }
 .audit-key pre { white-space: pre-wrap; font-size: 12px; background: #f6f4ee; padding: 10px; border-radius: 8px; }
 #audit-table code { font-size: 12px; }
+.mfa-steps { display: grid; gap: 10px; padding-left: 20px; }
+.mfa-secret { font-size: 15px; background: #f6f4ee; padding: 3px 8px; border-radius: 6px; letter-spacing: 1px; }
+.mfa-recovery { background: #f6f4ee; padding: 12px; border-radius: 8px; font-size: 15px; letter-spacing: 1px; }

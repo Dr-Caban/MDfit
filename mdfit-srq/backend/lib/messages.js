@@ -7,8 +7,11 @@ const crypto = require("crypto");
 const { ValidationError } = require("./validate");
 
 const PREFIX = "v1:";
-function cipher(secret) {
-  const KEY = crypto.scryptSync(String(secret || "mdfit-dev-fallback-key"), "mdfit-msg-v1", 32);
+// secrets: [current, ...older]. New messages use the first; older keys still decrypt (key rotation / separation).
+function cipher(secrets) {
+  const keys = (Array.isArray(secrets) ? secrets : [secrets]).filter(Boolean).map((x) => crypto.scryptSync(String(x), "mdfit-msg-v1", 32));
+  if (!keys.length) keys.push(crypto.scryptSync("mdfit-dev-fallback-key", "mdfit-msg-v1", 32));
+  const KEY = keys[0];
   return {
     enc(plain) {
       const iv = crypto.randomBytes(12), c = crypto.createCipheriv("aes-256-gcm", KEY, iv);
@@ -17,12 +20,15 @@ function cipher(secret) {
     },
     dec(stored) {
       if (typeof stored !== "string" || !stored.startsWith(PREFIX)) return stored || "";
-      try {
-        const raw = Buffer.from(stored.slice(PREFIX.length), "base64");
-        const d = crypto.createDecipheriv("aes-256-gcm", KEY, raw.subarray(0, 12));
-        d.setAuthTag(raw.subarray(12, 28));
-        return Buffer.concat([d.update(raw.subarray(28)), d.final()]).toString("utf8");
-      } catch { return ""; }
+      const raw = Buffer.from(stored.slice(PREFIX.length), "base64");
+      for (const K of keys) {
+        try {
+          const d = crypto.createDecipheriv("aes-256-gcm", K, raw.subarray(0, 12));
+          d.setAuthTag(raw.subarray(12, 28));
+          return Buffer.concat([d.update(raw.subarray(28)), d.final()]).toString("utf8");
+        } catch {}
+      }
+      return "";
     }
   };
 }
@@ -37,7 +43,7 @@ const bodyOf = (b) => {
 };
 
 function mountMessages({ app, admin, store, me, clients, today, notify, cfg, limiter, activity }) {
-  const C = cipher(process.env.MESSAGE_ENC_KEY || cfg.sessionSecret);
+  const C = cipher([process.env.MESSAGE_ENC_KEY, cfg.sessionSecret]);
   const all = () => store.read("messages", []);
   const write = (list) => store.write("messages", list.slice(-KEEP));
   const id = () => crypto.randomBytes(6).toString("hex");

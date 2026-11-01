@@ -16,6 +16,7 @@ const { mountPayments } = require("./lib/payments");
 const { createSecurity } = require("./lib/security");
 const { createCalSync } = require("./lib/calsync");
 const { createAudit } = require("./lib/audit");
+const totp = require("./lib/totp");
 const {
   ValidationError, LEAD_STATUSES, APPT_STATUSES, GOALS, SERVICES, AREAS, DURATIONS, SURGERY, DAYS,
   defaultSettings, leadInput, bookingInput, appointmentInput, feedbackInput, classInput, mergeSettings, EMAIL_RE
@@ -323,8 +324,11 @@ function createApp(cfg = loadConfig()) {
   app.use(sec.headers);
   app.use(sec.edgeGate);
   if (cfg.botFilter) app.use(sec.botFilter);
-  app.use("/api", sec.rateLimit({ name: "burst", max: 120, windowMs: 10 * 1000 }));
-  app.use("/api", sec.rateLimit({ name: "steady", max: 1500, windowMs: 10 * 60 * 1000 }));
+  // Signed-in: per account (240 / 10 s, 3,000 / 10 min). Anonymous: per IP (120 / 10 s, 1,500 / 10 min).
+  const who = (req) => { const m = (req.get("authorization") || "").match(/^Bearer\s+(.+)$/i); const p = m && verifyToken(m[1], cfg.sessionSecret); return p && p.sub ? "acct:" + p.sub : null; };
+  const keyed = (acct, anon) => (req) => { const a = who(req); return a ? { key: a, max: acct } : { key: "ip:" + req.ip, max: anon }; };
+  app.use("/api", sec.rateLimit({ name: "burst", windowMs: 10 * 1000, keyOf: keyed(240, 120) }));
+  app.use("/api", sec.rateLimit({ name: "steady", windowMs: 10 * 60 * 1000, keyOf: keyed(3000, 1500) }));
 
   // ---- Audit ledger (hash-chained, Ed25519-signed): recorded after each response
   const audit = createAudit({ store, signingKey: cfg.auditSigningKey, ipSalt: cfg.sessionSecret, logger });
@@ -352,6 +356,20 @@ function createApp(cfg = loadConfig()) {
     });
     next();
   });
+
+  // Daily anchor: email the owner the ledger head and log it, so history can't be rewritten unnoticed
+  function publishAnchor() {
+    const a = audit.anchor();
+    if (!a) return;
+    logger.info("audit_anchor", { seq: a.seq, head: a.head, kid: a.kid });
+    notify.owner(`MD Fit audit anchor · entry #${a.seq}`, `Keep this email. It proves the state of your patient-access audit log on ${a.at.slice(0, 10)}.\n\nEntry: #${a.seq}\nHash: ${a.head}\nKey: ${a.kid}\n\nTo check the log hasn't been rewritten: Admin → Audit → paste these into "Check an anchor".`);
+  }
+  let anchoredOn = "";
+  const anchorTimer = setInterval(() => {
+    const n = nowParts(cfg.tz, new Date());
+    if (n.time >= "23:45" && anchoredOn !== n.date) { anchoredOn = n.date; publishAnchor(); }
+  }, 5 * 60 * 1000);
+  anchorTimer.unref();
 
   // ---- Headers, CORS, request log
   app.use(requestLogger);
@@ -649,6 +667,24 @@ function createApp(cfg = loadConfig()) {
   });
 
   // ================= Admin =================
+  // ---- Admin MFA (authenticator app codes). State lives in the encrypted store; recovery codes are stored hashed.
+  const mfaState = () => store.read("admin-mfa", { enabled: false });
+  const hashCode = (c) => crypto.createHash("sha256").update("mdfit-recovery:" + String(c).replace(/[\s-]/g, "").toUpperCase()).digest("hex");
+  function checkSecondFactor(code) {
+    const st = mfaState();
+    if (!st.enabled) return true;
+    const c = String(code || "").trim();
+    const step = totp.verify(st.secret, c, cfg.now().getTime());
+    if (step !== null) {
+      if (st.lastStep && step <= st.lastStep) return false; // a code can't be reused
+      store.write("admin-mfa", { ...st, lastStep: step });
+      return true;
+    }
+    const h = hashCode(c), i = (st.recovery || []).indexOf(h);
+    if (c.length >= 8 && i >= 0) { st.recovery.splice(i, 1); store.write("admin-mfa", st); return true; }
+    return false;
+  }
+
   app.post("/api/admin/login", (req, res) => {
     if (!authReady) return res.status(503).json({ error: NOT_SET_UP });
     if (loginFails.blocked(req.ip)) return res.status(429).json({ error: "Too many attempts. Try again in 15 minutes." });
@@ -660,6 +696,14 @@ function createApp(cfg = loadConfig()) {
       logger.warn("login_failed", { email: mask(email || "-") });
       return res.status(401).json({ error: "Wrong email or password." });
     }
+    if (mfaState().enabled) {
+      if (!req.body.code) return res.status(401).json({ error: "Enter the 6-digit code from your authenticator app.", mfaRequired: true });
+      if (!checkSecondFactor(req.body.code)) {
+        loginFails.hit(req.ip);
+        logger.warn("mfa_failed", { email: mask(email) });
+        return res.status(401).json({ error: "That code didn't work. Use the newest code, or a recovery code.", mfaRequired: true });
+      }
+    }
     loginFails.reset(req.ip);
     const exp = Date.now() + SESSION_HOURS * 3600e3;
     activity("login", { email });
@@ -669,7 +713,30 @@ function createApp(cfg = loadConfig()) {
   const admin = express.Router();
   admin.use(requireAdmin);
 
-  admin.get("/me", (req, res) => res.json({ email: req.admin, emailNotifications: notify.enabled }));
+  admin.get("/me", (req, res) => res.json({ email: req.admin, emailNotifications: notify.enabled, mfa: mfaState().enabled }));
+  admin.get("/mfa", (req, res) => { const st = mfaState(); res.json({ enabled: !!st.enabled, recoveryLeft: (st.recovery || []).length }); });
+  admin.post("/mfa/setup", (req, res) => {
+    const st = mfaState();
+    if (st.enabled) return res.status(409).json({ error: "MFA is already on. Turn it off first to set up a new device." });
+    const secret = totp.newSecret();
+    store.write("admin-mfa", { enabled: false, pending: secret });
+    res.json({ secret: secret.replace(/(.{4})/g, "$1 ").trim(), uri: totp.uri(secret, req.admin) });
+  });
+  admin.post("/mfa/enable", (req, res) => {
+    const st = mfaState();
+    if (!st.pending) return res.status(400).json({ error: "Start setup first." });
+    const step = totp.verify(st.pending, req.body && req.body.code, cfg.now().getTime());
+    if (step === null) return res.status(400).json({ error: "That code didn't match. Check the time on your phone and try the newest code." });
+    const recovery = Array.from({ length: 8 }, () => crypto.randomBytes(5).toString("hex").toUpperCase().replace(/(.{5})/, "$1-"));
+    store.write("admin-mfa", { enabled: true, secret: st.pending, lastStep: step, recovery: recovery.map(hashCode), enabledAt: new Date().toISOString() });
+    res.json({ enabled: true, recovery });
+  });
+  admin.post("/mfa/disable", (req, res) => {
+    const b = req.body || {};
+    if (!verifyPassword(String(b.password || ""), cfg.adminPasswordHash) || !checkSecondFactor(b.code)) return res.status(401).json({ error: "Password or code is wrong." });
+    store.write("admin-mfa", { enabled: false });
+    res.json({ enabled: false });
+  });
 
   admin.get("/stats", (req, res) => {
     const { date: today } = nowParts(cfg.tz, cfg.now());
@@ -768,11 +835,16 @@ function createApp(cfg = loadConfig()) {
   });
 
   // Audit ledger: recent entries, filters, and full chain verification
+  admin.post("/audit/anchor", (req, res) => { publishAnchor(); res.json({ anchors: audit.anchors().slice(-5).reverse() }); });
   admin.get("/audit", (req, res) => {
     const limit = Math.min(1000, Math.max(1, Number.parseInt(req.query.limit, 10) || 200));
     res.json({ entries: audit.list({ limit, subject: req.query.subject || undefined, action: req.query.action || undefined }), publicKey: audit.publicPem, fingerprint: audit.fingerprint });
   });
-  admin.get("/audit/verify", (req, res) => res.json(audit.verify()));
+  admin.get("/audit/verify", (req, res) => {
+    const v = audit.verify();
+    if (req.query.seq && req.query.head) v.anchor = audit.checkAnchor(req.query.seq, req.query.head);
+    res.json({ ...v, anchors: audit.anchors().slice(-30).reverse() });
+  });
 
   // Calendar sync status + SimplePractice feed link (kept on the server, encrypted at rest, never sent to the public site)
   admin.get("/calsync", (req, res) => {

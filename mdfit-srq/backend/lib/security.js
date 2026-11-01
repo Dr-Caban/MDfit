@@ -59,17 +59,20 @@ function createSecurity({ edgeSecret = "", allowUa = null, logger } = {}) {
   }
 
   // 5. Global rate limits per IP: a steady ceiling plus a burst ceiling. Old entries are pruned.
-  function rateLimit({ max, windowMs, name }) {
+  // keyOf(req) -> { key, max } lets signed-in accounts be limited per account (shared gym / clinic Wi-Fi isn't punished)
+  // while anonymous traffic is limited per IP.
+  function rateLimit({ max, windowMs, name, keyOf }) {
     const hits = new Map();
     setInterval(() => { const now = Date.now(); for (const [k, v] of hits) if (now > v.reset) hits.delete(k); }, Math.max(windowMs, 60000)).unref();
     return (req, res, next) => {
       if (EXEMPT.some((r) => r.test(req.path))) return next();
       const now = Date.now();
-      let r = hits.get(req.ip);
-      if (!r || now > r.reset) { r = { n: 0, reset: now + windowMs }; hits.set(req.ip, r); }
-      if (++r.n > max) {
+      const k = keyOf ? keyOf(req) : { key: req.ip, max };
+      let r = hits.get(k.key);
+      if (!r || now > r.reset) { r = { n: 0, reset: now + windowMs }; hits.set(k.key, r); }
+      if (++r.n > k.max) {
         res.set("Retry-After", String(Math.ceil((r.reset - now) / 1000)));
-        if (r.n === max + 1) logger && logger.warn("rate_limited", { limiter: name, path: req.path });
+        if (r.n === k.max + 1) logger && logger.warn("rate_limited", { limiter: name, path: req.path });
         return res.status(429).json({ error: "Too many requests. Slow down and try again shortly." });
       }
       next();

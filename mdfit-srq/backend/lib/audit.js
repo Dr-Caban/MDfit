@@ -17,23 +17,31 @@ const canon = (v) => (v === null || typeof v !== "object") ? JSON.stringify(v)
 const hashOf = (e) => crypto.createHash("sha256").update(canon({ seq: e.seq, ts: e.ts, actor: e.actor, action: e.action, subject: e.subject, ip: e.ip, meta: e.meta, prev: e.prev })).digest("hex");
 
 function createAudit({ store, signingKey = "", ipSalt = "", logger, now = () => new Date() }) {
-  // ---- Keys
-  let priv, pub;
-  if (signingKey) {
-    const pem = signingKey.includes("BEGIN") ? signingKey : Buffer.from(signingKey, "base64").toString("utf8");
-    priv = crypto.createPrivateKey(pem);
-  } else {
-    const k = store.read("audit-key", null);
-    if (k && k.privatePem) priv = crypto.createPrivateKey(k.privatePem);
-    else {
-      const pair = crypto.generateKeyPairSync("ed25519");
-      priv = pair.privateKey;
-      store.write("audit-key", { privatePem: priv.export({ type: "pkcs8", format: "pem" }), createdAt: now().toISOString() });
-    }
+  // ---- Keys. Preferred: AUDIT_SIGNING_KEY in the host's secret variables, kept apart from the data it protects.
+  // Without it, a key is generated and kept in the encrypted store. Entries carry the key id (kid) that signed them,
+  // and older keys stay trusted for verification after a rotation.
+  const fp = (pubKey) => crypto.createHash("sha256").update(pubKey.export({ type: "spki", format: "der" })).digest("hex").slice(0, 16);
+  const stored = store.read("audit-key", null);
+  let priv;
+  if (signingKey) priv = crypto.createPrivateKey(signingKey.includes("BEGIN") ? signingKey : Buffer.from(signingKey, "base64").toString("utf8"));
+  else if (stored && stored.privatePem) priv = crypto.createPrivateKey(stored.privatePem);
+  else {
+    priv = crypto.generateKeyPairSync("ed25519").privateKey;
+    store.write("audit-key", { privatePem: priv.export({ type: "pkcs8", format: "pem" }), createdAt: now().toISOString() });
   }
-  pub = crypto.createPublicKey(priv);
+  const pub = crypto.createPublicKey(priv);
   const publicPem = pub.export({ type: "spki", format: "pem" });
-  const fingerprint = crypto.createHash("sha256").update(pub.export({ type: "spki", format: "der" })).digest("hex").slice(0, 16);
+  const fingerprint = fp(pub);
+  const trusted = new Map([[fingerprint, pub]]);
+  if (stored && stored.privatePem) { const old = crypto.createPublicKey(crypto.createPrivateKey(stored.privatePem)); trusted.set(fp(old), old); }
+  for (const pem of (store.read("audit-trusted-keys", []) || [])) { try { const k = crypto.createPublicKey(pem); trusted.set(fp(k), k); } catch {} }
+  // Remember every key that has ever signed, so a later rotation never orphans old entries
+  const known = store.read("audit-trusted-keys", []);
+  if (!known.includes(publicPem)) store.write("audit-trusted-keys", [...known, publicPem]);
+  const sigOk = (e) => {
+    const keys = e.kid && trusted.has(e.kid) ? [trusted.get(e.kid)] : [...trusted.values()];
+    return keys.some((k) => crypto.verify(null, Buffer.from(e.hash, "hex"), k, Buffer.from(e.sig || "", "base64")));
+  };
 
   const monthOf = (iso) => iso.slice(0, 7);
   const fileFor = (month) => `audit-${month}`;
@@ -48,6 +56,7 @@ function createAudit({ store, signingKey = "", ipSalt = "", logger, now = () => 
       const e = { seq: st.seq + 1, ts, actor: String(actor || "system"), action: String(action), subject: String(subject || ""), ip: hashIp(ip), meta: meta || {}, prev: st.last };
       e.hash = hashOf(e);
       e.sig = crypto.sign(null, Buffer.from(e.hash, "hex"), priv).toString("base64");
+      e.kid = fingerprint;
       const list = store.read(fileFor(month), []);
       list.push(e);
       store.write(fileFor(month), list);
@@ -69,7 +78,7 @@ function createAudit({ store, signingKey = "", ipSalt = "", logger, now = () => 
         if (e.seq !== n) return { ok: false, entries: n, error: `Entry ${n} is missing or out of order (found #${e.seq}).`, at: e.seq };
         if (e.prev !== prev) return { ok: false, entries: n, error: `Chain broken at entry #${e.seq}: it doesn't link to the entry before it.`, at: e.seq };
         if (hashOf(e) !== e.hash) return { ok: false, entries: n, error: `Entry #${e.seq} was altered after it was written.`, at: e.seq };
-        if (!crypto.verify(null, Buffer.from(e.hash, "hex"), pub, Buffer.from(e.sig || "", "base64"))) return { ok: false, entries: n, error: `Entry #${e.seq} has an invalid signature.`, at: e.seq };
+        if (!sigOk(e)) return { ok: false, entries: n, error: `Entry #${e.seq} has an invalid signature.`, at: e.seq };
         prev = e.hash;
       }
     }
@@ -94,7 +103,29 @@ function createAudit({ store, signingKey = "", ipSalt = "", logger, now = () => 
     return out;
   }
 
-  return { record, verify, list, publicPem, fingerprint, GENESIS };
+  // ---- Anchors: the chain head published OUTSIDE this server (emailed to the owner, written to the host's logs).
+  // Hash chaining alone can't stop someone with full server access from rebuilding the whole chain; an anchor they
+  // can't reach (your inbox) can. Check any anchor against the live ledger with checkAnchor().
+  function anchor() {
+    const st = state();
+    if (!st.seq) return null;
+    const a = { seq: st.seq, head: st.last, at: now().toISOString(), kid: fingerprint };
+    const list = store.read("audit-anchors", []);
+    if (list.length && list[list.length - 1].seq === a.seq) return null; // nothing new since the last anchor
+    store.write("audit-anchors", [...list, a].slice(-3650));
+    return a;
+  }
+  function checkAnchor(seq, head) {
+    const st = state();
+    for (const month of st.months) {
+      const e = store.read(fileFor(month), []).find((x) => x.seq === Number(seq));
+      if (e) return { ok: e.hash === String(head).trim().toLowerCase(), seq: e.seq, ts: e.ts };
+    }
+    return { ok: false, error: `Entry #${seq} isn't in the ledger.` };
+  }
+  const anchors = () => store.read("audit-anchors", []);
+
+  return { record, verify, list, anchor, checkAnchor, anchors, publicPem, fingerprint, GENESIS };
 }
 
 module.exports = { createAudit, hashOf, canon, GENESIS };
