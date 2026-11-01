@@ -509,3 +509,6 @@ dialog .book-when { margin: -6px 0 4px; }
 .stars-pick { justify-content: flex-end; }
 .review-form label.check { display: flex !important; flex-direction: row; grid-template-columns: none; gap: 10px; align-items: center; font-weight: 500; }
 .review-form label.check input { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; accent-color: var(--accent); }
+.credit-tiers { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; }
+.credit-tiers li { display: flex; gap: 10px; align-items: baseline; background: #fff; border-radius: 10px; padding: 8px 12px; }
+.credit-tiers b { color: var(--ink); min-width: 84px; }

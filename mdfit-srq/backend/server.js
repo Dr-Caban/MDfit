@@ -776,7 +776,7 @@ function createApp(cfg = loadConfig()) {
 
   admin.get("/activity", (req, res) => res.json(store.read("activity", []).slice(0, 200)));
 
-  const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime });
+  const cl = mountClients({ app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings });
   mountContent({ app, admin, store, notify, activity, ...cl });
 
   app.use("/api/admin", admin);

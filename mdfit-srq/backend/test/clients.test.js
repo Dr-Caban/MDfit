@@ -302,3 +302,18 @@ test("member content: locked links, membership requests, admin grants tiers, mon
   await s.call("PUT", `/api/admin/clients/${members[0].id}/membership`, { tier: "premium", until: "2026-10-31" }, adm);
   assert.equal((await s.call("GET", "/api/me/content", undefined, tok)).body.access, "free");
 });
+
+test("participation score and credit tiers", () => {
+  const { participation } = require("../lib/clients");
+  const T = { attendPct: 90, homePerWeek: 3, creditPct: 10 };
+  const wk = (n, from = "2026-11-02") => Array.from({ length: n }, (_, i) => ({ date: new Date(Date.parse(from + "T12:00:00Z") - i * 864e5 * 2).toISOString().slice(0, 10) }));
+  const v = (c, m) => [...Array(c).fill({ status: "completed" }), ...Array(m).fill({ status: "no-show" })];
+  const full = participation({ visits: v(10, 0), workouts: wk(12), targets: T, today: "2026-11-02" });
+  assert.equal(full.score, 100); assert.equal(full.earnedPct, 10);
+  const near = participation({ visits: v(9, 1), workouts: wk(8), targets: T, today: "2026-11-02" });
+  assert.equal(near.attendance, 90); assert.equal(near.homePerWeek, 2);
+  assert.equal(near.score, 83); assert.equal(near.earnedPct, 5, "a near-miss still earns half");
+  const low = participation({ visits: v(5, 5), workouts: [], targets: T, today: "2026-11-02" });
+  assert.equal(low.earnedPct, 0);
+  assert.equal(participation({ visits: [], workouts: [], targets: T, today: "2026-11-02" }).score, 50, "no visits yet: attendance not held against them");
+});

@@ -789,3 +789,13 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .tip summary { cursor: pointer; font-weight: 700; color: var(--navy); }
 .tip p { margin: 8px 0 0; color: var(--text); line-height: 1.55; }
 @media (min-width: 700px) { .prog-grid, .lect-grid { grid-template-columns: 1fr 1fr; } .tier-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); } }
+.part-score { font: 700 28px/1 var(--display); color: var(--navy); }
+.part-score small { font-size: 13px; color: var(--muted); }
+.part-earn { margin: 4px 0 10px; }
+.part-earn b { color: #2e7d4f; }
+.part-rows { display: grid; gap: 10px; }
+.part-rows > div { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 14px; }
+.part-rows b small { font-weight: 600; color: var(--muted); font-size: 12px; }
+.pbar { grid-column: 1 / -1; height: 8px; border-radius: 8px; background: var(--card-2); overflow: hidden; }
+.pbar i { display: block; height: 100%; background: var(--accent, #FF7A00); border-radius: 8px; }
+.part-week { margin: 10px 0 0; font-size: 14px; }
