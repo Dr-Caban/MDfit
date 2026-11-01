@@ -741,5 +741,176 @@
     dlg.querySelector(".gd-body").scrollTop = 0;
   }
   const meta = (id) => GUIDES[id] && { title: GUIDES[id].title, subtitle: GUIDES[id].subtitle, thumb: `assets/guides/${id}-thumb.webp` };
-  window.MDFitGuides = { open, render, meta, ids: Object.keys(GUIDES) };
+
+  // ================= Protocol guides: one per pain track from Dr. Jared's Drive =================
+  // Built from the track (pattern images, levels, videos), painmuscles.js (where each muscle sends pain, what aggravates it)
+  // and musclereports.js (symptoms, self-tests, causes, look-alikes, red flags, dosing, timeline).
+  const GROUPS = ["Neck & head", "Shoulder & arm", "Chest & ribs", "Back", "Hip & glutes", "Knee & thigh", "Calf & foot"];
+  const REGION_GROUP = { "Chest": "Chest & ribs", "Ribs": "Chest & ribs", "Abdomen": "Chest & ribs", "Neck & shoulder": "Neck & head", "Shoulder": "Shoulder & arm",
+    "Upper arm": "Shoulder & arm", "Forearm": "Shoulder & arm", "Low back": "Back", "Low back & hip": "Back", "Hip": "Hip & glutes", "Hip & groin": "Hip & glutes",
+    "Glutes": "Hip & glutes", "Knee": "Knee & thigh", "Calf": "Calf & foot", "Foot": "Calf & foot" };
+  const POSTER_GROUP = { "posterior-neck": "Neck & head", "scalenes": "Neck & head", "rotator-cuff": "Shoulder & arm", "iliopsoas": "Hip & glutes", "lateral-hip": "Hip & glutes", "quads": "Knee & thigh", "calf": "Calf & foot" };
+  const TK = () => window.MDFitTracks, MUS = () => (window.MDFitMuscles || {}).MUSCLES || {};
+  const driveThumb = (id, w = 900) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+  const mp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
+  let reportsLoading = null;
+  const loadReports = () => window.MDFIT_MUSCLE_REPORTS ? Promise.resolve() : (reportsLoading = reportsLoading || new Promise((res) => {
+    const sc = document.createElement("script"); sc.src = "/musclereports.js"; sc.onload = res; sc.onerror = res; document.head.appendChild(sc);
+  }));
+  // Default dosing by level when the muscle report has no exact match for a video
+  const LEVEL_DOSE = [
+    "Daily · 2 sets · slow and gentle, pain no higher than 3/10 during or after",
+    "Every other day · 3 sets · smooth control, pain no higher than 3/10",
+    "2 to 3 times a week · 3 sets · lower slowly over 3 to 5 seconds",
+    "2 to 3 times a week · 3 sets · add load only when the last level is easy"
+  ];
+  const norm = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function doseFor(video, reports, li) {
+    const n = norm(video.name);
+    for (const r of reports) for (const ph of ["calm", "restore", "strengthen"]) for (const st of (r.protocol || {})[ph] || []) {
+      const v = norm(st.video), nm = norm(st.name);
+      if (v && (v === n || v.includes(n) || n.includes(v)) || nm === n) return { dose: st.dose, how: st.how };
+    }
+    return { dose: LEVEL_DOSE[Math.min(li, LEVEL_DOSE.length - 1)], how: "" };
+  }
+  const list = (arr) => `<ul class="gd-list">${arr.map((i) => `<li>${lines(i)}</li>`).join("")}</ul>`;
+
+  function renderTrack(t) {
+    const M = MUS(), R = window.MDFIT_MUSCLE_REPORTS || {};
+    const ms = t.pts.filter((id) => M[id]);
+    const main = ms.find((id) => R[id]) || ms[0], rep = R[main] || {};
+    const reports = ms.map((id) => R[id]).filter(Boolean);
+    const worse = [...new Set(ms.flatMap((id) => M[id].worse || []))];
+    const allVideos = t.levels.flatMap((l) => l.videos.filter((v) => v.id));
+    return `
+      <header class="gd-hero">
+        <img class="gd-logo" src="/assets/logo.webp" alt="MD Fit" width="72" height="72">
+        <div><p class="gd-eyebrow">MD Fit protocol guide · ${esc(t.region)}</p><h2>${esc(t.title)}</h2>
+          <p class="gd-sub">${ms.map((id) => esc(M[id].name)).join(" · ")}</p></div>
+      </header>
+      ${t.img.length ? `<div class="gd-art tg-art">${t.img.map((i) => `<figure><img src="${driveThumb(i)}" alt="${esc(t.title)}: pain pattern" loading="lazy" referrerpolicy="no-referrer"><figcaption>Dr. Jared's pain pattern</figcaption></figure>`).join("")}</div>` : ""}
+      ${t.note ? `<blockquote class="gd-quote">${esc(t.note)}</blockquote>` : ""}
+
+      <section class="gd-sec"><h3>Where you'll feel it</h3><ul class="gd-ref">${ms.map((id) => `<li><b>${esc(M[id].name)}</b><p>${esc(M[id].refers || "")}${M[id].does ? `<br><span class="tg-does">What it does: ${esc(M[id].does)}</span>` : ""}</p></li>`).join("")}</ul></section>
+
+      ${rep.symptoms ? `<section class="gd-sec"><h3>Does this sound like you?</h3>${list(rep.symptoms)}
+        ${rep.questions && rep.questions.length ? `<div class="tg-quiz" data-total="${rep.questions.reduce((a, q) => a + (q.w || 1), 0)}"><p class="tg-q-h">Tick what's true for you:</p>
+          ${rep.questions.map((q, i) => `<label><input type="checkbox" data-w="${q.w || 1}"> ${esc(q.q)}</label>`).join("")}
+          <p class="tg-verdict" aria-live="polite">Tick the statements above to see how well this pattern fits.</p></div>` : ""}</section>` : ""}
+
+      ${rep.tests && rep.tests.length ? `<section class="gd-sec"><h3>Quick self-tests</h3><div class="gd-muscles">${rep.tests.map((x) => `<article><h4>${esc(x.name)}</h4><dl><dt>How</dt><dd>${lines(x.how)}</dd>${x.positive ? `<dt>Positive if</dt><dd>${lines(x.positive)}</dd>` : ""}</dl></article>`).join("")}</div></section>` : ""}
+
+      <section class="gd-sec"><h3>What drives it</h3>${rep.causes ? list(rep.causes) : ""}
+        ${worse.length ? `<p class="tg-tags-h">Usually worse with:</p><p class="pm-tags">${worse.map((w) => `<span>${esc(w)}</span>`).join("")}</p>` : ""}</section>
+
+      ${rep.mimics && rep.mimics.length ? `<section class="gd-sec"><h3>Could it be something else?</h3>${list(rep.mimics)}</section>` : ""}
+
+      ${ms.length > 1 ? `<section class="gd-sec"><h3>Other muscles in this pattern</h3><div class="gd-muscles">${ms.filter((id) => id !== main).map((id) => `
+        <article><h4>${esc(M[id].name)}</h4><dl><dt>Sends pain to</dt><dd>${esc(M[id].refers || "")}</dd>${R[id] && R[id].symptoms ? `<dt>Clues</dt><dd>${R[id].symptoms.slice(0, 2).map(esc).join("<br>")}</dd>` : ""}</dl>
+        <a class="tg-mlink" href="/account#pain/muscle/${id}">Full ${esc(M[id].name)} report →</a></article>`).join("")}</div></section>` : ""}
+
+      <section class="gd-sec tg-proto"><h3>The protocol</h3>
+        <p class="tg-rule">Work through the levels in order. Stay on a level until the movements feel easy and your pain stays at 2/10 or less for three sessions in a row, then move up. If pain flares above 3/10, or is worse the next morning, drop back one level.</p>
+        <div class="tg-player" hidden><div class="tg-screen"></div><p class="tg-now"></p></div>
+        ${t.levels.map((l, li) => `<div class="tg-level"><h4>${esc(l.title)}</h4><ol>${l.videos.map((v) => {
+          const d = doseFor(v, reports, li);
+          return `<li${v.id ? "" : ' class="soon"'}>${v.id ? `<button type="button" class="tg-play" data-gvid="${esc(v.id)}" data-gname="${esc(v.name)}" aria-label="Play ${esc(v.name)}"><img src="${driveThumb(v.id, 240)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"><span>▶</span></button>` : `<span class="tg-soon">Video coming soon</span>`}
+            <div><b>${esc(v.name)}</b><p class="tg-dose">${esc(d.dose)}</p>${d.how ? `<p class="tg-how">${esc(d.how)}</p>` : ""}</div></li>`;
+        }).join("")}</ol></div>`).join("")}
+        ${allVideos.length ? `<button type="button" class="gd-book tg-start" data-track-play="${esc(t.id)}">▶ Play the whole track</button>` : ""}
+      </section>
+
+      ${rep.protocol ? `<section class="gd-sec"><h3>Dr. Jared's phase-by-phase plan for the ${esc(M[main].name)}</h3>${[["calm", "Phase 1 · Calm it down"], ["restore", "Phase 2 · Restore movement"], ["strengthen", "Phase 3 · Strengthen"]].map(([k, h]) => (rep.protocol[k] || []).length ? `
+        <div class="tg-phase"><h4>${h}</h4>${rep.protocol[k].map((st) => `<p><b>${esc(st.name)}</b> · <span class="tg-dose">${esc(st.dose || "")}</span><br>${esc(st.how || "")}</p>`).join("")}</div>` : "").join("")}</section>` : ""}
+
+      ${rep.habits && rep.habits.length ? `<section class="gd-sec"><h3>Daily habits that help</h3>${list(rep.habits)}</section>` : ""}
+      ${rep.expect ? `<section class="gd-take"><h3>What to expect</h3><p>${lines(rep.expect)}</p></section>` : ""}
+      ${(rep.redFlags && rep.redFlags.length) || rep.seePro ? `<section class="gd-sec tg-red"><h3>Stop and get checked if…</h3>${rep.redFlags ? list(rep.redFlags) : ""}${rep.seePro ? `<p>${lines(rep.seePro)}</p>` : ""}</section>` : ""}
+      <footer class="gd-foot"><a class="gd-book" href="/book">Book an evaluation with Dr. Jared</a>
+        <p><a href="/account#pain/track/${esc(t.id)}">Open this track in the MD Fit app</a> to save your progress. Educational only, not a diagnosis. MD Fit · 3214 Clark Road, Sarasota · 941-313-0562</p></footer>`;
+  }
+
+  function ensureDlg() {
+    if (dlg) return dlg;
+    open("posterior-neck"); dlg.close(); return dlg;
+  }
+  function wireTrackGuide(t) {
+    const body = dlg.querySelector(".gd-body");
+    const quiz = body.querySelector(".tg-quiz");
+    if (quiz) quiz.addEventListener("change", () => {
+      const tot = Number(quiz.dataset.total) || 1, got = [...quiz.querySelectorAll("input:checked")].reduce((a, c) => a + Number(c.dataset.w), 0), pct = got / tot;
+      quiz.querySelector(".tg-verdict").innerHTML = !got ? "Tick the statements above to see how well this pattern fits."
+        : pct >= 0.6 ? `<b>Strong match.</b> This pattern fits what you're feeling. Start Level 1 below.`
+        : pct >= 0.3 ? `<b>Possible match.</b> Try Level 1 for a week. If nothing changes, check the other muscles listed or book an evaluation.`
+        : `<b>Weak match.</b> Another muscle may be the source. Try the pain map, or book an evaluation.`;
+    });
+    body.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-gvid]");
+      if (b) {
+        const pl = body.querySelector(".tg-player"), sc = pl.querySelector(".tg-screen"), id = b.dataset.gvid;
+        pl.hidden = false;
+        sc.innerHTML = `<video playsinline muted autoplay loop controls preload="auto"></video>`;
+        const v = sc.querySelector("video");
+        v.addEventListener("error", () => { sc.innerHTML = `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="Exercise video" allow="autoplay; fullscreen" allowfullscreen></iframe>`; }, { once: true });
+        v.src = mp4(id); v.play().catch(() => {});
+        pl.querySelector(".tg-now").textContent = "Now playing: " + b.dataset.gname;
+        pl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      const s = e.target.closest("[data-track-play]");
+      if (s && TK()) { dlg.close(); TK().open(s.dataset.trackPlay, { startLabel: location.pathname.startsWith("/account") ? "" : "Save my progress in the app", onStart: () => (location.href = "/account#pain/track/" + s.dataset.trackPlay) }); }
+    });
+  }
+  async function openTrackGuide(id) {
+    if (TK() && TK().ready) await TK().ready;
+    const t = TK() && TK().TRACKS.find((x) => x.id === id);
+    if (!t) return;
+    ensureDlg();
+    dlg.querySelector(".gd-body").innerHTML = `<p class="tg-loading">Loading the guide…</p>`;
+    dlg.showModal();
+    await loadReports();
+    const body = dlg.querySelector(".gd-body"), fresh = body.cloneNode(false);
+    body.replaceWith(fresh);
+    fresh.innerHTML = renderTrack(t);
+    dlg.setAttribute("aria-label", t.title);
+    fresh.scrollTop = 0;
+    wireTrackGuide(t);
+  }
+
+  // Every guide (posters + protocol guides), for the guide library
+  function all() {
+    const posters = Object.keys(GUIDES).map((id) => ({ id, kind: "poster", group: POSTER_GROUP[id] || "Back", title: GUIDES[id].title, sub: GUIDES[id].subtitle, thumb: `/assets/guides/${id}-thumb.webp` }));
+    const tracks = (TK() ? TK().TRACKS : []).map((t) => ({ id: t.id, kind: "track", group: REGION_GROUP[t.region] || "Back", title: t.title, sub: t.pts.map((p) => (MUS()[p] || {}).name).filter(Boolean).slice(0, 3).join(" · "), thumb: t.img[0] ? driveThumb(t.img[0], 300) : "" }));
+    return [...posters, ...tracks];
+  }
+  const openAny = (kind, id) => (kind === "track" ? openTrackGuide(id) : open(id));
+  // A guide library with region filters: MDFitGuides.mountLibrary(el)
+  function mountLibrary(root) {
+    if (!root) return;
+    let grp = "All";
+    const card = (g) => `<button type="button" class="guide-card${g.kind === "track" ? " tg-card" : ""}" data-gkind="${g.kind}" data-gid="${esc(g.id)}">
+      ${g.thumb ? `<img src="${esc(g.thumb)}" alt="" width="120" height="120" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">` : ""}
+      <span>${g.kind === "track" ? `<em class="tg-kind">Protocol guide</em>` : ""}<b>${esc(g.title)}</b><small>${esc(g.sub || "")}</small><i>Open guide →</i></span></button>`;
+    const draw = () => {
+      const items = all();
+      root.innerHTML = `<div class="tg-filter" role="tablist" aria-label="Body region">${["All", ...GROUPS].map((x) => `<button type="button" data-ggrp="${x}" aria-selected="${x === grp}">${x}${x === "All" ? ` <span>${items.length}</span>` : ""}</button>`).join("")}</div>
+        <div class="tg-grid">${items.filter((g) => grp === "All" || g.group === grp).map(card).join("")}</div>`;
+    };
+    root.addEventListener("click", (e) => {
+      const f = e.target.closest("[data-ggrp]"); if (f) { grp = f.dataset.ggrp; draw(); return; }
+      const c = e.target.closest("[data-gkind]"); if (c) openAny(c.dataset.gkind, c.dataset.gid);
+    });
+    draw();
+    if (TK() && TK().ready) TK().ready.then(draw);
+  }
+
+  // Any [data-tguide="trackId"] button anywhere opens that protocol guide
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tguide]");
+    if (b) { e.preventDefault(); const d = b.closest("dialog[open]"); if (d && d !== dlg) d.close(); openTrackGuide(b.dataset.tguide); }
+  });
+  // Deep link: /#guide/<id> or /account#guide/<id>
+  const fromHash = () => { const m = location.hash.match(/^#guide\/([\w-]+)/); if (m) (GUIDES[m[1]] ? open(m[1]) : openTrackGuide(m[1])); };
+  window.addEventListener("hashchange", fromHash); setTimeout(fromHash, 300);
+
+  window.MDFitGuides = { open, render, meta, ids: Object.keys(GUIDES), openTrackGuide, renderTrack, all, mountLibrary, GROUPS };
 })();

@@ -101,3 +101,57 @@
 .tk-ctrl { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 .tk-ctrl .tk-now { margin: 0; }
 .tk-auto { font-size: 13px; font-weight: 600; color: #0A1A2E; display: inline-flex; gap: 6px; align-items: center; }
+
+/* ===== Guide library (filters + grid), shared by homepage and app ===== */
+.tg-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; scrollbar-width: none; }
+.tg-filter button { flex: 0 0 auto; font: 600 13.5px "Montserrat", system-ui, sans-serif; padding: 8px 14px; border-radius: 999px; border: 1.5px solid #e4ded1; background: #fff; color: #0A1A2E; cursor: pointer; }
+.tg-filter button span { opacity: .7; font-weight: 700; }
+.tg-filter button[aria-selected="true"] { background: #0A1A2E; color: #fff; border-color: #0A1A2E; }
+.tg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.app-guides .guide-card { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; text-align: left; background: #fff; border: 1px solid #e4ded1; border-radius: 12px; padding: 8px; cursor: pointer; font: inherit; color: inherit; width: 100%; }
+.app-guides .guide-card img { width: 64px; height: 64px; object-fit: contain; background: #fff; border-radius: 10px; padding: 4px; }
+.app-guides .guide-card span { display: grid; gap: 2px; }
+.app-guides .guide-card b { color: #0A1A2E; font-size: 14.5px; }
+.app-guides .guide-card small { color: #6b6a6e; font-size: 12.5px; }
+.app-guides .guide-card i { font-style: normal; color: #2F6E9E; font-weight: 600; font-size: 13px; }
+.tg-card img { object-fit: cover !important; padding: 0 !important; }
+.tg-kind { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #7AAFD7; }
+.app-guides .tg-kind { color: #2F6E9E; }
+.pain-guides-head { margin-top: 22px; }
+
+/* ===== Protocol guide page ===== */
+.tg-loading { padding: 60px 20px; text-align: center; color: #6b6a6e; }
+.tg-art figure img { object-fit: contain; background: #fff; }
+.tg-does { color: #6b6a6e; font-size: 13px; }
+.tg-quiz { background: #fff; border: 1px solid #e4ded1; border-radius: 14px; padding: 14px 16px; margin-top: 12px; display: grid; gap: 8px; }
+.tg-quiz label { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; line-height: 1.45; cursor: pointer; }
+.tg-quiz input { margin-top: 3px; width: 18px; height: 18px; accent-color: #2F6E9E; flex: 0 0 auto; }
+.tg-q-h { margin: 0; font-weight: 700; color: #0A1A2E; }
+.tg-verdict { margin: 4px 0 0; padding: 10px 12px; border-radius: 10px; background: #EAF3FA; color: #0A1A2E; font-size: 14px; }
+.tg-tags-h { margin: 12px 0 6px; font-weight: 700; color: #0A1A2E; }
+.tg-proto .tg-rule { background: #EAF3FA; border-left: 4px solid #7AAFD7; padding: 10px 14px; border-radius: 0 10px 10px 0; font-size: 14.5px; }
+.tg-level { margin: 14px 0; }
+.tg-level h4 { font: 700 16px/1.3 "Libre Baskerville", Georgia, serif; color: #0A1A2E; margin: 0 0 8px; }
+.tg-level ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.tg-level li { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: start; background: #fff; border: 1px solid #e4ded1; border-radius: 12px; padding: 8px; }
+.tg-level li b { color: #0A1A2E; }
+.tg-level li p { margin: 2px 0 0; font-size: 13.5px; }
+.tg-dose { color: #2F6E9E; font-weight: 700; }
+.tg-how { color: #424244; }
+.tg-play { position: relative; width: 96px; aspect-ratio: 4/3; border: 0; border-radius: 8px; overflow: hidden; background: #1d3352; cursor: pointer; padding: 0; }
+.tg-play img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tg-play span { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 22px; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.tg-soon { width: 96px; aspect-ratio: 4/3; border-radius: 8px; background: #F3EFE6; color: #6b6a6e; font-size: 11.5px; font-weight: 700; display: grid; place-items: center; text-align: center; padding: 4px; }
+.tg-player { margin: 10px 0 14px; }
+.tg-screen video, .tg-screen iframe { width: 100%; aspect-ratio: 16/10; border: 0; border-radius: 14px; background: #000; display: block; }
+.tg-now { margin: 6px 2px 0; font-size: 13px; font-weight: 600; color: #0A1A2E; }
+.tg-start { display: inline-block; margin-top: 8px; border: 0; cursor: pointer; font-family: inherit; }
+.tg-phase { background: #fff; border: 1px solid #e4ded1; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.tg-phase h4 { margin: 0 0 6px; color: #0A1A2E; }
+.tg-phase p { margin: 6px 0; font-size: 14px; line-height: 1.5; }
+.tg-red { background: #fdf0f0; border: 1px solid #f3cccc; border-radius: 14px; padding: 4px 16px 10px; }
+.tg-red h3 { color: #a12020 !important; }
+.tg-mlink { display: inline-block; margin-top: 8px; font-weight: 700; font-size: 13px; color: #2F6E9E; text-decoration: none; }
+.tk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tk-guide { background: #fff; color: #0A1A2E; border: 1.5px solid #7AAFD7; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+@media (max-width: 560px) { .tg-level li { grid-template-columns: 76px 1fr; } .tg-play, .tg-soon { width: 76px; } }

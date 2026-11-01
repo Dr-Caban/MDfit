@@ -37,6 +37,7 @@
     $$("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== tab));
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
     if (tab === "videos") renderVideos();
+    if (tab === "pain" && !show.painGuides && window.MDFitGuides.mountLibrary) { window.MDFitGuides.mountLibrary($("#pain-guides")); show.painGuides = true; }
     if (tab === "progress") renderCalendar();
     if (["programs", "learn", "premium", "tips"].includes(tab)) renderContent(tab, sub);
     $("#more-btn").classList.toggle("on", $$(".tabbar .ov").some((b) => b.dataset.tab === tab));
@@ -1190,7 +1191,9 @@
     const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//MD Fit//Live//EN", "BEGIN:VEVENT", `UID:live-${L.date}@mdfit`, `DTSTAMP:${st(new Date())}`, `DTSTART:${st(start)}`, `DTEND:${st(end)}`, `SUMMARY:${L.title}`, `DESCRIPTION:${L.joinUrl || "Join from the Learn tab in the MD Fit app."}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
     return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
   }
+  let guidesMounted = false;
   function renderLearn() {
+    if (!guidesMounted && window.MDFitGuides.mountLibrary) { window.MDFitGuides.mountLibrary($("#learn-guides")); guidesMounted = true; }
     const L = C.live, has = L.date && L.date >= todayInTz();
     $("#live-card").innerHTML = `<div class="live-top"><span class="live-dot"></span><span class="label accent">Monthly live Q&amp;A</span>${L.locked ? lockBadge : ""}</div>
       <h2>${esc(L.title)}</h2>

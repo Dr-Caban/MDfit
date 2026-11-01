@@ -53,6 +53,7 @@
       </ul>
       <div class="pm-tags"><b>Often worse with</b>${m.worse.map((w) => `<span>${esc(MUS.AGGRAVATORS[w])}</span>`).join("")}</div>
       ${m.guide && GUIDES[m.guide] ? `<div class="guide-cards">${guideCard(m.guide)}</div>` : ""}
+      ${tracks.length ? `<div class="pm-guide-links"><b>Protocol guides</b>${tracks.map((t) => `<button type="button" class="pm-glink" data-tguide="${esc(t.id)}">${esc(t.title)} <span>Read →</span></button>`).join("")}</div>` : ""}
       <a class="btn pm-report" href="/account#pain/muscle/${id}">Take the self-check &amp; get the protocol →</a>
       <div class="painmap-cta">
         <a href="#book" class="btn btn-line">Book an evaluation</a>
@@ -85,5 +86,5 @@
   });
 
   // Guide library under the map
-  $(".guide-library", root).innerHTML = Object.keys(GUIDES).map(guideCard).join("");
+  window.MDFitGuides.mountLibrary($(".guide-library", root));
 })();
