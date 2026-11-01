@@ -209,3 +209,6 @@
   .pm-choice.two .pp { flex-direction: column; }
   .pm-choice.two .pp-panel { width: 100%; }
 }
+.pm-sheet-head { display: grid; grid-template-columns: 96px 1fr; gap: 18px; align-items: center; }
+.pm-thumb { width: 96px; height: 120px; border-radius: 12px; border: 1px solid #e4ded1; background: #fff; }
+@media (max-width: 640px) { .pm-sheet-head { grid-template-columns: 72px 1fr; gap: 12px; } .pm-thumb { width: 72px; height: 90px; } }

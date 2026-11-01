@@ -1,5 +1,5 @@
-// "Find the source" pain map: Dr. Jared's front/back anatomy figures with a point on each general pain area.
-// Tapping an area opens "Which most resembles your pain?": one large picture per pain track (painpatterns.js).
+// "Find the source" pain map: Dr. Jared's front/back anatomy figures split into unnamed regions (large muscle groups,
+// drawn a little wider than the muscles). Tapping a region opens "Which most resembles your pain?": one large picture per pain track (painpatterns.js).
 // Picking one opens that track's videos. Muscle details stay folded under "Want to know more about your pain?".
 (() => {
   const { $, $$, esc } = window.MDFit;
@@ -14,16 +14,25 @@
     "calf": { title: "The Calf Complex", sub: "Gastrocnemius · Soleus · Tibialis posterior" }
   };
 
-  // One point per general area (painmuscles.js AREA_POINTS), in px of the 1182×1073 figure image
+  // Regions from painmuscles.js BODY_REGIONS, in px of the 1182×1073 figure image
   const MUS = window.MDFitMuscles, TK = window.MDFitTracks;
   const W = 1182, H = 1073;
-  const POINTS = MUS.AREA_POINTS;
+  const REGIONS = MUS.BODY_REGIONS;
+  // Smooth closed outline through the points (Catmull-Rom -> cubic Bézier)
+  const smooth = (p) => p.map((pt, i) => {
+    const p0 = p[(i - 1 + p.length) % p.length], p1 = pt, p2 = p[(i + 1) % p.length], p3 = p[(i + 2) % p.length];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    return `${i ? "" : `M${p1[0]} ${p1[1]}`}C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0]} ${p2[1]}`;
+  }).join("") + "Z";
+  const PATH = Object.fromEntries(REGIONS.map((r) => [r.id, smooth(r.pts)]));
   const deepOf = (id) => ["body-front", "body-back"].some((v) => (MUS.MAPS[v].pts[id] || [])[2]);
 
   const root = $("#pain-map");
   if (!root) return;
-  $(".hotspots", root).innerHTML = POINTS.map((p) =>
-    `<button type="button" class="hotspot" data-spot="${p.id}" data-view="${p.view}" style="left:${(p.x / W) * 100}%;top:${(p.y / H) * 100}%" aria-label="${esc(p.label)} (${p.view})"><span></span></button>`).join("");
+  const sideWord = (r) => (r.side === "center" ? "" : ` (${r.side} side)`);
+  $(".hotspots", root).outerHTML = `<svg class="pm-regions" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Body regions">
+    <defs><mask id="pm-body" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><image href="assets/pain/body-mask.png" width="${W}" height="${H}"/></mask></defs>
+    <g mask="url(#pm-body)">${REGIONS.map((r, i) => `<path class="pm-region" d="${PATH[r.id]}" data-region="${r.id}" tabindex="0" role="button" aria-pressed="false" aria-label="Region ${i + 1}, ${r.view} of body${sideWord(r)}"/>`).join("")}</g></svg>`;
 
   // Phones: show one figure at a time, big enough to tap the right area
   const stage = $(".pm-stage", root);
@@ -53,7 +62,7 @@
       if (c) TK.open(c.dataset.track, { startLabel: "Do this track in the free MD Fit app →", onStart: (t) => { location.href = `/account#pain/track/${t.id}`; } });
       if (e.target.closest("a[href^='#']")) sheet.close();
     });
-    sheet.addEventListener("close", () => $$(".hotspot", root).forEach((b) => b.setAttribute("aria-pressed", "false")));
+    sheet.addEventListener("close", () => $$(".pm-region", root).forEach((b) => b.setAttribute("aria-pressed", "false")));
     return sheet;
   }
 
@@ -68,19 +77,30 @@
       <p class="pm-mus-links"><a href="/account#pain/muscle/${m.id}">Take the self-check →</a>${m.guide && GUIDES[m.guide] ? `<button type="button" class="link" data-guide="${m.guide}">Read the guide: ${esc(GUIDES[m.guide].title)}</button>` : ""}</p>
     </details>`;
 
+  // Small picture of the chosen region (instead of a name), framed 4:5 around it
+  function regionThumb(r) {
+    const xs = r.pts.map((q) => q[0]), ys = r.pts.map((q) => q[1]);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const w = Math.max(320, (Math.max(...xs) - Math.min(...xs)) * 2.2, ((Math.max(...ys) - Math.min(...ys)) * 2.2) * 0.8), h = w * 1.25;
+    const x = Math.min(Math.max(cx - w / 2, 0), W - w), y = Math.min(Math.max(cy - h / 2, 0), H - h);
+    return `<svg class="pm-thumb" viewBox="${x} ${y} ${w} ${h}" aria-hidden="true"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff"/>
+      <image href="assets/pain/body-figures-gray.webp" width="${W}" height="${H}"/><path d="${PATH[r.id]}" fill="rgba(122,175,215,.55)" stroke="#2F6E9E" stroke-width="${w / 110}"/></svg>`;
+  }
+
   function showArea(areaId) {
-    const p = POINTS.find((x) => x.id === areaId);
+    const p = REGIONS.find((x) => x.id === areaId);
     if (!p) return;
-    $$(".hotspot", root).forEach((b) => b.setAttribute("aria-pressed", b.dataset.spot === areaId));
+    $$(".pm-region", root).forEach((b) => b.setAttribute("aria-pressed", b.dataset.region === areaId));
     let tracks = (p.tracks || []).map((id) => TK.TRACKS.find((t) => t.id === id)).filter(Boolean);
     if (!tracks.length) tracks = [...new Set(MUS.rank(p.spots).slice(0, 6).flatMap((m) => TK.forPoint(m.id)))].slice(0, 6);
     const ranked = MUS.rank(p.spots).slice(0, 8);
     const d = ensureSheet();
     $(".pm-sheet-body", d).innerHTML = `
       <header class="pm-sheet-head">
-        <p class="eyebrow">${esc(p.label)}</p>
+        ${regionThumb(p)}
+        <div><p class="eyebrow">Your selected area</p>
         <h2>Which most resembles your pain?</h2>
-        <p>Tap the picture closest to where you feel it. Red shows where the pain is felt.</p>
+        <p>Tap the picture closest to where you feel it. Red shows where the pain is felt.</p></div>
       </header>
       ${tracks.length ? `<div class="pm-choices">${tracks.map((t) => `<button type="button" class="pm-choice ${PP && PP.has(t.id) && PP.PATTERNS[t.id].length > 1 ? "two" : ""}" data-track="${t.id}">
           ${PP && PP.has(t.id) ? PP.html(t.id, where(t)) : `<div class="pp"><img src="${TK.img(t.img[0], 800)}" alt="" referrerpolicy="no-referrer"></div>`}
@@ -97,9 +117,14 @@
     $(".pm-sheet-body", d).scrollTop = 0;
   }
 
-  $(".hotspots", root).addEventListener("click", (e) => {
-    const b = e.target.closest(".hotspot");
-    if (b) showArea(b.dataset.spot);
+  const regions = $(".pm-regions", root);
+  regions.addEventListener("click", (e) => {
+    const r = e.target.closest("[data-region]");
+    if (r) showArea(r.dataset.region);
+  });
+  regions.addEventListener("keydown", (e) => {
+    const r = e.target.closest("[data-region]");
+    if (r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showArea(r.dataset.region); }
   });
 
   // Guide viewer: native MD Fit guide pages (guides.js)

@@ -224,31 +224,50 @@
   };
   for (const [id, a] of Object.entries(ATTACH)) if (M[id]) M[id].attach = a;
 
-  // Homepage pain map: generalized areas Dr. Jared placed on the figures (px of body-figures.webp, 1182×1073).
-  // spots: "area|spot label" keys from SPOTS (ranks the muscles under "Want to know more?").
-  // tracks: Dr. Jared's pain tracks offered for the area, in the order shown.
+  // Homepage pain map: unnamed tappable regions sized to the large muscle groups, drawn a little wider than
+  // the muscle bellies on purpose so patients pick where it HURTS, not a muscle (referred pain rarely starts
+  // where it's felt). Outlines are in px of assets/pain/body-figures.webp (1182×1073), drawn for the body's
+  // RIGHT side; paired regions are mirrored for the left. tracks: pain tracks offered, in order.
+  // spots: Pain Tool "area|spot" keys that rank the muscles under "Want to know more?".
   const all = (a) => (SPOTS[a] || []).map((s) => `${a}|${s[0]}`);
-  const AREA_POINTS = [
-    { id: "head", view: "front", x: 272, y: 48, label: "Head & face", spots: all("head"), tracks: ["scalenes", "levator"] },
-    { id: "neck", view: "front", x: 222, y: 170, label: "Neck", spots: all("neck"), tracks: ["scalenes", "levator", "scalene-chest"] },
-    { id: "shoulder", view: "front", x: 150, y: 222, label: "Shoulder", spots: all("shoulder"), tracks: ["anterior-deltoid", "pec-major", "scalenes", "levator", "supraspinatus", "infraspinatus", "subscapularis"] },
-    { id: "chest", view: "front", x: 226, y: 255, label: "Chest & ribs", spots: ["chest|Front of the chest", "chest|Side of the ribs", "chest|Along one rib"], tracks: ["pec-major", "pec-minor-rib", "scalene-chest", "serratus"] },
-    { id: "abdomen", view: "front", x: 234, y: 374, label: "Abdomen", spots: ["chest|Belly or side of the abdomen"], tracks: ["external-oblique", "psoas", "groin-rotational"] },
-    { id: "forearm", view: "front", x: 104, y: 415, label: "Elbow & forearm", spots: all("elbow"), tracks: ["extensor-radialis", "medial-forearm", "radialis-general", "triceps"] },
-    { id: "hip-side", view: "front", x: 182, y: 462, label: "Side of the hip", spots: ["hip|Outside of the hip", "thigh|Outside of the thigh"], tracks: ["glute-min", "hip-general", "iliacus"] },
-    { id: "groin", view: "front", x: 232, y: 498, label: "Groin & front of hip", spots: ["hip|Groin", "hip|Front of the hip bone"], tracks: ["iliacus", "psoas", "pectineus", "groin-rotational"] },
-    { id: "thigh", view: "front", x: 205, y: 588, label: "Thigh", spots: ["thigh|Front of the thigh", "thigh|Inner thigh"], tracks: ["iliacus", "pectineus", "groin-rotational", "glute-min", "knee"] },
-    { id: "knee", view: "front", x: 205, y: 741, label: "Knee", spots: ["knee|Kneecap or just below", "knee|Inside of the knee", "knee|Outside of the knee"], tracks: ["knee", "groin-rotational", "glute-min"] },
-    { id: "shin", view: "front", x: 196, y: 862, label: "Shin & ankle", spots: ["knee|Front of the shin", ...all("ankle")], tracks: ["knee", "calf-soleus", "foot"] },
-    { id: "head-b", view: "back", x: 908, y: 70, label: "Back of the head", spots: all("head-b"), tracks: ["levator", "scalenes"] },
-    { id: "neck-b", view: "back", x: 876, y: 185, label: "Neck & upper traps", spots: all("neck-b"), tracks: ["levator", "scalenes", "supraspinatus"] },
-    { id: "arm-b", view: "back", x: 774, y: 287, label: "Back of shoulder & arm", spots: all("shoulder-b"), tracks: ["infraspinatus", "supraspinatus", "subscapularis", "triceps", "serratus"] },
-    { id: "low-back", view: "back", x: 911, y: 441, label: "Low back", spots: all("low-back"), tracks: ["ql", "psoas", "iliacus", "glute-max"] },
-    { id: "hip-b", view: "back", x: 1011, y: 498, label: "Outer hip", spots: ["glute|Outer hip", "glute|Upper buttock, belt line"], tracks: ["glute-min", "ql", "hip-general"] },
-    { id: "glute", view: "back", x: 953, y: 562, label: "Glutes", spots: ["glute|Middle of the buttock", "glute|Pain down the leg (sciatica-like)", "hamstring|Buttock crease"], tracks: ["glute-max", "glute-min", "hip-general", "ql"] },
-    { id: "calf", view: "back", x: 844, y: 843, label: "Calf", spots: all("calf"), tracks: ["calf-soleus", "glute-min", "foot"] },
-    { id: "heel", view: "back", x: 979, y: 958, label: "Heel & Achilles", spots: all("heel"), tracks: ["foot", "calf-soleus"] }
+  const FRONT_MID = 287, BACK_MID = 911.5; // measured from the figure silhouettes
+  const R = [
+    // ---- Front
+    { id: "f-head", view: "front", pair: false, pts: [[290, 0], [332, 10], [348, 55], [340, 108], [316, 136], [290, 142], [264, 136], [240, 108], [232, 55], [248, 10]], tracks: ["scalenes", "levator"], spots: all("head") },
+    { id: "f-neck", view: "front", pair: false, pts: [[256, 140], [324, 140], [334, 170], [374, 198], [290, 210], [200, 198], [240, 170]], tracks: ["scalenes", "levator", "scalene-chest"], spots: all("neck") },
+    { id: "f-chest", view: "front", pts: [[286, 212], [242, 202], [200, 206], [188, 238], [192, 282], [212, 314], [254, 322], [286, 310]], tracks: ["pec-major", "pec-minor-rib", "scalene-chest", "serratus"], spots: ["chest|Front of the chest", "chest|Along one rib", "shoulder|Under the collarbone"] },
+    { id: "f-shoulder", view: "front", pts: [[198, 204], [164, 196], [132, 212], [116, 250], [120, 292], [136, 318], [166, 310], [190, 284], [186, 240]], tracks: ["anterior-deltoid", "pec-major", "scalenes", "supraspinatus", "subscapularis", "infraspinatus", "pec-minor-rib"], spots: all("shoulder") },
+    { id: "f-upper-arm", view: "front", pts: [[136, 318], [166, 310], [184, 324], [174, 362], [154, 396], [128, 402], [110, 386], [114, 344]], tracks: ["anterior-deltoid", "pec-major", "scalenes", "infraspinatus", "subscapularis", "pec-minor-rib"], spots: ["shoulder|Front of the shoulder", "shoulder|Outside of the shoulder or arm", "elbow|Front of the elbow"] },
+    { id: "f-forearm", view: "front", pts: [[104, 398], [154, 400], [144, 442], [120, 482], [102, 510], [56, 506], [64, 460], [84, 420]], tracks: ["medial-forearm", "radialis-general", "extensor-radialis", "pec-major", "scalenes"], spots: all("elbow") },
+    { id: "f-hand", view: "front", pts: [[102, 512], [56, 508], [22, 536], [6, 568], [26, 604], [42, 652], [78, 642], [98, 588]], tracks: ["scalenes", "radialis-general", "medial-forearm", "extensor-radialis", "pec-minor-rib", "pec-major"], spots: all("wrist") },
+    { id: "f-abs", view: "front", pair: false, pts: [[250, 322], [326, 322], [334, 382], [332, 448], [290, 462], [244, 448], [242, 382]], tracks: ["external-oblique", "psoas", "scalene-chest"], spots: ["chest|Belly or side of the abdomen"] },
+    { id: "f-side", view: "front", pts: [[212, 316], [248, 324], [240, 382], [242, 446], [212, 452], [196, 420], [190, 368], [196, 330]], tracks: ["external-oblique", "serratus", "groin-rotational"], spots: ["chest|Side of the ribs", "chest|Belly or side of the abdomen", "chest|Along one rib"] },
+    { id: "f-hip", view: "front", pts: [[200, 452], [244, 452], [270, 488], [276, 530], [252, 546], [214, 528], [190, 494]], tracks: ["iliacus", "psoas", "pectineus", "hip-general"], spots: ["hip|Groin", "hip|Front of the hip bone"] },
+    { id: "f-outer-thigh", view: "front", pts: [[186, 500], [208, 530], [200, 600], [200, 690], [186, 704], [170, 640], [170, 560]], tracks: ["glute-min", "hip-general", "knee"], spots: ["hip|Outside of the hip", "thigh|Outside of the thigh"] },
+    { id: "f-thigh", view: "front", pts: [[210, 532], [252, 548], [258, 600], [250, 666], [238, 708], [206, 708], [202, 640], [204, 580]], tracks: ["iliacus", "knee", "pectineus", "groin-rotational"], spots: ["thigh|Front of the thigh"] },
+    { id: "f-inner-thigh", view: "front", pts: [[256, 550], [280, 562], [282, 620], [270, 676], [252, 700], [254, 640], [260, 600]], tracks: ["groin-rotational", "pectineus", "iliacus"], spots: ["thigh|Inner thigh", "hip|Groin"] },
+    { id: "f-knee", view: "front", pts: [[186, 708], [254, 706], [258, 754], [244, 796], [204, 798], [188, 760]], tracks: ["knee", "groin-rotational", "glute-min"], spots: ["knee|Kneecap or just below", "knee|Inside of the knee", "knee|Outside of the knee"] },
+    { id: "f-shin", view: "front", pts: [[192, 800], [246, 798], [240, 868], [230, 950], [218, 990], [196, 990], [188, 900], [186, 836]], tracks: ["knee", "calf-soleus", "foot", "glute-min"], spots: ["knee|Front of the shin", "ankle|Outer ankle"] },
+    { id: "f-foot", view: "front", pts: [[194, 992], [234, 992], [244, 1032], [242, 1066], [200, 1072], [166, 1062], [176, 1022]], tracks: ["foot", "calf-soleus"], spots: all("ankle") },
+    // ---- Back
+    { id: "b-head", view: "back", pair: false, pts: [[911, 0], [949, 10], [965, 55], [955, 96], [911, 110], [867, 96], [857, 55], [873, 10]], tracks: ["levator", "scalenes"], spots: all("head-b") },
+    { id: "b-trap", view: "back", pts: [[911, 110], [939, 104], [949, 152], [983, 190], [1029, 204], [1055, 222], [1021, 236], [981, 240], [959, 256], [951, 302], [941, 352], [929, 410], [915, 442], [911, 442]], tracks: ["levator", "scalenes", "supraspinatus", "infraspinatus"], spots: [...all("neck-b"), "upper-back|Between the shoulder blades"] },
+    { id: "b-blade", view: "back", pts: [[961, 258], [983, 242], [1021, 238], [1041, 252], [1039, 292], [1021, 330], [991, 346], [967, 330], [957, 300]], tracks: ["infraspinatus", "levator", "scalenes", "serratus", "supraspinatus"], spots: ["upper-back|Inner edge of the shoulder blade", "shoulder-b|On the shoulder blade", "upper-back|Bottom tip of the shoulder blade"] },
+    { id: "b-shoulder", view: "back", pts: [[1036, 222], [1062, 226], [1082, 252], [1082, 292], [1060, 318], [1034, 302], [1022, 268], [1022, 246]], tracks: ["supraspinatus", "subscapularis", "infraspinatus", "triceps", "scalenes"], spots: ["shoulder-b|Back of the shoulder", "shoulder|Top of the shoulder", "shoulder|Deep inside the joint"] },
+    { id: "b-upper-arm", view: "back", pts: [[1034, 304], [1060, 320], [1084, 296], [1092, 340], [1094, 382], [1072, 398], [1046, 388], [1034, 346]], tracks: ["triceps", "subscapularis", "scalenes", "supraspinatus"], spots: ["shoulder-b|Back of the upper arm", "elbow|Point of the elbow"] },
+    { id: "b-forearm", view: "back", pts: [[1062, 400], [1096, 392], [1112, 432], [1132, 480], [1140, 512], [1104, 516], [1090, 472], [1070, 432]], tracks: ["extensor-radialis", "triceps", "radialis-general"], spots: ["elbow|Outside of the elbow", "elbow|Forearm", "elbow|Point of the elbow"] },
+    { id: "b-hand", view: "back", pts: [[1104, 518], [1142, 514], [1170, 548], [1182, 580], [1164, 622], [1132, 640], [1116, 600], [1106, 556]], tracks: ["extensor-radialis", "triceps", "subscapularis", "scalenes"], spots: ["wrist|Back of the hand or wrist", "wrist|Ring and little finger", "wrist|Thumb and index finger"] },
+    { id: "b-mid-back", view: "back", pts: [[955, 324], [991, 350], [1025, 332], [1041, 312], [1035, 372], [1021, 420], [999, 444], [933, 444], [931, 410], [941, 362]], tracks: ["serratus", "ql", "infraspinatus"], spots: ["upper-back|Bottom tip of the shoulder blade", "low-back|Flank or side"] },
+    { id: "b-low-back", view: "back", pair: false, pts: [[869, 446], [953, 446], [973, 470], [967, 506], [911, 516], [855, 506], [849, 470]], tracks: ["ql", "psoas", "iliacus", "glute-max"], spots: all("low-back") },
+    { id: "b-glute", view: "back", pts: [[913, 518], [967, 508], [1007, 496], [1035, 520], [1039, 574], [1021, 604], [971, 612], [925, 598], [913, 560]], tracks: ["glute-max", "glute-min", "hip-general", "ql"], spots: all("glute") },
+    { id: "b-outer-thigh", view: "back", pts: [[1037, 526], [1051, 540], [1053, 620], [1043, 702], [1025, 704], [1027, 620], [1039, 578]], tracks: ["glute-min", "hip-general", "knee"], spots: ["glute|Outer hip", "thigh|Outside of the thigh"] },
+    { id: "b-hamstring", view: "back", pts: [[925, 602], [971, 614], [1023, 608], [1025, 662], [1017, 718], [985, 728], [945, 724], [935, 662]], tracks: ["glute-min", "glute-max", "hip-general"], spots: all("hamstring") },
+    { id: "b-knee", view: "back", pts: [[943, 728], [1019, 722], [1017, 770], [981, 782], [947, 772]], tracks: ["calf-soleus", "knee"], spots: ["hamstring|Back of the knee", "calf|Back of the knee"] },
+    { id: "b-calf", view: "back", pts: [[943, 776], [1021, 772], [1027, 840], [1013, 900], [987, 920], [957, 906], [939, 846]], tracks: ["calf-soleus", "glute-min", "foot"], spots: all("calf") },
+    { id: "b-heel", view: "back", pts: [[961, 912], [1011, 906], [1007, 980], [1017, 1030], [997, 1066], [965, 1062], [959, 1010], [965, 962]], tracks: ["foot", "calf-soleus"], spots: all("heel") }
   ];
+  const mirror = (r) => ({ ...r, id: r.id + "-l", side: "left", pts: r.pts.map(([x, y]) => [2 * (r.view === "front" ? FRONT_MID : BACK_MID) - x, y]) });
+  const BODY_REGIONS = R.flatMap((r) => (r.pair === false ? [{ ...r, side: "center" }] : [{ ...r, id: r.id + "-r", side: "right" }, mirror(r)]));
 
-  window.MDFitMuscles = { MUSCLES: M, AGGRAVATORS, SPOTS, MAPS, AREA_POINTS, rank, areaOf };
+  window.MDFitMuscles = { MUSCLES: M, AGGRAVATORS, SPOTS, MAPS, BODY_REGIONS, rank, areaOf };
 })();
