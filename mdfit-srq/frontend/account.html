@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=4dfcf286">
+  <link rel="stylesheet" href="app/app.css?v=e59cb426">
   <link rel="stylesheet" href="guides.css?v=eb045f99">
 </head>
 <body class="mdapp">
@@ -96,6 +96,7 @@
         <div><h1>Workout <em>Generator</em></h1><p>Customize every detail. Create a workout that fits you.</p></div>
         <p class="hero-tag">Any goal<br>Any environment<br>Any level<br><b>Your workout</b></p>
       </header>
+      <p class="free-badge" id="free-badge" hidden></p>
       <button type="button" class="intro-btn" data-intro="generator"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> How it works with Dr. Jared</button>
       <div class="card" id="my-programs" hidden>
         <div class="card-head"><span class="label accent">My programs</span><span class="muted small" id="program-count"></span></div>
@@ -367,6 +368,23 @@
     <div class="side-foot"><p class="side-tag">Move better<br>Feel stronger<br>Live more</p><a class="side-book" href="/book">Book a visit</a><a href="tel:+19413130562">941-313-0562</a></div>
   </nav>
 
+  <dialog class="sheet paywall" id="paywall" aria-label="Become a member">
+    <div class="sheet-head"><b>Unlock everything</b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <p class="pw-reason" id="pw-reason"></p>
+    <ul class="pw-perks"><li>Unlimited workouts and custom plans</li><li>Every premade program</li><li>Lectures and the monthly live Q&amp;A</li><li>Message Dr. Jared directly</li></ul>
+    <p class="muted small">The pain tools, pain tracks and guides stay free for everyone.</p>
+    <p class="pw-price" id="pw-price"></p>
+    <form id="pw-form" class="pw-review nums-form" novalidate>
+      <p class="pw-offer"><b>Get 30% off your first month:</b> leave a quick, honest review. Any rating counts.</p>
+      <div class="stars-pick"><input type="radio" name="pwrating" id="pwr-5" value="5"><label for="pwr-5" title="5 stars">★</label><input type="radio" name="pwrating" id="pwr-4" value="4"><label for="pwr-4" title="4 stars">★</label><input type="radio" name="pwrating" id="pwr-3" value="3"><label for="pwr-3" title="3 stars">★</label><input type="radio" name="pwrating" id="pwr-2" value="2"><label for="pwr-2" title="2 stars">★</label><input type="radio" name="pwrating" id="pwr-1" value="1"><label for="pwr-1" title="1 stars">★</label></div>
+      <label class="full">Your review<textarea name="text" rows="3" maxlength="2000" required minlength="10" placeholder="How has MD Fit helped so far?"></textarea></label>
+      <label class="pw-pub"><input type="checkbox" name="publish" checked> OK to show my review and first name on the website</label>
+      <button class="btn-gold sm" type="submit">Send review &amp; get 30% off</button><span class="nums-msg small"></span>
+    </form>
+    <div id="pw-have" class="pw-have" hidden><p>Your code <b id="pw-code"></b> gives you <b>30% off your first month</b>.</p></div>
+    <button type="button" class="btn-blue" id="pw-subscribe">See memberships</button>
+  </dialog>
+
   <dialog class="sheet more-sheet" id="more-sheet" aria-label="More">
     <div class="sheet-head"><b>More</b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
     <div class="more-list" id="more-list"></div>
@@ -417,6 +435,6 @@
   <script src="paintracks.js?v=76c79be0"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
-  <script src="account.js?v=93c05da4"></script>
+  <script src="account.js?v=3c850ed0"></script>
 </body>
 </html>

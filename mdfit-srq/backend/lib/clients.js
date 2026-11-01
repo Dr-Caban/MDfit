@@ -399,7 +399,26 @@ function mountClients(ctx) {
       }
     };
   }
+  // Free accounts: unlimited pain tools, one generated workout (kept as "Your free workout"). Everything else needs a membership.
+  const isMember = (c) => !!activeMembership(c);
+  const paywall = (res) => res.status(402).json({ error: "You've used your free workout. Become a member for unlimited workouts, programs and custom plans.", paywall: true });
+  me.get("/access", (req, res) => {
+    const c = req.client, m = activeMembership(c);
+    res.json({ member: !!m, tier: m ? m.tier : null, freeUsed: !!c.freeWorkoutAt, freeLeft: m ? null : (c.freeWorkoutAt ? 0 : 1), reviewCode: c.reviewCode || null });
+  });
+  me.post("/generations", (req, res) => {
+    const c = req.client;
+    if (isMember(c)) return res.json({ member: true });
+    if (c.freeWorkoutAt) return paywall(res);
+    const p = programInput({ ...req.body, name: "Your free workout" });
+    res.status(201).json(update(req, (cl) => {
+      cl.freeWorkoutAt = new Date().toISOString();
+      cl.programs = [{ id: id(), ...p, free: true, createdAt: cl.freeWorkoutAt }, ...(cl.programs || [])];
+      return { member: false, free: true, library: libraryOf(cl) };
+    }));
+  });
   me.post("/programs", (req, res) => {
+    if (!isMember(req.client)) return paywall(res);
     const p = programInput(req.body);
     res.status(201).json(update(req, (c) => {
       if ((c.programs || []).length >= PROGRAMS_MAX) fail(`You can save up to ${PROGRAMS_MAX} programs. Delete one first.`);

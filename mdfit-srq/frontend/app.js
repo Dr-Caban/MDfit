@@ -115,7 +115,7 @@
     if (!d.reviews.length) return;
     $(".quotes").insertAdjacentHTML("beforeend", d.reviews.map((r) => `
       <blockquote class="quote site-review"><span class="stars" aria-label="${r.rating} out of 5 stars">${"★".repeat(r.rating)}${"☆".repeat(5 - r.rating)}</span>
-        <p>&ldquo;${esc(r.text)}&rdquo;</p><cite>${esc(r.name)}</cite><small class="disclose">MD Fit client. Received a free plan review for sharing feedback.</small></blockquote>`).join(""));
+        <p>&ldquo;${esc(r.text)}&rdquo;</p><cite>${esc(r.name)}</cite><small class="disclose">MD Fit client. Received a membership discount for sharing feedback.</small></blockquote>`).join(""));
   }
   async function redeem(code) {
     let r; try { r = await api(`/api/feedback/reward/${encodeURIComponent(code)}`); } catch { return; }
@@ -139,7 +139,7 @@
       f.hidden = true;
       const done = $(".lr-done"); done.hidden = false;
       $(".lr-code", done).textContent = out.rewardCode;
-      $("#lr-book").onclick = () => redeem(out.rewardCode);
+      try { localStorage.setItem("mdfit_review_code", JSON.stringify(out.rewardCode)); } catch {}
     } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
     finally { btn.disabled = false; }
   });

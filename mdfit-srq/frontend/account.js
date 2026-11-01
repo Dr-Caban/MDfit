@@ -90,7 +90,27 @@
   const saved = store.get(PREFS_KEY, {});
   const prefs = { ...Gen.DEFAULTS, ...saved, addons: { ...Gen.DEFAULTS.addons, ...(saved.addons || {}) } };
   const daySeed = (d) => [...d].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  // Free accounts get one generated workout ("Your free workout"); members generate freely. The server enforces it.
+  let access = { member: true, freeUsed: false, freeLeft: null, reviewCode: null };
+  const freeProgram = () => lib.programs.find((p) => p.free);
+  const compactW = (w) => ({ title: w.title, goal: w.goal, goalId: w.goalId, location: w.location, level: w.level, levelLabel: w.levelLabel,
+    rounds: w.rounds, restEx: w.restEx, restRound: w.restRound, minutes: w.minutes,
+    warmup: w.warmup.map((e) => ({ id: e.id, sets: e.sets })), circuit: w.circuit.map((e) => ({ id: e.id, sets: e.sets })), cooldown: w.cooldown.map((e) => ({ id: e.id, sets: e.sets })) });
+  // Resolves true when this workout may be used: members always; free accounts claim their one free workout
+  async function claim(w) {
+    if (access.member) return true;
+    const fp = freeProgram();
+    if (access.freeUsed) { if (fp && w && w.key === "program-" + fp.id) return true; showPaywall(); return false; }
+    try {
+      const r = await apiAuth("POST", "/api/me/generations", { workout: compactW(w) });
+      if (r.member) { access.member = true; return true; }
+      lib = r.library; access.freeUsed = true; access.freeLeft = 0; renderPrograms(); renderAccessBadge();
+      toast("Saved as your free workout. Repeat it any time from My Programs.");
+      return true;
+    } catch (err) { if (/free workout/i.test(err.message)) { access.freeUsed = true; showPaywall(); } else toast(err.message); return false; }
+  }
   function todaysWorkout() {
+    if (!access.member && access.freeUsed && freeProgram()) return programWorkout(freeProgram());
     const t = todayInTz(), s = store.get(TODAY_KEY, null);
     if (s && s.date === t && s.workout && s.workout.circuit) return s.workout;
     const w = Gen.generate({ ...prefs, seed: daySeed(t + (client?.id || "")) });
@@ -103,7 +123,7 @@
     $("#today-title").textContent = w.title;
     $("#today-meta").textContent = `About ${w.minutes} min · ${planLine(w)} · ${w.levelLabel}`;
   }
-  $("#start-today").addEventListener("click", () => startPlayer(todaysWorkout()));
+  $("#start-today").addEventListener("click", async () => { const w = todaysWorkout(); if (await claim(w)) startPlayer(w); });
 
   function renderPlan() {
     const p = client.plan || { guides: [], exercises: [], notes: "" };
@@ -291,8 +311,11 @@
     renderToday();
     renderGenerated();
   }
-  $("#generate").addEventListener("click", () => { generateNow(); $("#generated").scrollIntoView({ behavior: "smooth", block: "start" }); });
-  $("#shuffle").addEventListener("click", () => generateNow());
+  $("#generate").addEventListener("click", () => {
+    if (!access.member && access.freeUsed) return showPaywall();
+    generateNow(); $("#generated").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("#shuffle").addEventListener("click", () => (!access.member && access.freeUsed ? showPaywall() : generateNow()));
   // Swap one movement for a random alternative that fits the same slot
   $("#gen-list").addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-swap]"); if (!b || !current) return;
@@ -305,7 +328,7 @@
     const li = $$(`#gen-list [data-swap="${b.dataset.swap}"]`)[Number(b.dataset.i)];
     if (li) li.closest("li").classList.add("swapped");
   });
-  $("#start-gen").addEventListener("click", () => current && startPlayer(current));
+  $("#start-gen").addEventListener("click", async () => { if (current && await claim(current)) startPlayer(current); });
   renderChoices();
 
   // ---- My programs: saved workouts, kept on the account
@@ -341,6 +364,7 @@
   });
   $("#save-program").addEventListener("click", async () => {
     if (!current) return;
+    if (!access.member) return showPaywall("Saving custom plans is part of membership.");
     const name = prompt("Name this program", current.title);
     if (!name || !name.trim()) return;
     const w = current;
@@ -1114,6 +1138,38 @@
   });
   $("#p-close").addEventListener("click", () => { if (P.done || confirm("End this workout? It won't be saved.")) closePlayer(); });
 
+  // ================= Paywall: subscribe, with 30% off the first month for leaving a review
+  function renderAccessBadge() {
+    const b = $("#free-badge"); if (!b) return;
+    b.hidden = access.member;
+    b.innerHTML = access.member ? "" : access.freeUsed
+      ? `Free account · <button type="button" class="link-sm" data-paywall>Unlock unlimited workouts</button>`
+      : `Free account · <b>1 free workout</b> to generate · Pain tools are always free`;
+  }
+  document.addEventListener("click", (e) => { if (e.target.closest("[data-paywall]")) showPaywall(); });
+  async function showPaywall(reason) {
+    if (!C) await (contentLoading || loadContent()).catch(() => {});
+    const d = $("#paywall"), tier = C && C.tiers && C.tiers[0], pct = 30;
+    const code = access.reviewCode || store.get("mdfit_review_code", null);
+    $("#pw-reason").textContent = reason || "You've used your free workout.";
+    $("#pw-price").innerHTML = tier ? `Membership from <b>$${tier.price}/month</b>${code ? ` · <span class="pw-deal">$${(tier.price * (100 - pct) / 100).toFixed(2)} your first month</span>` : ""}` : "";
+    $("#pw-form").hidden = !!code;
+    $("#pw-have").hidden = !code;
+    if (code) $("#pw-code").textContent = code;
+    d.showModal();
+  }
+  $("#pw-form").addEventListener("submit", async (e) => {
+    e.preventDefault(); const f = e.target, msg = $(".nums-msg", f);
+    const rating = Number((f.querySelector("[name=pwrating]:checked") || {}).value || 0);
+    if (!rating) { msg.textContent = "Tap the stars first."; return; }
+    try {
+      const r = await api("/api/feedback", { name: client.name, email: client.email, rating, text: f.text.value, publish: f.publish.checked });
+      access.reviewCode = r.rewardCode; store.set("mdfit_review_code", r.rewardCode);
+      showPaywall($("#pw-reason").textContent);
+    } catch (err) { msg.textContent = err.message; }
+  });
+  $("#pw-subscribe").addEventListener("click", () => { $("#paywall").close(); go("premium"); });
+
   // ================= Member content: programs, lectures + live Q&A, membership & 1-on-1, health tips
   let C = null, contentLoading = null;
   const loadContent = () => (contentLoading = apiAuth("GET", "/api/me/content").then((d) => (C = d)).catch(() => api("/api/content").then((d) => (C = { ...d, access: "free" }))));
@@ -1232,9 +1288,11 @@
     $("#my-membership").innerHTML = cur && C.access !== "free"
       ? `<div class="card mem-on"><span class="label accent">Your membership</span><h2>${esc(cur.name)}</h2><p class="muted small">Member since ${esc(m.since)}${m.until ? ` · paid through ${esc(m.until)}` : ""}</p></div>`
       : `<p class="muted mem-pitch">Pick a membership below and tap <b>Request</b>. Dr. Jared confirms it and sends payment details. Online checkout is coming soon.</p>`;
+    const rc = access.reviewCode || store.get("mdfit_review_code", null);
+    if (rc && C.access === "free") $("#my-membership").insertAdjacentHTML("beforeend", `<div class="pw-applied">Your review code <b>${esc(rc)}</b> takes <b>30% off your first month</b>. It's applied automatically when you request a membership.</div>`);
     $("#tier-grid").innerHTML = C.tiers.map((t, i) => `<article class="tier${i === 1 ? " featured" : ""}${cur && cur.id === t.id ? " current" : ""}">
       ${i === 1 ? `<span class="tag">Most popular</span>` : ""}
-      <h3>${esc(t.name)}</h3><p class="tier-price"><b>${money(t.price)}</b>/month</p>
+      <h3>${esc(t.name)}</h3><p class="tier-price"><b>${money(t.price)}</b>/month</p>${rc && C.access === "free" ? `<p class="tier-first">First month ${money(Math.round(t.price * 70) / 100)} with your review code</p>` : ""}
       ${t.meetings ? `<p class="tier-meet">${t.meetings} remote 1-on-1 sessions a month · ${t.meetingMinutes} min each</p>` : ""}
       <ul>${t.perks.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
       ${cur && cur.id === t.id ? `<span class="tier-cur">Your plan</span>` : `<button type="button" class="${i === 1 ? "btn-gold" : "btn-ghost"} sm" data-tier="${t.id}">Request ${esc(t.name)}</button>`}
@@ -1388,6 +1446,7 @@
     if (wl.status === "fulfilled") allWorkouts = wl.value;
     apiAuth("GET", "/api/me/vitals").then((v) => { vitals = v; renderPerf(); }).catch(() => renderPerf());
     loadParticipation();
+    apiAuth("GET", "/api/me/access").then((a) => { access = a; renderToday(); renderAccessBadge(); }).catch(() => {});
     loadContent().then(() => { const t = location.hash.slice(1).split("/"); if (["programs", "learn", "premium", "tips"].includes(t[0])) renderContent(t[0], t[1]); });
     if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }
     renderStats(); renderEvents(); renderActivity(); renderNotes(); renderCalendar();

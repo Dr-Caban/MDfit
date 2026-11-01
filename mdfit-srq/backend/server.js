@@ -376,21 +376,26 @@ function createApp(cfg = loadConfig()) {
     res.json({ ok: true });
   });
 
-  // ---- On-site reviews. Every review, whatever the rating, earns a free 30-minute plan review.
+  // ---- On-site reviews. Every review, whatever the rating, earns a discount on the first month of membership.
   // (Google and the FTC don't allow rewards tied to public or positive reviews, so the reward is for honest feedback here.)
+  const reviewPct = () => (settings().plans || {}).reviewDiscountPct ?? 30;
   app.post("/api/feedback", formLimit.mw, honeypot, (req, res) => {
     const f = feedbackInput(req.body);
     const list = feedback();
     const code = "MDFIT-" + crypto.randomBytes(3).toString("hex").toUpperCase();
-    const entry = { id: id(), ...f, status: "pending", rewardCode: code, createdAt: new Date().toISOString() };
+    const pct = reviewPct();
+    const entry = { id: id(), ...f, status: "pending", rewardCode: code, rewardPct: pct, createdAt: new Date().toISOString() };
     list.push(entry);
     store.write("feedback", list);
+    // Link the code to their account so the app applies it automatically
+    const cls = store.read("clients", []), cl = cls.find((c) => c.email === f.email.toLowerCase());
+    if (cl && !cl.reviewCode) { cl.reviewCode = code; store.write("clients", cls); }
     activity("feedback", { email: f.email, rating: f.rating });
     const biz = settings().business;
-    const bookUrl = `${cfg.siteUrl}/?reward=${encodeURIComponent(code)}#book`;
-    notify.owner(`New review: ${f.rating}/5 from ${f.name}`, `${f.name} <${f.email}>\n${"★".repeat(f.rating)}${"☆".repeat(5 - f.rating)}\n\n${f.text}\n\n${f.publish ? "OK to publish (approve it in Admin → Reviews)." : "Private: do not publish."}\nReward code: ${code}`);
-    notify.client(f.email, `Thank you! Your free 30-minute plan review`, `Hi ${f.name.split(" ")[0]},\n\nThank you for your feedback. As promised, you get a free 30-minute plan review with Dr. Jared to go over your progress and which programs to use next.\n\nYour code: ${code}\nBook it here: ${bookUrl}\n\n${biz.name}\n${biz.phone}`);
-    res.status(201).json({ ok: true, rewardCode: code, bookUrl, message: "Thank you! Your free 30-minute plan review code is below." });
+    const subUrl = `${cfg.siteUrl}/account#premium`;
+    notify.owner(`New review: ${f.rating}/5 from ${f.name}`, `${f.name} <${f.email}>\n${"★".repeat(f.rating)}${"☆".repeat(5 - f.rating)}\n\n${f.text}\n\n${f.publish ? "OK to publish (approve it in Admin → Reviews)." : "Private: do not publish."}\nReward code: ${code} (${pct}% off first month)`);
+    notify.client(f.email, `Thank you! ${pct}% off your first month`, `Hi ${f.name.split(" ")[0]},\n\nThank you for your feedback. As promised, here's ${pct}% off your first month of MD Fit membership: unlimited workouts, every program, custom plans and messaging with Dr. Jared.\n\nYour code: ${code}\nUse it here: ${subUrl}\n\n${biz.name}\n${biz.phone}`);
+    res.status(201).json({ ok: true, rewardCode: code, rewardPct: pct, subscribeUrl: subUrl, message: `Thank you! Here's ${pct}% off your first month.` });
   });
   app.get("/api/feedback", (req, res) => {
     const pub = feedback().filter((f) => f.status === "approved" && f.publish)
@@ -399,12 +404,12 @@ function createApp(cfg = loadConfig()) {
     const n = pub.length;
     res.set("Cache-Control", "no-cache");
     res.json({ reviews: pub, count: n, average: n ? Math.round((pub.reduce((s, f) => s + f.rating, 0) / n) * 10) / 10 : null,
-      reward: { title: PLAN_REVIEW.name, typeId: PLAN_REVIEW.id, minutes: PLAN_REVIEW.minutes } });
+      reward: { pct: reviewPct(), title: `${reviewPct()}% off your first month` } });
   });
   app.get("/api/feedback/reward/:code", (req, res) => {
     const f = feedback().find((x) => x.rewardCode === String(req.params.code).toUpperCase());
     if (!f) return res.status(404).json({ error: "That reward code isn't valid." });
-    res.json({ valid: !f.rewardUsedAt, used: !!f.rewardUsedAt, name: f.name, email: f.email, type: PLAN_REVIEW });
+    res.json({ valid: !f.rewardUsedAt, used: !!f.rewardUsedAt, pct: f.rewardPct ?? reviewPct(), name: f.name, email: f.email, type: PLAN_REVIEW });
   });
 
   // Native apps check this on launch: API version, the oldest app build still supported, and which features are on

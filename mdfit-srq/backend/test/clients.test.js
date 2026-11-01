@@ -224,6 +224,9 @@ test("library: favorites and programs persist on the account", async (t) => {
   assert.deepEqual(lib.favorites, ["108rqCigYY-88hJo3QQTANQtb9qcalFYG"]);
   const workout = { title: "Core Strength", goal: "Core & Spine", goalId: "core", location: "home", level: "intermediate", levelLabel: "Intermediate",
     rounds: 3, restEx: 15, restRound: 30, minutes: 15, warmup: [{ id: "108rqCigYY-88hJo3QQTANQtb9qcalFYG", sets: "45 sec" }], circuit: [], cooldown: [] };
+  assert.equal((await s.call("POST", "/api/me/programs", { name: "Monday core", workout }, tok)).status, 402, "saving custom plans needs a membership");
+  const adm = await s.adminToken(), me = (await s.call("GET", "/api/me", undefined, tok)).body.client;
+  await s.call("PUT", `/api/admin/clients/${me.id}/membership`, { tier: "member" }, adm);
   assert.equal((await s.call("POST", "/api/me/programs", { name: "", workout }, tok)).status, 400);
   lib = (await s.call("POST", "/api/me/programs", { name: "Monday core", workout }, tok)).body;
   assert.equal(lib.programs[0].name, "Monday core");
@@ -268,7 +271,7 @@ test("member content: locked links, membership requests, admin grants tiers, mon
   const pub = (await s.call("GET", "/api/content")).body;
   assert.ok(pub.programs.length >= 5 && pub.recommendations.some((r) => r.id === "pillow-progression"));
   assert.equal(pub.programs.find((p) => p.id === "hypertrophy-4").locked, true);
-  assert.equal(pub.programs.find((p) => p.id === "mobility-daily").locked, false);
+  assert.equal(pub.programs.find((p) => p.id === "mobility-daily").locked, true, "programs need a membership");
   const adm = await s.adminToken();
   // admin adds a lecture link and a live session link
   const c0 = (await s.call("GET", "/api/admin/content", undefined, adm)).body;
@@ -347,4 +350,34 @@ test("pain tracks are admin-editable and fall back to the built-in set", async (
   assert.equal((await s.call("PUT", "/api/admin/content", { tracks: [{ ...track, img: ["not a link"] }] }, adm)).status, 400);
   await s.call("PUT", "/api/admin/content", { tracks: [] }, adm);
   assert.deepEqual((await s.call("GET", "/api/content")).body.tracks, [], "reset to built-in");
+});
+
+test("free accounts: one generated workout, then the paywall; a review gives 30% off the first month", async (t) => {
+  const s = await start(); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  const workout = { title: "Full Body Strength", goal: "Full Body", goalId: "full", location: "home", level: "intermediate", levelLabel: "Intermediate",
+    rounds: 3, restEx: 15, restRound: 30, minutes: 20, warmup: [], circuit: [{ id: "108rqCigYY-88hJo3QQTANQtb9qcalFYG", sets: "10 reps" }], cooldown: [] };
+  let acc = (await s.call("GET", "/api/me/access", undefined, tok)).body;
+  assert.deepEqual([acc.member, acc.freeLeft], [false, 1]);
+  const g1 = await s.call("POST", "/api/me/generations", { workout }, tok);
+  assert.equal(g1.status, 201);
+  assert.equal(g1.body.library.programs[0].name, "Your free workout");
+  assert.equal(g1.body.library.programs[0].free, true);
+  const g2 = await s.call("POST", "/api/me/generations", { workout }, tok);
+  assert.equal(g2.status, 402); assert.equal(g2.body.paywall, true);
+  assert.equal((await s.call("GET", "/api/me/access", undefined, tok)).body.freeLeft, 0);
+  // pain tools stay open
+  assert.equal((await s.call("POST", "/api/me/pain", { area: "Neck", level: 4 }, tok)).status, 201);
+  // review -> code linked to the account -> membership request carries 30% off
+  const r = await s.call("POST", "/api/feedback", { name: "Pat Doe", email: "pat@example.com", rating: 3, text: "Good so far, still sore some days.", publish: false });
+  assert.equal(r.body.rewardPct, 30);
+  acc = (await s.call("GET", "/api/me/access", undefined, tok)).body;
+  assert.equal(acc.reviewCode, r.body.rewardCode);
+  assert.equal((await s.call("POST", "/api/me/membership/request", { tier: "member", rewardCode: "MDFIT-000000" }, tok)).status, 400);
+  const req = await s.call("POST", "/api/me/membership/request", { tier: "premium" }, tok);
+  assert.equal(req.body.request.discountPct, 30);
+  const adm = await s.adminToken(), me = (await s.call("GET", "/api/me", undefined, tok)).body.client;
+  await s.call("PUT", `/api/admin/clients/${me.id}/membership`, { tier: "premium" }, adm);
+  assert.equal((await s.call("GET", `/api/feedback/reward/${r.body.rewardCode}`)).body.used, true, "code is spent when the membership starts");
+  assert.equal((await s.call("POST", "/api/me/generations", { workout }, tok)).body.member, true, "members generate freely");
 });

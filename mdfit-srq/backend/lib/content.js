@@ -34,7 +34,7 @@ function defaultContent() {
         summary: "Build muscle with an upper / lower split. Same sessions each week so you can watch your weights climb.",
         notes: "Add weight when every round feels like 2 reps left in the tank. Protein with every meal, 7 to 9 hours of sleep.",
         days: [day("Upper A", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower A", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Upper B", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower B", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 })] },
-      { id: "anti-inflammatory", title: "Anti-Inflammatory Reset", category: "Anti-inflammatory", level: "beginner", location: "home", weeks: 4, seed: 4202, access: "free",
+      { id: "anti-inflammatory", title: "Anti-Inflammatory Reset", category: "Anti-inflammatory", level: "beginner", location: "home", weeks: 4, seed: 4202, access: "member",
         summary: "Gentle full-body strength, mobility and daily walking to calm things down without flaring them up.",
         notes: "Walk 20 to 30 minutes a day at a pace you can still talk at. Keep every session at an effort of 5 out of 10 or less.",
         days: [day("Strength & breath", "full", 30, { rounds: 2, restEx: 20, restRound: 60 }), day("Mobility flow", "mobility", 20), day("Core & spine", "core", 20, { rounds: 2 })] },
@@ -42,7 +42,7 @@ function defaultContent() {
         summary: "Full-body circuits with short rests to burn more and keep the muscle you have.",
         notes: "Pair with a daily step goal and protein at every meal. Rest days are walking days.",
         days: [day("Circuit A", "full", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Circuit B", "lower", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Circuit C", "upper", 30, { rounds: 4, restEx: 15, restRound: 45 })] },
-      { id: "mobility-daily", title: "Daily Mobility", category: "Mobility", level: "beginner", location: "home", weeks: 4, seed: 4404, access: "free",
+      { id: "mobility-daily", title: "Daily Mobility", category: "Mobility", level: "beginner", location: "home", weeks: 4, seed: 4404, access: "member",
         summary: "Fifteen to twenty minutes a day to open up hips, spine and shoulders.",
         notes: "Move slowly and breathe through each position. Mild stretch is fine; sharp pain is not.",
         days: [day("Hips & spine", "mobility", 20), day("Shoulders & neck", "mobility", 15, { seedOffset: 7 }), day("Full flow", "mobility", 20, { seedOffset: 13 })] },
@@ -50,7 +50,7 @@ function defaultContent() {
         summary: "Core control, hip mobility and graded loading for a cranky low back. Pair it with your pain track.",
         notes: "Use the Pain tool first and follow your track's Level 1 videos. Stop and book a visit if pain spreads down the leg.",
         days: [day("Core control", "core", 20, { rounds: 2, restEx: 20 }), day("Hips & glutes", "lower", 20, { rounds: 2, restEx: 20 }), day("Mobility", "mobility", 15)] },
-      { id: "desk-reset", title: "Desk Worker Reset", category: "Desk & posture", level: "beginner", location: "office", weeks: 4, seed: 4606, access: "free",
+      { id: "desk-reset", title: "Desk Worker Reset", category: "Desk & posture", level: "beginner", location: "office", weeks: 4, seed: 4606, access: "member",
         summary: "Short sessions you can do at your desk to undo hours of sitting.",
         notes: "Set a timer to move every 30 to 45 minutes.",
         days: [day("Neck & shoulders", "upper", 15, { rounds: 2 }), day("Spine & hips", "mobility", 15)] }
@@ -187,10 +187,19 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     if (!tier) fail("Pick a membership.");
     const note = str(req.body.note, "Note", { max: 500 });
     const list = clients(); const cl = list.find((x) => x.id === req.client.id);
-    cl.membershipRequest = { tier: tier.id, note, at: new Date().toISOString() };
+    // Review reward: a percentage off the first month
+    let discount = null;
+    const code = String(req.body.rewardCode || cl.reviewCode || "").trim().toUpperCase();
+    if (code) {
+      const fb = store.read("feedback", []).find((f) => f.rewardCode === code);
+      if (!fb) { if (req.body.rewardCode) fail("That review code isn't valid."); }
+      else if (fb.rewardUsedAt) { if (req.body.rewardCode) fail("That review code has already been used."); }
+      else discount = { code, pct: fb.rewardPct ?? 30 };
+    }
+    cl.membershipRequest = { tier: tier.id, note, at: new Date().toISOString(), ...(discount ? { rewardCode: discount.code, discountPct: discount.pct } : {}) };
     save(list);
     activity("membership_request", { email: cl.email, tier: tier.id });
-    notify.owner(`Membership request: ${tier.name} ($${tier.price}/mo)`, `${cl.name} <${cl.email}> ${cl.phone || ""}\nwants ${tier.name}.\n${note || ""}\n\nTurn it on in Admin → Clients → ${cl.name}.`);
+    notify.owner(`Membership request: ${tier.name} ($${tier.price}/mo)`, `${cl.name} <${cl.email}> ${cl.phone || ""}\nwants ${tier.name}.${discount ? `\nReview reward: ${discount.pct}% off the first month (code ${discount.code}), first month $${Math.round(tier.price * (100 - discount.pct)) / 100}.` : ""}\n${note || ""}\n\nTurn it on in Admin → Members.`);
     res.status(201).json({ ok: true, request: cl.membershipRequest });
   });
 
@@ -247,7 +256,13 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
       const until = str(b.until, "Paid through", { max: 10 });
       if (until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) fail("Paid through must be YYYY-MM-DD.");
       cl.membership = { tier: b.tier, since: (cl.membership && cl.membership.since) || today(), until };
-      if (cl.membershipRequest && cl.membershipRequest.tier === b.tier) delete cl.membershipRequest;
+      const rq = cl.membershipRequest;
+      if (rq && rq.rewardCode) {
+        const fbl = store.read("feedback", []), fb = fbl.find((f) => f.rewardCode === rq.rewardCode);
+        if (fb && !fb.rewardUsedAt) { fb.rewardUsedAt = new Date().toISOString(); store.write("feedback", fbl); }
+        cl.membership.firstMonthDiscountPct = rq.discountPct;
+      }
+      if (rq && rq.tier === b.tier) delete cl.membershipRequest;
     }
     save(list);
     res.json({ membership: cl.membership });

@@ -331,7 +331,7 @@ test("reviews: any rating earns a one-time plan review code, admin publishes onl
   assert.equal((await s.call("PATCH", `/api/admin/feedback/${hiId}`, { status: "approved" })).status, 200);
   const pub = (await s.call("GET", "/api/feedback")).body;
   assert.deepEqual(pub.reviews.map((r) => r.name), ["Hana H."]);
-  assert.equal(pub.reward.typeId, "plan-review");
+  assert.equal(pub.reward.pct, 30);
   // redeem the code once
   const code = hi.body.rewardCode;
   assert.equal((await s.call("GET", `/api/feedback/reward/${code}`)).body.valid, true);

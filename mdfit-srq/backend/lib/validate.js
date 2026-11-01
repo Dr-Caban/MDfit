@@ -59,7 +59,8 @@ function defaultSettings() {
     plans: {
       gold: 20, silver: 10, silverPayments: 3, ext12: 5, ext24: 10, packageSizes: [6, 12, 24], guaranteeMin: 12,
       // Participation credit: attend at least attendPct% of booked visits and log homePerWeek home sessions a week to earn creditPct% back
-      participation: { creditPct: 10, attendPct: 90, homePerWeek: 3 }
+      participation: { creditPct: 10, attendPct: 90, homePerWeek: 3 },
+      reviewDiscountPct: 30
     },
     appointmentTypes: [
       { id: "eval", name: "Initial Evaluation", minutes: 60, description: "Full pain and movement assessment, hands-on treatment and a plan." },
@@ -300,6 +301,7 @@ function mergeSettings(current, body) {
       if (!Array.isArray(b.packageSizes) || !b.packageSizes.length || b.packageSizes.length > 6) fail("Package sizes: 1 to 6 numbers.");
       s.plans.packageSizes = [...new Set(b.packageSizes.map((n) => int(n, "Package size", { min: 1, max: 100 })))].sort((x, y) => x - y);
     }
+    if (b.reviewDiscountPct !== undefined) s.plans.reviewDiscountPct = int(b.reviewDiscountPct, "Review discount", { min: 0, max: 100 });
     if (b.participation !== undefined) {
       const p = obj(b.participation, "participation");
       s.plans.participation = { ...s.plans.participation };
