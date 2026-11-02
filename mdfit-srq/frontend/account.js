@@ -954,7 +954,7 @@
 
   // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
   // Drive serves the raw MP4 (CORS + range requests), so a real <video> can autoplay, loop through the set and move on by itself.
-  const driveMp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
+  const driveMp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`;
   const PLAY_KEY = "mdfit.player";
   const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false, left: 0, paused: false,
     opt: { auto: true, breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}), auto: true } };

@@ -35,7 +35,7 @@
   let dlg;
   // Stream the Drive MP4 directly so it autoplays; each clip plays twice, then the next video in the track starts.
   const LOOPS = 2;
-  const mp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
+  const mp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`;
   function goFullscreen(el) {
     const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
     if (rfs) rfs.call(el).catch(() => {});
@@ -54,9 +54,9 @@
       const all = [...dlg.querySelectorAll("[data-vid]")], nx = all[all.indexOf(btn) + 1];
       if (nx) play(nx); else { exitFs(); f.querySelector(".tk-now").textContent = "Track complete. Nice work."; }
     });
+    goFullscreen(f);
     vid.src = mp4(id);
     vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
-    goFullscreen(f);
     const all = [...dlg.querySelectorAll("[data-vid]")];
     f.querySelector(".tk-now").innerHTML = `<b>${all.indexOf(btn) + 1} of ${all.length}</b> · ${btn.dataset.name.replace(/[<>&]/g, "")}`;
     all.forEach((b) => b.classList.toggle("on", b === btn));
