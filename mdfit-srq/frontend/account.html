@@ -246,8 +246,8 @@
       </header>
       <div class="info"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>Educational tool only. Not medical advice or diagnosis.</div>
       <button type="button" class="intro-btn" data-intro="pain"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Watch: how the pain tool works</button>
-      <div class="seg mode-seg" role="tablist" aria-label="How to search"><button type="button" role="tab" data-mode="area" aria-selected="true">Find by area</button><button type="button" role="tab" data-mode="muscle" aria-selected="false">Pick a muscle</button></div>
-      <div id="mode-area">
+      <div class="seg mode-seg" role="tablist" aria-label="How to search"><button type="button" role="tab" data-mode="muscle" aria-selected="true">Body diagram</button><button type="button" role="tab" data-mode="area" aria-selected="false">Find by area</button></div>
+      <div id="mode-area" hidden>
         <div class="seg" role="tablist"><button type="button" role="tab" data-side="front" aria-selected="true">Front</button><button type="button" role="tab" data-side="back" aria-selected="false">Back</button></div>
         <p class="center muted">Select the area(s) where you feel discomfort</p>
         <div class="areas" id="areas"></div>
@@ -256,7 +256,7 @@
         <div id="pain-results"></div>
         <a class="link center block" href="/#pain-map">Open the interactive body map</a>
       </div>
-      <div id="mode-muscle" hidden>
+      <div id="mode-muscle">
         <div class="card map-card"><span class="label accent">Tap the muscle</span><div id="muscle-map"></div></div>
         <p class="label list-label">Or find it in the list</p>
         <input type="search" id="muscle-search" class="search" placeholder="Search muscles, e.g. piriformis, rotator cuff, calf" aria-label="Search muscles">
@@ -377,7 +377,7 @@
 
       <div class="card referral-card">
         <div class="card-head"><span class="label accent">Refer a friend</span></div>
-        <p class="small">Share your code. When someone signs up with it, they get <b>3 months free access</b> to everything.</p>
+        <p class="small">Share your code. When someone signs up with it, <b>you get 1 free month</b> of membership credit.</p>
         <div class="referral-row">
           <code class="referral-code" id="referral-code"></code>
           <button type="button" class="btn-gold sm" id="copy-referral">Copy code</button>
@@ -405,7 +405,7 @@
 
       <div class="card" id="referral-card">
         <div class="card-head"><span class="label accent">Refer a friend</span></div>
-        <p class="small">Share your code — when someone signs up with it, they get <strong>3 months free</strong> access.</p>
+        <p class="small">Share your code — when someone signs up with it, <strong>you get 1 free month</strong> of membership credit.</p>
         <div class="referral-code-row">
           <code class="referral-code" id="ref-code">—</code>
           <button type="button" class="btn-gold sm" id="copy-ref">Copy</button>

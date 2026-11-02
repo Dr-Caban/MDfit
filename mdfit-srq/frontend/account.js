@@ -38,6 +38,7 @@
     $$("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== tab));
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
     if (tab === "videos") renderVideos();
+    if (tab === "pain" && !show.painMap) { show.painMap = true; renderMap(); renderMuscleList(); }
     if (tab === "pain" && !show.painGuides && window.MDFitGuides.mountLibrary) { window.MDFitGuides.mountLibrary($("#pain-guides")); show.painGuides = true; }
     if (tab === "progress") renderCalendar();
     if (["programs", "learn", "premium", "tips"].includes(tab)) renderContent(tab, sub);
