@@ -124,8 +124,8 @@
 .app-painmap .pm-regions { position: absolute; inset: 0; width: 100%; height: 100%; }
 @media (max-width: 600px) {
   .app-painmap .pm-stage { width: 227.3%; }
-  .app-painmap .pm-stage[data-view="front"] { transform: translateX(0); }
-  .app-painmap .pm-stage[data-view="back"] { transform: translateX(-56%); }
+  .app-painmap .pm-stage[data-pmside="front"] { transform: translateX(0); }
+  .app-painmap .pm-stage[data-pmside="back"] { transform: translateX(-56%); }
 }
 
 .pain-secondary { margin-top: 20px; }

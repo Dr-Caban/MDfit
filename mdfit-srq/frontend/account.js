@@ -471,11 +471,11 @@
   const MUS = window.MDFitMuscles;
   const spotsPicked = new Set(), aggrPicked = new Set();
   function renderAreas() {
-    $("#areas").innerHTML = PAIN[side].map((a) => `<button type="button" class="area" data-area="${a.id}" aria-pressed="${picked.has(a.id)}">
+    const _a = $("#areas"); if (!_a) return;
+    _a.innerHTML = PAIN[side].map((a) => `<button type="button" class="area" data-area="${a.id}" aria-pressed="${picked.has(a.id)}">
       <span class="aic">${personSvg}</span><span><b>${esc(a.label)}</b><small>${esc(a.sub)}</small></span><span class="radio" aria-hidden="true"></span></button>`).join("");
-    const n = picked.size;
-    $("#pain-go").disabled = !n;
-    $("#pain-go").textContent = n ? "Find the muscles" : "Select an area";
+    const n = picked.size, _pg = $("#pain-go");
+    if (_pg) { _pg.disabled = !n; _pg.textContent = n ? "Find the muscles" : "Select an area"; }
     renderRefine();
   }
   const spotKeys = () => ALL_PAIN.filter((a) => picked.has(a.id)).flatMap((a) => {
@@ -483,11 +483,12 @@
     return mine.length ? mine : (MUS.SPOTS[a.id] || []).map((s) => `${a.id}|${s[0]}`);
   });
   function renderRefine() {
+    const _pr = $("#pain-refine"); if (!_pr) return;
     const areas = ALL_PAIN.filter((a) => picked.has(a.id));
-    if (!areas.length) { $("#pain-refine").innerHTML = ""; return; }
+    if (!areas.length) { _pr.innerHTML = ""; return; }
     // Only offer aggravators that matter for the muscles in play
     const tags = [...new Set(MUS.rank(spotKeys()).flatMap((m) => m.worse))];
-    $("#pain-refine").innerHTML = `<div class="card refine">
+    _pr.innerHTML = `<div class="card refine">
       <p class="label accent">Narrow it down</p>
       ${areas.map((a) => `<div class="refine-row"><b>${esc(a.label)}: where exactly?</b><div class="pills">${(MUS.SPOTS[a.id] || []).map(([l]) => {
         const k = `${a.id}|${l}`;
@@ -501,14 +502,16 @@
     $$(".seg [data-side]").forEach((x) => x.setAttribute("aria-selected", x === b));
     renderAreas();
   }));
-  $("#areas").addEventListener("click", (e) => {
+  const _areas = $("#areas");
+  if (_areas) _areas.addEventListener("click", (e) => {
     const b = e.target.closest("[data-area]");
     if (!b) return;
     const id = b.dataset.area;
     if (picked.has(id)) { picked.delete(id); [...spotsPicked].forEach((k) => k.startsWith(id + "|") && spotsPicked.delete(k)); } else picked.add(id);
     renderAreas();
   });
-  $("#pain-refine").addEventListener("click", (e) => {
+  const _refine = $("#pain-refine");
+  if (_refine) _refine.addEventListener("click", (e) => {
     const s = e.target.closest("[data-spot]"), g = e.target.closest("[data-aggr]");
     if (s) spotsPicked.has(s.dataset.spot) ? spotsPicked.delete(s.dataset.spot) : spotsPicked.add(s.dataset.spot);
     else if (g) aggrPicked.has(g.dataset.aggr) ? aggrPicked.delete(g.dataset.aggr) : aggrPicked.add(g.dataset.aggr);
@@ -527,7 +530,8 @@
       <div class="mini-vids">${m.videos.map((n) => byName.get(n)).filter(Boolean).map(vcard).join("")}</div>
       ${m.guide && GUIDES[m.guide] ? `<div class="guides"><button type="button" class="guide" data-guide="${m.guide}"><img src="assets/guides/${m.guide}-thumb.webp" alt="" width="52" height="52" loading="lazy"><span><b>${esc(GUIDES[m.guide])}</b><span>Open Dr. Jared's guide</span></span></button></div>` : ""}
     </article>`;
-  $("#pain-go").addEventListener("click", () => {
+  const _painGo = $("#pain-go");
+  if (_painGo) _painGo.addEventListener("click", () => {
     const areas = ALL_PAIN.filter((a) => picked.has(a.id));
     const list = MUS.rank(spotKeys(), [...aggrPicked]);
     const chosen = [...spotsPicked].map((k) => k.split("|")[1]);
@@ -547,8 +551,9 @@
       <p class="muted tiny center" style="margin:12px 0 0">Educational only, not a diagnosis. Sudden, severe or worsening pain, chest pain, numbness or weakness needs prompt medical care.</p></div>`;
     $("#pain-results").scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  $("#pain-results").addEventListener("input", (e) => { if (e.target.type === "range") e.target.closest(".log-row").querySelector("output").textContent = e.target.value; });
-  $("#pain-results").addEventListener("click", async (e) => {
+  const _painResults = $("#pain-results");
+  if (_painResults) _painResults.addEventListener("input", (e) => { if (e.target.type === "range") e.target.closest(".log-row").querySelector("output").textContent = e.target.value; });
+  if (_painResults) _painResults.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-log]");
     if (!b) return;
     const row = b.closest(".log-row"), sel = $("select", row);
@@ -591,10 +596,10 @@
 
   function setMode(mode) {
     $$(".mode-seg [data-mode]").forEach((b) => b.setAttribute("aria-selected", b.dataset.mode === mode));
-    $("#mode-area").hidden = mode !== "area";
-    $("#mode-muscle").hidden = mode !== "muscle";
+    const _ma = $("#mode-area"); if (_ma) _ma.hidden = mode !== "area";
+    const _mm = $("#mode-muscle"); if (_mm) _mm.hidden = mode !== "muscle";
     $("#muscle-report").hidden = true;
-    if (mode === "muscle") { renderMap(); renderMuscleList(); }
+    if (mode === "muscle" && _mm) { renderMap(); renderMuscleList(); }
   }
   $$(".mode-seg [data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
   const painSec = $("#pain-secondary");
@@ -602,8 +607,9 @@
   // Tap the muscle on Dr. Jared's anatomy figure (zoomed crops from painmuscles.js MAPS)
   let mapView = "body-front", mapPick = null;
   function renderMap() {
+    const _mm = $("#muscle-map"); if (!_mm) return;
     const mp = MUS.MAPS[mapView], [x, y, w, h] = mp.box;
-    $("#muscle-map").innerHTML = `
+    _mm.innerHTML = `
       <div class="map-tabs">${Object.entries(MUS.MAPS).map(([k, v]) => `<button type="button" class="chip" data-map="${k}" aria-selected="${k === mapView}">${esc(v.label)}</button>`).join("")}</div>
       <div class="map-stage ${mapView.startsWith("body") ? "dense" : ""}" style="aspect-ratio:${w}/${h}">
         <img src="assets/pain/body-figures.webp" alt="" style="width:${(1182 / w) * 100}%;left:${(-x / w) * 100}%;top:${(-y / h) * 100}%">
@@ -613,32 +619,37 @@
           ${TK.forPoint(mapPick).length ? `<div class="pm-tracks"><b>Choose your pain pattern</b><div class="track-list">${TK.forPoint(mapPick).map(TK.card).join("")}</div></div>` : ""}`
         : `<p class="muted small">Tap a point on the muscle that hurts. Navy points are deep muscles under the surface.${mapView.startsWith("body") ? " Use the Shoulder views to zoom in." : ""}</p>`}</div>`;
   }
-  $("#muscle-map").addEventListener("click", (e) => {
+  const _muscleMap = $("#muscle-map");
+  if (_muscleMap) _muscleMap.addEventListener("click", (e) => {
     const t = e.target.closest("[data-map]"), d = e.target.closest("[data-pick]");
     if (t) { mapView = t.dataset.map; mapPick = null; renderMap(); }
     else if (d) { mapPick = d.dataset.pick; renderMap(); }
   });
 
   function renderMuscleList() {
-    const q = $("#muscle-search").value.trim().toLowerCase();
+    const _ms = $("#muscle-search"), _ml = $("#muscle-list"); if (!_ms || !_ml) return;
+    const q = _ms.value.trim().toLowerCase();
     const hit = (id) => { const m = MUS.MUSCLES[id]; return !q || (m.name + " " + m.refers + " " + m.does).toLowerCase().includes(q); };
-    $("#muscle-list").innerHTML = GROUPS.map(([g, ids]) => {
+    _ml.innerHTML = GROUPS.map(([g, ids]) => {
       const list = ids.filter(hit);
       return list.length ? `<div class="mgroup"><p class="label">${esc(g)}</p><div class="mchips">${list.map((id) =>
         `<button type="button" class="mchip" data-report="${id}"><b>${esc(MUS.MUSCLES[id].name)}</b><span>${esc(MUS.MUSCLES[id].refers.split(/[.;]/)[0])}</span></button>`).join("")}</div></div>` : "";
     }).join("") || `<p class="muted small center">No muscle matches "${esc(q)}".</p>`;
   }
-  $("#muscle-search").addEventListener("input", renderMuscleList);
+  const _muscleSearch = $("#muscle-search");
+  if (_muscleSearch) _muscleSearch.addEventListener("input", renderMuscleList);
   document.addEventListener("click", (e) => { const b = e.target.closest("[data-report]"); if (b) openReport(b.dataset.report); });
 
   let report = null, reportFrom = "muscle"; // report = { id, answers: Map(index -> bool) }; reportFrom = mode to go back to
   function openReport(id, push = true) {
     if (!MUS.MUSCLES[id]) return;
-    if (!$("#mode-area").hidden) reportFrom = "area"; else if (!$("#mode-muscle").hidden) reportFrom = "muscle";
+    const _rma = $("#mode-area"), _rmm = $("#mode-muscle");
+    if (_rma && !_rma.hidden) reportFrom = "area"; else if (_rmm && !_rmm.hidden) reportFrom = "muscle";
     if (location.hash.slice(1).split("/")[0] !== "pain") show("pain");
     if (push) history.pushState(null, "", `#pain/muscle/${id}`);
     report = { id, answers: new Map() };
-    $("#mode-area").hidden = true; $("#mode-muscle").hidden = true;
+    const _oma = $("#mode-area"); if (_oma) _oma.hidden = true;
+    const _omm = $("#mode-muscle"); if (_omm) _omm.hidden = true;
     $("#muscle-report").hidden = false;
     renderReport();
     window.scrollTo(0, 0);

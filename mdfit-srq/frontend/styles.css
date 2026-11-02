@@ -384,8 +384,8 @@ dialog .book-when { margin: -6px 0 4px; }
   .pm-toggle button { border: 0; background: none; color: #fff; padding: 10px; font: 700 15px var(--body); cursor: pointer; }
   .pm-toggle button[aria-pressed="true"] { background: var(--accent); color: var(--ink); }
   .pm-stage { width: 227.3%; }
-  .pm-stage[data-view="front"] { transform: translateX(-2.1%); }
-  .pm-stage[data-view="back"] { transform: translateX(-54.6%); }
+  .pm-stage[data-pmside="front"] { transform: translateX(-2.1%); }
+  .pm-stage[data-pmside="back"] { transform: translateX(-54.6%); }
   .pm-logo { display: none; }
   .hotspot { width: 2.4%; }
   .pm-views { display: none; }

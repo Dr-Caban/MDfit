@@ -32,7 +32,7 @@
 
     const stage = $(".pm-stage", root);
     function setView(v) {
-      stage.dataset.view = v;
+      stage.dataset.pmside = v;
       $$(".pm-toggle [data-pmview]", root).forEach((b) => b.setAttribute("aria-pressed", b.dataset.pmview === v));
     }
     $$(".pm-toggle [data-pmview]", root).forEach((b) => b.addEventListener("click", () => setView(b.dataset.pmview)));
