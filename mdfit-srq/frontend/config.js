@@ -2,5 +2,6 @@
 window.MDFIT_CONFIG = {
   apiUrl: ["localhost", "127.0.0.1"].includes(location.hostname)
     ? "http://localhost:3000"
-    : "https://mdfit-api-production.up.railway.app"
+    : "https://mdfit-api-production.up.railway.app",
+  googleClientId: ""
 };

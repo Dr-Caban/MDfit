@@ -38,6 +38,7 @@ function loadConfig() {
     googleLegacyUrl: env("GOOGLE_PLACES_LEGACY_URL", "https://maps.googleapis.com/maps/api/place"),
     googlePlaceId: env("GOOGLE_PLACE_ID"),
     googleQuery: env("GOOGLE_PLACE_QUERY", "MD Fit, 3214 Clark Road, Sarasota, FL 34231"),
+    googleClientId: env("GOOGLE_CLIENT_ID"),
     now: () => new Date()
   };
 }
@@ -332,7 +333,7 @@ function createApp(cfg = loadConfig()) {
     const calData = booking.provider === "cal" ? await calInfo(s) : null;
     res.set("Cache-Control", "no-cache");
     res.json({
-      settings: pub, timeZone: cfg.tz,
+      settings: pub, timeZone: cfg.tz, googleClientId: cfg.googleClientId || null,
       booking: { provider: calData ? "cal" : "builtin", cal: calData },
       options: { goals: GOALS, services: SERVICES, areas: AREAS, durations: DURATIONS, surgery: SURGERY },
       // kept for older frontends

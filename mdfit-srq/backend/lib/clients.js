@@ -7,6 +7,7 @@ const { ValidationError, EMAIL_RE, AREAS } = require("./validate");
 
 const SESSION_DAYS = 30;
 const RESET_HOURS = 24;
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/tokeninfo";
 const GUIDE_IDS = ["posterior-neck", "scalenes", "rotator-cuff", "iliopsoas", "lateral-hip", "quads", "calf"];
 const PAIN_LOG_MAX = 1000;
 const WORKOUT_LOG_MAX = 2000;
@@ -176,6 +177,68 @@ function mountClients(ctx) {
     save(list);
     activity("client_password_reset", { email: c.email });
     res.json(session(c));
+  });
+
+  // Google sign-in: verify the ID token with Google and create/login the client
+  app.post("/api/clients/google", signupLimit.mw, async (req, res) => {
+    if (!ready) return notReady(res);
+    const googleClientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
+    if (!googleClientId) return res.status(503).json({ error: "Google sign-in isn't configured on the server." });
+    const credential = String((req.body && req.body.credential) || "");
+    if (!credential) return res.status(400).json({ error: "Missing Google credential." });
+
+    let gUser;
+    try {
+      const r = await fetch(`${GOOGLE_TOKEN_URL}?id_token=${encodeURIComponent(credential)}`);
+      gUser = await r.json();
+      if (!r.ok || gUser.aud !== googleClientId) throw new Error("Invalid token");
+    } catch (err) {
+      logger.warn("google_signin_failed", { error: err.message });
+      return res.status(401).json({ error: "Google sign-in failed. Try again." });
+    }
+
+    const email = (gUser.email || "").toLowerCase();
+    if (!email || !gUser.email_verified) return res.status(400).json({ error: "Google account has no verified email." });
+
+    const list = clients();
+    let c = list.find((x) => x.email === email);
+
+    if (c) {
+      c.lastLoginAt = new Date().toISOString();
+      if (!c.googleSub) c.googleSub = gUser.sub;
+      save(list);
+      return res.json(session(c));
+    }
+
+    const name = gUser.name || email.split("@")[0];
+    let code = generateReferralCode(name);
+    while (list.some((x) => x.referralCode === code)) code = generateReferralCode(name);
+
+    c = {
+      id: id(), email, name, phone: "",
+      passwordHash: null, googleSub: gUser.sub, pwv: 0, plan: emptyPlan(), painLog: [],
+      referralCode: code, referredBy: null, freeUntil: null,
+      createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
+    };
+
+    const refCode = text(req.body.referralCode, "Referral code", { max: 20 });
+    if (refCode) {
+      const referrer = list.find((x) => x.referralCode === refCode);
+      if (referrer) {
+        c.referredBy = referrer.id;
+        c.freeUntil = addDay(today(), FREE_MONTHS * 30);
+        const refs = referrals();
+        refs.push({ id: id(), referrerId: referrer.id, referredId: c.id, referredEmail: email, freeUntil: c.freeUntil, createdAt: new Date().toISOString() });
+        saveReferrals(refs);
+        activity("referral_used", { referrer: referrer.email, referred: email });
+      }
+    }
+
+    list.push(c);
+    save(list);
+    activity("client_signup", { email, via: "google" });
+    notify.owner(`New client account (Google): ${c.name}`, `${c.name}\n${c.email}`);
+    res.status(201).json(session(c));
   });
 
   // ================= Client dashboard =================
