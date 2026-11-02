@@ -121,6 +121,13 @@ function defaultContent() {
       { id: "desk-breaks", area: "Desk & posture", title: "Move every 30 to 45 minutes", body: "Set a timer. Stand, walk, or do one desk reset from the Desk Worker Reset program. The best posture is the next one.", link: "" },
       { id: "sleep-position", area: "Neck & shoulders", title: "Pick a pillow that keeps your neck level", body: "On your side, your pillow should fill the gap between ear and shoulder so your neck stays straight. On your back, use a thinner pillow.", link: "" },
       { id: "sleep-hours", area: "Recovery", title: "Protect 7 to 9 hours of sleep", body: "Tissue repairs while you sleep. Keep the same bed and wake time, and keep screens out of the last 30 minutes.", link: "" }
+    ],
+    events: [
+      { id: "nxf-nov-2026", title: "NXF Community Day — Free Bodywork", date: "2026-11-14", time: "10:00 AM – 2:00 PM", location: "NXF Fitness, Sarasota", description: "Stop by for complimentary soft-tissue bodywork and movement assessments with Dr. Jared Caban. Open to everyone — no appointment needed.", link: "", free: true },
+      { id: "dec-2026", title: "MD Fit Holiday Open House", date: "2026-12-05", time: "TBA", location: "3214 Clark Road, Sarasota", description: "Details coming soon.", link: "", free: true },
+      { id: "jan-2027", title: "New Year Movement Workshop", date: "2027-01-10", time: "TBA", location: "Sarasota, FL", description: "Start the year moving better. Details coming soon.", link: "", free: false },
+      { id: "feb-2027", title: "Pain-Free Living Seminar", date: "2027-02-07", time: "TBA", location: "Sarasota, FL", description: "Learn the MD Fit approach to eliminating chronic pain. Details coming soon.", link: "", free: false },
+      { id: "mar-2027", title: "Spring Into Strength Workshop", date: "2027-03-07", time: "TBA", location: "Sarasota, FL", description: "Details coming soon.", link: "", free: false }
     ]
   };
 }
@@ -164,6 +171,12 @@ const recIn = (r, i) => ({
   id: slug(r.id, `Recommendation ${i + 1} id`), area: str(r.area, `Recommendation ${i + 1} area`, { min: 1, max: 40 }),
   title: str(r.title, `Recommendation ${i + 1} title`, { min: 1, max: 120 }), body: str(r.body, `Recommendation ${i + 1} text`, { min: 1, max: 2000 }),
   link: url(r.link, `Recommendation ${i + 1} link`)
+});
+const eventIn = (e, i) => ({
+  id: slug(e.id, `Event ${i + 1} id`), title: str(e.title, `Event ${i + 1} title`, { min: 1, max: 120 }),
+  date: str(e.date, `Event ${i + 1} date`, { min: 10, max: 10 }), time: str(e.time || "", `Event ${i + 1} time`, { max: 20 }),
+  location: str(e.location || "", `Event ${i + 1} location`, { max: 200 }), description: str(e.description || "", `Event ${i + 1} description`, { max: 2000 }),
+  link: url(e.link || "", `Event ${i + 1} link`), free: !!e.free
 });
 const driveId = (v, label) => {
   const s = str(v, label, { max: 300 });
@@ -225,7 +238,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     programs: c.programs.map((p) => ({ ...p, locked: false })),
     lectures: c.lectures.map((l) => ({ ...l, locked: false })),
     live: { ...c.live, locked: false },
-    tiers: c.tiers, recommendations: c.recommendations, tracks: c.tracks, categories: PROGRAM_CATS, topics: LECTURE_TOPICS
+    tiers: c.tiers, recommendations: c.recommendations, tracks: c.tracks, events: c.events || [], categories: PROGRAM_CATS, topics: LECTURE_TOPICS
   });
 
   app.get("/api/content", (req, res) => { res.set("Cache-Control", "no-cache"); res.json(view(content())); });
@@ -290,6 +303,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     if (b.recommendations !== undefined) next.recommendations = list(b.recommendations, "Recommendations", 100, recIn);
     if (b.live !== undefined) next.live = liveIn(b.live || {}, c.live);
     if (b.tracks !== undefined) next.tracks = list(b.tracks, "Pain tracks", 80, trackIn);
+    if (b.events !== undefined) next.events = list(b.events, "Events", 50, eventIn);
     store.write("content", { ...next, contentVersion: 2 });
     res.json(content());
   });

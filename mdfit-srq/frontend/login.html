@@ -28,7 +28,8 @@
 
       <form id="login-form" class="form auth-form" data-panel="login" novalidate>
         <h1>Welcome back</h1>
-        <label>Full name<input name="name" maxlength="100" autocomplete="name" placeholder="Required for new accounts"></label>
+        <div id="google-btn-login" class="google-signin-wrap" hidden></div>
+        <div class="auth-divider" id="auth-divider-login" hidden><span>or</span></div>
         <label>Email<input name="email" type="email" required autocomplete="username"></label>
         <label>Password<input name="password" type="password" required minlength="8" autocomplete="current-password"></label>
         <button class="btn btn-lg btn-block" type="submit">Log in</button>
@@ -41,6 +42,8 @@
       <form id="signup-form" class="form auth-form" data-panel="signup" novalidate hidden>
         <h1>Create your account</h1>
         <p class="muted">See your appointments, your plan from Dr. Jared, and track your progress.</p>
+        <div id="google-btn-signup" class="google-signin-wrap" hidden></div>
+        <div class="auth-divider" id="auth-divider-signup" hidden><span>or</span></div>
         <label>Full name<input name="name" required minlength="2" maxlength="100" autocomplete="name"></label>
         <label>Email<input name="email" type="email" required autocomplete="email"></label>
         <label>Mobile phone<input name="phone" type="tel" maxlength="30" autocomplete="tel"></label>
@@ -107,8 +110,9 @@
       document.addEventListener("click", (e) => { const b = e.target.closest("[data-mode]"); if (b) mode(b.dataset.mode); });
       const done = (sess) => { auth.set(sess); location.replace(next); return { message: "Logged in. Loading your account…" }; };
 
+      const ref = q.get("ref") || "";
       wire($("#login-form"), async (d) => done(await api("/api/clients/login", d)), { reset: false });
-      wire($("#signup-form"), async (d) => done(await api("/api/clients/signup", d)), { reset: false });
+      wire($("#signup-form"), async (d) => done(await api("/api/clients/signup", { ...d, referralCode: ref || undefined })), { reset: false });
       wire($("#forgot-form"), async (d) => {
         resetEmail = d.email;
         const r = await api("/api/clients/forgot", d);
@@ -123,44 +127,40 @@
       });
       wire($("#reset-form"), async (d) => done(await api("/api/clients/reset", { ...d, token: resetToken || q.get("reset") })), { reset: false });
 
-      const ref = q.get("ref");
       if (ref) { const ri = $("#signup-form [name=referralCode]"); if (ri) ri.value = ref; }
 
       if (q.get("reset")) { auth.clear(); resetToken = q.get("reset"); mode("reset"); }
       else if (q.get("signup") !== null || ref) mode("signup");
 
-      // Google sign-in
-      (async () => {
-        let GID;
-        try { const s = await api("/api/site"); GID = s.googleClientId; } catch {}
-        if (!GID) return;
-
-        function onGoogleLoad() {
+      // Google Sign-In
+      api("/api/app/config", null, "GET").then((cfg) => {
+        if (!cfg.googleClientId) return;
+        const s = document.createElement("script");
+        s.src = "https://accounts.google.com/gsi/client";
+        s.async = true;
+        s.onload = () => {
           google.accounts.id.initialize({
-            client_id: GID,
+            client_id: cfg.googleClientId,
             callback: async (resp) => {
-              const msg = $("[data-panel]:not([hidden]) .form-msg");
               try {
                 const refInput = $("#signup-form [name=referralCode]");
                 const body = { credential: resp.credential };
                 if (refInput && refInput.value) body.referralCode = refInput.value;
-                const sess = await api("/api/clients/google", body);
-                done(sess);
-              } catch (err) {
-                if (msg) { msg.className = "form-msg err"; msg.textContent = err.message; }
+                done(await api("/api/clients/google", body));
+              } catch (e) {
+                const msg = $("[data-panel]:not([hidden]) .form-msg");
+                if (msg) { msg.className = "form-msg err"; msg.textContent = e.message || "Google sign-in failed."; }
               }
             }
           });
-          function renderBtn(el) {
-            if (!el) return;
-            google.accounts.id.renderButton(el, { theme: "outline", size: "large", width: el.offsetWidth || 320, text: "continue_with" });
-          }
-          renderBtn(document.getElementById("g-login-btn"));
-          renderBtn(document.getElementById("g-signup-btn"));
-        }
-        if (window.google && google.accounts) onGoogleLoad();
-        else window.addEventListener("load", () => { if (window.google && google.accounts) onGoogleLoad(); });
-      })();
+          ["google-btn-login", "google-btn-signup"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) { el.hidden = false; google.accounts.id.renderButton(el, { theme: "outline", size: "large", width: 320, text: "continue_with" }); }
+          });
+          ["auth-divider-login", "auth-divider-signup"].forEach((id) => { const el = document.getElementById(id); if (el) el.hidden = false; });
+        };
+        document.head.appendChild(s);
+      }).catch(() => {});
     })();
   </script>
 <script defer src="/_vercel/insights/script.js"></script>

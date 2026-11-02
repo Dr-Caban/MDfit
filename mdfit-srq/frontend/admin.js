@@ -642,7 +642,15 @@
       <label>Access<select data-f="access">${["free", "member", "premium"].map((a) => `<option${a === x.access ? " selected" : ""}>${a}</option>`).join("")}</select></label>
       <label class="wide">Summary<input data-f="summary" value="${esc(x.summary)}" maxlength="400"></label>
       <label class="wide">Coaching notes<textarea data-f="notes" rows="2" maxlength="1000">${esc(x.notes)}</textarea></label>
-      <label class="wide">Days<textarea data-f="days" rows="4">${esc(x.days.map((d) => [d.name, d.goal, d.length, d.rounds || ""].join(" | ")).join("\n"))}</textarea></label>` }
+      <label class="wide">Days<textarea data-f="days" rows="4">${esc(x.days.map((d) => [d.name, d.goal, d.length, d.rounds || ""].join(" | ")).join("\n"))}</textarea></label>` },
+    events: { blank: { id: "", title: "", date: "", time: "", location: "", description: "", link: "", free: false }, html: (x) => `
+      <label>Title<input data-f="title" value="${esc(x.title)}" maxlength="120"></label>
+      <label>Date (YYYY-MM-DD)<input data-f="date" value="${esc(x.date)}" maxlength="10" placeholder="2026-11-14"></label>
+      <label>Time<input data-f="time" value="${esc(x.time)}" maxlength="20" placeholder="10:00 AM – 2:00 PM"></label>
+      <label>Location<input data-f="location" value="${esc(x.location)}" maxlength="200"></label>
+      <label class="wide">Description<textarea data-f="description" rows="2" maxlength="2000">${esc(x.description)}</textarea></label>
+      <label>RSVP / Details link<input data-f="link" value="${esc(x.link)}" placeholder="https://…"></label>
+      <label><input data-f="free" type="checkbox"${x.free ? " checked" : ""}> Free event</label>` }
   };
   let tracksEdited = false;
   $("#rows-tracks").addEventListener("input", () => (tracksEdited = true));
@@ -675,7 +683,7 @@
   function readRows(kind) {
     const used = new Set();
     return $$("#rows-" + kind + " .crow").map((r) => {
-      const o = {}; $$("[data-f]", r).forEach((el) => (o[el.dataset.f] = el.type === "number" ? Number(el.value) : el.value.trim()));
+      const o = {}; $$("[data-f]", r).forEach((el) => (o[el.dataset.f] = el.type === "checkbox" ? el.checked : el.type === "number" ? Number(el.value) : el.value.trim()));
       const base = o.title || o.name || "item"; let id = r.dataset.id || slugify(base), n = 2; while (used.has(id)) id = slugify(base) + "-" + n++; used.add(id); o.id = id;
       if (kind === "tiers") o.perks = o.perks.split("\n").map((x) => x.trim()).filter(Boolean);
       if (kind === "tracks") {
@@ -703,7 +711,7 @@
     live.minutes = Number(ctf.live_minutes.value || 60);
     live.recordings = ctf.live_recordings.value.split("\n").map((x) => x.trim()).filter(Boolean).map((l) => { const [title, date = "", url = ""] = l.split("|").map((y) => y.trim()); return { title, date, url }; });
     try {
-      await api("PUT", "/api/admin/content", { live, lectures: readRows("lectures"), recommendations: readRows("recommendations"), tiers: readRows("tiers"), programs: readRows("programs"), ...(tracksEdited ? { tracks: readRows("tracks") } : {}) });
+      await api("PUT", "/api/admin/content", { live, lectures: readRows("lectures"), recommendations: readRows("recommendations"), tiers: readRows("tiers"), programs: readRows("programs"), events: readRows("events"), ...(tracksEdited ? { tracks: readRows("tracks") } : {}) });
       msg.className = "form-msg ok"; msg.textContent = "Saved. The app updates immediately."; loadContent();
     } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
   }));

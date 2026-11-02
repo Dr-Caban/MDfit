@@ -780,6 +780,7 @@
     $("#p-email").textContent = client.email;
     const f = $("#profile-form");
     f.name.value = client.name; f.email.value = client.email; f.phone.value = client.phone || "";
+    renderReferral();
   }
   wire($("#profile-form"), async (d) => {
     const r = await apiAuth("PUT", "/api/me", { name: d.name, phone: d.phone });
@@ -789,6 +790,24 @@
   wire($("#password-form"), async (d) => {
     auth.set(await apiAuth("PUT", "/api/me/password", d));
     return { message: "Password changed. Other devices were signed out." };
+  });
+  // Referral code
+  function renderReferral() {
+    const code = client.referralCode;
+    if (!code) return;
+    $("#referral-code").textContent = code;
+  }
+  $("#copy-referral").addEventListener("click", () => {
+    const code = client.referralCode;
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => { $("#referral-msg").textContent = "Code copied!"; setTimeout(() => ($("#referral-msg").textContent = ""), 2000); });
+  });
+  $("#share-referral").addEventListener("click", () => {
+    const code = client.referralCode;
+    if (!code) return;
+    const url = `${location.origin}/login?signup&ref=${encodeURIComponent(code)}`;
+    if (navigator.share) navigator.share({ title: "Join MD Fit", text: `Sign up with my code and get 3 months free access!`, url }).catch(() => {});
+    else navigator.clipboard.writeText(url).then(() => { $("#referral-msg").textContent = "Link copied!"; setTimeout(() => ($("#referral-msg").textContent = ""), 2000); });
   });
   $("#logout").addEventListener("click", () => { auth.clear(); location.href = "/"; });
 
