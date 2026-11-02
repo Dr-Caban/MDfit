@@ -14,6 +14,7 @@ const { mountContent } = require("./lib/content");
 const { mountMessages } = require("./lib/messages");
 const { mountIntake, MASSAGE_TYPES } = require("./lib/intake");
 const { mountFeedbackReports } = require("./lib/feedback-reports");
+const { mountAnalytics } = require("./lib/analytics");
 const { mountPayments } = require("./lib/payments");
 const { createSecurity } = require("./lib/security");
 const { createCalSync } = require("./lib/calsync");
@@ -1006,6 +1007,7 @@ function createApp(cfg = loadConfig()) {
   mountMessages({ app, admin, store, notify, activity, cfg, limiter, ...cl });
   mountIntake({ app, admin, store, cfg, notify, activity, limiter, appointments, tokenMatches, prettyDate, prettyTime });
   mountFeedbackReports({ app, admin, store, me: cl.me, cfg, notify, activity, limiter });
+  mountAnalytics({ app, admin, store, limiter });
   const pay = mountPayments({ app, admin, store, notify, activity, cfg, settings, logger, ...cl });
 
   app.use("/api/admin", admin);

@@ -55,7 +55,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, audit: loadAudit, messages: loadThreads, members: loadMembers, content: loadContent, settings: loadSettings, feedback: loadFeedback };
+  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, audit: loadAudit, messages: loadThreads, members: loadMembers, content: loadContent, settings: loadSettings, feedback: loadFeedback, analytics: loadAnalytics };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -696,6 +696,25 @@
     if (e.target.id === "mfa-confirm") { await api("POST", "/api/admin/mfa/confirm", { code: $("#mfa-code").value.trim() }); toast("Two-step login is on."); loadMfa(); }
     if (e.target.id === "mfa-off") { await api("POST", "/api/admin/mfa/disable", { password: $("#mfa-pass").value }); toast("Two-step login turned off."); loadMfa(); }
   }));
+
+  async function loadAnalytics() {
+    const d = await api("GET", "/api/admin/analytics");
+    const s = d.summary;
+    $("#analytics-stats").innerHTML = `
+      <div class="stat"><b>${s.todayViews}</b><small>Views today</small></div>
+      <div class="stat"><b>${s.todayUnique}</b><small>Visitors today</small></div>
+      <div class="stat"><b>${s.totalViews}</b><small>Views (30d)</small></div>
+      <div class="stat"><b>${s.totalUnique}</b><small>Visitors (30d)</small></div>`;
+    $("#analytics-days").innerHTML = `<thead><tr><th>Date</th><th>Views</th><th>Visitors</th></tr></thead><tbody>${
+      d.days.map((r) => `<tr><td>${esc(r.date)}</td><td>${r.views}</td><td>${r.unique}</td></tr>`).join("") || "<tr><td colspan=3 class='muted'>No data yet</td></tr>"
+    }</tbody>`;
+    $("#analytics-pages").innerHTML = `<thead><tr><th>Page</th><th>Views</th></tr></thead><tbody>${
+      d.pages.map((r) => `<tr><td>${esc(r.page)}</td><td>${r.views}</td></tr>`).join("") || "<tr><td colspan=2 class='muted'>No data yet</td></tr>"
+    }</tbody>`;
+    $("#analytics-refs").innerHTML = `<thead><tr><th>Source</th><th>Views</th></tr></thead><tbody>${
+      d.referrers.map((r) => `<tr><td>${esc(r.source)}</td><td>${r.views}</td></tr>`).join("") || "<tr><td colspan=2 class='muted'>No referral traffic yet</td></tr>"
+    }</tbody>`;
+  }
 
   async function loadSettings() {
     loadMfa();

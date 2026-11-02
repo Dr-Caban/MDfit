@@ -44,6 +44,7 @@
           <button data-tab="members">Members</button>
           <button data-tab="content">Content</button>
           <button data-tab="hours">Booking</button>
+          <button data-tab="analytics">Analytics</button>
           <button data-tab="audit">Audit</button>
           <button data-tab="settings">Settings</button>
           <button id="logout" class="link">Log out</button>
@@ -256,6 +257,24 @@
         <div class="table-wrap"><table id="subs-table"></table></div>
       </section>
 
+      <section data-panel="analytics" hidden>
+        <h2>Site analytics <small class="muted">(last 30 days)</small></h2>
+        <div class="stats" id="analytics-stats"></div>
+        <div class="grid2" id="analytics-grid">
+          <div>
+            <h3>Daily traffic</h3>
+            <div class="table-wrap"><table id="analytics-days"></table></div>
+          </div>
+          <div>
+            <h3>Top pages</h3>
+            <div class="table-wrap"><table id="analytics-pages"></table></div>
+            <h3 style="margin-top:18px">Top referrers</h3>
+            <div class="table-wrap"><table id="analytics-refs"></table></div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:14px">For deeper analytics (devices, geography, speed), open <a href="https://vercel.com" target="_blank" rel="noopener">Vercel Dashboard</a> → mdfit-srq → Analytics.</p>
+      </section>
+
       <section data-panel="settings" hidden>
         <form id="settings-form" class="form" novalidate>
           <h2>Security</h2>
@@ -319,5 +338,6 @@
   <script src="painmuscles.js?v=74e3b348"></script>
   <script src="paintracks.js?v=1c44032f"></script>
   <script src="admin.js?v=522e8e1e"></script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
