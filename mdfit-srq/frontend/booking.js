@@ -17,6 +17,7 @@
       <div class="booker-step">
         <h3 class="step-title"><span>1</span> What do you need?</h3>
         <div class="types" role="radiogroup" aria-label="Appointment type"></div>
+      <p class="type-note" aria-live="polite"></p>
       </div>
       <div class="booker-step">
         <h3 class="step-title"><span>2</span> Choose a day</h3>
@@ -80,9 +81,13 @@
 
     function renderTypes() {
       $(".types", root).innerHTML = types.map((t) => `
-        <button type="button" class="type" role="radio" aria-checked="${t.id === state.type.id}" data-type="${esc(t.id)}">
-          <b>${esc(t.name)}</b><span class="mins">${t.minutes} min</span>${t.description ? `<small>${esc(t.description)}</small>` : ""}
+        <button type="button" class="type ${t.remote ? "type-remote" : ""}" role="radio" aria-checked="${t.id === state.type.id}" data-type="${esc(t.id)}">
+          <b>${esc(t.name)}${t.remote ? ' <span class="type-badge">Video</span>' : ""}</b><span class="mins">${t.minutes} min</span>${t.description ? `<small>${esc(t.description)}</small>` : ""}
         </button>`).join("");
+      const chosen = state.type;
+      const note = root.querySelector(".type-note");
+      if (chosen && chosen.remote) note.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>This is a telehealth visit. You\'ll get a private, secure video link before your appointment. Join from a quiet, private room.';
+      else note.textContent = "";
     }
 
     async function load() {

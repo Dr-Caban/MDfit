@@ -54,7 +54,9 @@ function defaultSettings() {
     // withEval = the plan total includes the evaluation (Gold pays for the evaluation and every visit upfront)
     services: [
       { id: "eval", name: "Evaluation", rate: 300, unit: "90 minutes", protocol: false, description: "Rehabilitation, functional mobility, strength & performance, stability or cognitive fortitude: full assessment, hands-on treatment, your plan and your first homework." },
+      { id: "eval-remote", name: "Online Evaluation (Telehealth)", rate: 300, unit: "60 minutes", protocol: false, remote: true, description: "A video evaluation with Dr. Jared when you can't come in. We'll review your history, assess movement on camera, and build your plan." },
       { id: "followup", name: "Follow-up Visit", rate: 150, unit: "60 minutes", protocol: true, withEval: true, description: "Treatment and progression. You leave with homework for the days before your next visit." },
+      { id: "followup-remote", name: "Online Follow-up (Telehealth)", rate: 150, unit: "45 minutes", protocol: true, remote: true, description: "A remote check-in: review your homework, progress your plan and answer questions on video." },
       { id: "massage", name: "Medical Massage", rate: 250, unit: "60 minutes", protocol: true, description: "Targeted soft-tissue treatment for the muscles driving your pain. No evaluation needed: just a short intake form." },
       { id: "massage90", name: "Medical Massage, Extended", rate: 300, unit: "90 minutes", protocol: true, description: "More time on more areas, for widespread or stubborn pain." }
     ],
@@ -67,8 +69,10 @@ function defaultSettings() {
       reviewDiscountPct: 30
     },
     appointmentTypes: [
-      { id: "eval", name: "Evaluation", minutes: 90, description: "Rehab, functional mobility, strength & performance, stability or cognitive fortitude. $300." },
-      { id: "session", name: "Follow-up / Training Session", minutes: 60, description: "For existing clients continuing their plan. $150." },
+      { id: "eval", name: "In-Studio Evaluation", minutes: 90, description: "Rehab, functional mobility, strength & performance, stability or cognitive fortitude at the studio in Sarasota. $300." },
+      { id: "eval-remote", name: "Online Evaluation (Telehealth)", minutes: 60, remote: true, description: "A video evaluation with Dr. Jared when you can't come in. $300." },
+      { id: "session", name: "In-Studio Follow-up / Training Session", minutes: 60, description: "For existing clients continuing their plan. $150." },
+      { id: "followup-remote", name: "Online Follow-up (Telehealth)", minutes: 45, remote: true, description: "A remote check-in by video. $150." },
       { id: "massage", name: "Medical Massage", minutes: 60, description: "No evaluation needed; you'll fill out a short intake form. $250." },
       { id: "massage90", name: "Medical Massage, 90 min", minutes: 90, description: "Extended session for more areas. $300." },
       { id: "call", name: "Free 15-Minute Phone Consult", minutes: 15, description: "Not sure where to start? Talk it through with Dr. Jared." }
@@ -292,6 +296,7 @@ function mergeSettings(current, body) {
         unit: str(v.unit || "visit", `Service ${i + 1} unit`, { max: 20 }),
         protocol: Boolean(v.protocol),
         withEval: Boolean(v.withEval),
+        remote: Boolean(v.remote),
         description: str(v.description, `Service ${i + 1} description`, { max: 300 })
       };
     });

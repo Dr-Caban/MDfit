@@ -220,7 +220,7 @@ test("appointments: availability, notice window, overlap, cancel, admin status",
   assert.equal((await book({ painLevel: 12 })).status, 400);
   const ok = await book({ areas: ["Knee"], painLevel: 5 });
   assert.equal(ok.status, 201);
-  assert.equal(ok.body.message, "You're booked: Evaluation, Tue, Nov 3 at 10:00 AM.");
+  assert.equal(ok.body.message, "You're booked: In-Studio Evaluation, Tue, Nov 3 at 10:00 AM.");
   assert.equal((await book({ email: "b@example.com", time: "11:00" })).status, 409); // overlaps 10:00-11:30
   assert.equal((await book({ email: "b@example.com", typeId: "call", time: "10:30" })).status, 409); // inside the eval
   const call = await book({ email: "b@example.com", typeId: "call", time: "09:30" }); // 09:30-09:45 fits before it
@@ -306,7 +306,7 @@ test("services, payment plans and Medical Massage are public and admin-editable"
   const s = await start(); t.after(s.close);
   const site = (await s.call("GET", "/api/site")).body;
   const svc = Object.fromEntries(site.settings.services.map((v) => [v.id, v]));
-  assert.equal(svc.eval.rate, 300); assert.equal(svc.followup.rate, 150); assert.equal(svc.massage.rate, 250); assert.equal(svc.massage90.rate, 300);
+  assert.equal(svc.eval.rate, 300); assert.equal(svc.followup.rate, 150); assert.equal(svc.massage.rate, 250); assert.equal(svc.massage90.rate, 300); assert.equal(svc["eval-remote"].remote, true); assert.equal(svc["followup-remote"].remote, true);
   assert.equal(svc.followup.withEval, true);
   assert.equal(site.settings.plans.gold, 20); assert.equal(site.settings.plans.silver, 0); assert.equal(site.settings.plans.silverPayments, 3);
   assert.equal(site.settings.plans.ext12, 5); assert.equal(site.settings.plans.ext24, 10); assert.equal(site.settings.plans.guaranteeMin, 12);
@@ -314,12 +314,12 @@ test("services, payment plans and Medical Massage are public and admin-editable"
   assert.ok(site.options.services.includes("Medical massage"));
   assert.ok(!site.options.services.includes("Group classes"), "classes are off the public site for now");
   const types = Object.fromEntries(site.settings.appointmentTypes.map((a) => [a.id, a.minutes]));
-  assert.deepEqual(types, { eval: 90, session: 60, massage: 60, massage90: 90, call: 15 });
+  assert.deepEqual(types, { eval: 90, "eval-remote": 60, session: 60, "followup-remote": 45, massage: 60, massage90: 90, call: 15 });
   await s.login();
   const r = await s.call("PUT", "/api/admin/settings", { services: [...site.settings.services, { id: "dry-needling", name: "Dry Needling", rate: 180, protocol: true, description: "" }], plans: { gold: 25, participation: { creditPct: 15 } } });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const after = (await s.call("GET", "/api/site")).body.settings;
-  assert.equal(after.services.length, 5); assert.equal(after.plans.gold, 25); assert.equal(after.plans.participation.creditPct, 15); assert.equal(after.plans.participation.attendPct, 90);
+  assert.equal(after.services.length, 7); assert.equal(after.plans.gold, 25); assert.equal(after.plans.participation.creditPct, 15); assert.equal(after.plans.participation.attendPct, 90);
   assert.equal((await s.call("PUT", "/api/admin/settings", { services: [{ id: "Bad Id", name: "x", rate: 1 }] })).status, 400);
 });
 

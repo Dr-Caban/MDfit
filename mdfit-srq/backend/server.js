@@ -156,15 +156,15 @@ function createApp(cfg = loadConfig()) {
   // Saved settings override the defaults, so without this the live site would keep the old prices.
   (function migrateSettings() {
     const s = store.read("settings", null);
-    if (!s || s.version >= 2) return;
+    if (!s || s.version >= 3) return;
     const d = defaultSettings();
-    s.services = d.services;
+    s.services = d.services; // picks up telehealth types/prices
     s.appointmentTypes = d.appointmentTypes;
     s.plans = { ...(s.plans || {}), gold: d.plans.gold, silver: d.plans.silver, silverPayments: d.plans.silverPayments, ext12: d.plans.ext12, ext24: d.plans.ext24 };
     s.scheduling = { ...(s.scheduling || {}), hours: d.scheduling.hours, lastStart: d.scheduling.lastStart, minNoticeHours: d.scheduling.minNoticeHours };
     s.business = { ...(s.business || {}), hours: d.business.hours };
     s.coach = { ...(s.coach || {}), title: d.coach.title };
-    s.version = 2;
+    s.version = 3;
     store.write("settings", s);
   })();
 
@@ -594,7 +594,9 @@ function createApp(cfg = loadConfig()) {
     notify.client(a.email, `You're booked: ${type.name}, ${when}`,
       `Hi ${a.name.split(" ")[0]},\n\nYou're booked at ${biz.name} for ${type.name} (${type.minutes} min) on ${when}.\n\n` +
       `${biz.address}\n${biz.phone}\n\n` +
-      (isMassage ? `Before your massage, please fill out the short intake form (about 3 minutes):\n${intakeUrl}` : `Please wear comfortable clothes you can move in.`) +
+      (isMassage ? `Before your massage, please fill out the short intake form (about 3 minutes):\n${intakeUrl}`
+        : type.remote ? `This visit is on video. Dr. Jared will send you a secure meeting link before your appointment. Please join from a quiet, private room so you can show the movements he asks about.`
+        : `Please wear comfortable clothes you can move in.`) +
       (link ? `\n\nNeed to cancel? Please give at least 24 hours' notice: ${link}` : "") + `\n\n${biz.name}`);
 
     res.status(201).json({

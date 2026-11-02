@@ -104,7 +104,7 @@
     $("#appts-list").innerHTML = list.length ? list.map((a) => `
       <article class="lead appt ${a.status}" data-id="${a.id}">
         <header>
-          <div><h3>${fmtDate(a.date)} · ${fmtTime(a.time)} <span class="badge ${a.status}">${a.status}</span>${a.source === "cal" ? ` <span class="badge cal">Cal.com</span>` : ""}</h3>
+          <div><h3>${fmtDate(a.date)} · ${fmtTime(a.time)} <span class="badge ${a.status}">${a.status}</span>${["eval-remote","followup-remote"].includes(a.typeId) ? ` <span class="badge remote">Video</span>` : ""}${a.source === "cal" ? ` <span class="badge cal">Cal.com</span>` : ""}</h3>
             <div class="meta">${esc(a.typeName)} · ${a.minutes} min</div></div>
           <div class="meta">Booked ${when(a.createdAt)}</div>
         </header>
