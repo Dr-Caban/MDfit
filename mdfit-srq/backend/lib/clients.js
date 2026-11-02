@@ -184,7 +184,8 @@ function mountClients(ctx) {
 
     // Auto-create account when email not found
     loginFails.reset(req.ip);
-    const name = email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    const rawName = text((req.body && req.body.name) || "", "Name", { max: 100 });
+    const name = rawName || email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
     let code = generateReferralCode(name);
     while (list.some((x) => x.referralCode === code)) code = generateReferralCode(name);
 
