@@ -1033,7 +1033,7 @@
     P.left = P.total = Gen.stepSecs(e.sets);
     $("#p-body").innerHTML = `
       <div class="frame p-frame">
-        <video id="p-video" playsinline loop ${P.opt.sound ? "" : "muted"} autoplay preload="auto" poster="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800"></video>
+        <video id="p-video" playsinline ${P.opt.sound ? "" : "muted"} autoplay preload="auto" poster="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800"></video>
       </div>
       <div class="p-info">
         <p class="p-block">${esc(st.label)}</p>
@@ -1048,6 +1048,7 @@
     const v = $("#p-video");
     // Fall back to Drive's own player if the direct stream is refused
     v.addEventListener("error", () => { v.parentElement.innerHTML = `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(e.id)}/preview" title="${esc(e.name)} demo" allow="autoplay; fullscreen" allowfullscreen></iframe>`; }, { once: true });
+    v.addEventListener("ended", () => { if (!P.paused && !P.done) advance(); });
     v.src = driveMp4(e.id);
     const pr = v.play(); if (pr) pr.catch(() => { v.muted = true; v.play().catch(() => {}); });
     const wt = $("#p-weight");
