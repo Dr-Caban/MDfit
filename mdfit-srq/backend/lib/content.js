@@ -221,20 +221,17 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     const t = tiers.find((x) => x.id === m.tier);
     return t && t.meetings > 0 ? 2 : 1;
   };
-  const view = (c, lvl) => {
-    const can = (a) => lvl >= rank[a || "free"];
-    return {
-      programs: c.programs.map((p) => ({ ...p, locked: !can(p.access) })),
-      lectures: c.lectures.map((l) => (can(l.access) ? { ...l, locked: false } : { ...l, url: "", downloadUrl: "", locked: true, hasVideo: !!l.url })),
-      live: can(c.live.access) ? { ...c.live, locked: false } : { ...c.live, joinUrl: "", recordings: c.live.recordings.map((r) => ({ ...r, url: "" })), locked: true, hasLink: !!c.live.joinUrl },
-      tiers: c.tiers, recommendations: c.recommendations, tracks: c.tracks, categories: PROGRAM_CATS, topics: LECTURE_TOPICS
-    };
-  };
+  const view = (c) => ({
+    programs: c.programs.map((p) => ({ ...p, locked: false })),
+    lectures: c.lectures.map((l) => ({ ...l, locked: false })),
+    live: { ...c.live, locked: false },
+    tiers: c.tiers, recommendations: c.recommendations, tracks: c.tracks, categories: PROGRAM_CATS, topics: LECTURE_TOPICS
+  });
 
-  app.get("/api/content", (req, res) => { res.set("Cache-Control", "no-cache"); res.json(view(content(), 0)); });
+  app.get("/api/content", (req, res) => { res.set("Cache-Control", "no-cache"); res.json(view(content())); });
   me.get("/content", (req, res) => {
     const c = content(), lvl = levelOf(req.client, c.tiers);
-    res.json({ ...view(c, lvl), access: ["free", "member", "premium"][lvl], membership: req.client.membership || null });
+    res.json({ ...view(c), access: ["free", "member", "premium"][lvl], membership: req.client.membership || null });
   });
 
   // Ask to join a tier (payments come later; Dr. Jared confirms and turns it on)

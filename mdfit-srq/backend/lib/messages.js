@@ -47,7 +47,7 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
   const all = () => store.read("messages", []);
   const write = (list) => store.write("messages", list.slice(-KEEP));
   const id = () => crypto.randomBytes(6).toString("hex");
-  const active = (c) => c && c.membership && (!c.membership.until || c.membership.until >= today());
+  const active = () => true;
   const view = (m) => ({ id: m.id, from: m.from, body: C.dec(m.body), at: m.at, read: !!m.readAt });
   const sendLimit = limiter(40, 60 * 60 * 1000);
 
@@ -67,7 +67,6 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
   });
   me.post("/messages", sendLimit.mw, (req, res) => {
     const c = req.client;
-    if (!active(c)) return res.status(402).json({ error: "Messaging Dr. Jared is part of membership.", paywall: true });
     const m = { id: id(), clientId: c.id, from: "client", body: C.enc(bodyOf(req.body)), at: new Date().toISOString(), readAt: null };
     const list = all(); list.push(m); write(list);
     activity("message", { email: c.email });
