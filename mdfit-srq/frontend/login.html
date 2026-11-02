@@ -57,10 +57,19 @@
 
       <form id="forgot-form" class="form auth-form" data-panel="forgot" novalidate hidden>
         <h1>Reset your password</h1>
-        <p class="muted">Enter your email and we'll send you a link.</p>
+        <p class="muted">Enter your email and we'll send you a 6-digit code.</p>
         <label>Email<input name="email" type="email" required autocomplete="email"></label>
-        <button class="btn btn-lg btn-block" type="submit">Send reset link</button>
+        <button class="btn btn-lg btn-block" type="submit">Send code</button>
         <button type="button" class="link-btn" data-mode="login">Back to log in</button>
+        <p class="form-msg" role="status"></p>
+      </form>
+
+      <form id="code-form" class="form auth-form" data-panel="code" novalidate hidden>
+        <h1>Enter your code</h1>
+        <p class="muted">Check your email for a 6-digit code.</p>
+        <label>Code<input name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" placeholder="000000" style="text-align:center;font-size:24px;letter-spacing:6px"></label>
+        <button class="btn btn-lg btn-block" type="submit">Verify</button>
+        <button type="button" class="link-btn" data-mode="forgot">Resend code</button>
         <p class="form-msg" role="status"></p>
       </form>
 
@@ -85,9 +94,12 @@
       const next = /^\/[a-z]*(#[a-z0-9/-]*)?$/.test(q.get("next") || "") ? q.get("next") : "/account";
       if (auth.get() && !q.get("reset")) { location.replace(next); return; }
 
+      let resetEmail = "";
+      let resetToken = "";
+
       function mode(m) {
         $$(".auth-tabs [data-mode]").forEach((b) => b.setAttribute("aria-selected", b.dataset.mode === m));
-        $(".auth-tabs").hidden = m === "reset" || m === "forgot";
+        $(".auth-tabs").hidden = m === "reset" || m === "forgot" || m === "code";
         $$("[data-panel]").forEach((f) => (f.hidden = f.dataset.panel !== m));
         const first = $(`[data-panel="${m}"] input:not(.hp)`);
         if (first) first.focus();
@@ -97,13 +109,24 @@
 
       wire($("#login-form"), async (d) => done(await api("/api/clients/login", d)), { reset: false });
       wire($("#signup-form"), async (d) => done(await api("/api/clients/signup", d)), { reset: false });
-      wire($("#forgot-form"), (d) => api("/api/clients/forgot", d));
-      wire($("#reset-form"), async (d) => done(await api("/api/clients/reset", { ...d, token: q.get("reset") })), { reset: false });
+      wire($("#forgot-form"), async (d) => {
+        resetEmail = d.email;
+        const r = await api("/api/clients/forgot", d);
+        mode("code");
+        return r;
+      });
+      wire($("#code-form"), async (d) => {
+        const r = await api("/api/clients/verify-code", { email: resetEmail, code: d.code });
+        resetToken = r.resetToken;
+        mode("reset");
+        return { message: "Code verified. Choose a new password." };
+      });
+      wire($("#reset-form"), async (d) => done(await api("/api/clients/reset", { ...d, token: resetToken || q.get("reset") })), { reset: false });
 
       const ref = q.get("ref");
       if (ref) { const ri = $("#signup-form [name=referralCode]"); if (ri) ri.value = ref; }
 
-      if (q.get("reset")) { auth.clear(); mode("reset"); }
+      if (q.get("reset")) { auth.clear(); resetToken = q.get("reset"); mode("reset"); }
       else if (q.get("signup") !== null || ref) mode("signup");
 
       // Google sign-in

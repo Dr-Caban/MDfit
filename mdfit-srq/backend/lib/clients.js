@@ -203,16 +203,36 @@ function mountClients(ctx) {
   });
 
   // Always answers the same way so it can't be used to find out who has an account.
+  const resetCodes = new Map(); // email -> { code, exp, tries }
+  const RESET_CODE_TTL = 10 * 60e3; // 10 minutes
+  const RESET_CODE_MAX_TRIES = 5;
+
   app.post("/api/clients/forgot", signupLimit.mw, (req, res) => {
     const email = String((req.body && req.body.email) || "").trim().toLowerCase();
     const c = clients().find((x) => x.email === email);
-    if (c && notify.enabled && cfg.siteUrl) {
-      notify.client(c.email, "Reset your MD Fit password",
-        `Hi ${c.name.split(" ")[0]},\n\nReset your password here (link works for ${RESET_HOURS} hours):\n${resetUrl(c)}\n\nIf you didn't ask for this, ignore this email.\n\nMD Fit`);
+    if (c && notify.enabled) {
+      const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
+      resetCodes.set(email, { code, exp: Date.now() + RESET_CODE_TTL, tries: 0 });
+      notify.client(c.email, `${code} — your MD Fit reset code`,
+        `Hi ${c.name.split(" ")[0]},\n\nYour password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.\n\nMD Fit`);
     }
     res.json({ ok: true, emailed: notify.enabled, message: notify.enabled
-      ? "If that email has an account, a reset link is on its way."
-      : "Call or text us and we'll send you a reset link." });
+      ? "If that email has an account, a 6-digit code is on its way."
+      : "Call or text us and we'll help you reset your password." });
+  });
+
+  app.post("/api/clients/verify-code", (req, res) => {
+    if (!ready) return notReady(res);
+    const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+    const code = String((req.body && req.body.code) || "").trim();
+    const entry = resetCodes.get(email);
+    if (!entry || Date.now() > entry.exp) { resetCodes.delete(email); return res.status(400).json({ error: "Code expired. Request a new one." }); }
+    if (entry.tries >= RESET_CODE_MAX_TRIES) { resetCodes.delete(email); return res.status(429).json({ error: "Too many attempts. Request a new code." }); }
+    if (entry.code !== code) { entry.tries++; return res.status(400).json({ error: `Wrong code. ${RESET_CODE_MAX_TRIES - entry.tries} attempts left.` }); }
+    resetCodes.delete(email);
+    const c = clients().find((x) => x.email === email);
+    if (!c) return res.status(400).json({ error: "Code expired. Request a new one." });
+    res.json({ resetToken: resetToken(c) });
   });
 
   app.post("/api/clients/reset", (req, res) => {
@@ -220,9 +240,9 @@ function mountClients(ctx) {
     const payload = verifyToken(String((req.body && req.body.token) || ""), cfg.sessionSecret);
     const list = clients();
     const c = payload && payload.role === "reset" && list.find((x) => x.id === payload.sub);
-    if (!c || (c.pwv || 0) !== payload.pwv) return res.status(400).json({ error: "This reset link has expired or was already used. Ask for a new one." });
+    if (!c || (c.pwv || 0) !== payload.pwv) return res.status(400).json({ error: "This reset code has expired or was already used. Request a new one." });
     c.passwordHash = hashPassword(passwordOf(req.body.password));
-    c.pwv = (c.pwv || 0) + 1; // logs out old sessions and burns the link
+    c.pwv = (c.pwv || 0) + 1;
     c.lastLoginAt = new Date().toISOString();
     save(list);
     activity("client_password_reset", { email: c.email });
