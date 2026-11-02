@@ -164,17 +164,41 @@ function mountClients(ctx) {
     if (!ready) return notReady(res);
     if (loginFails.blocked(req.ip)) return res.status(429).json({ error: "Too many attempts. Try again in 15 minutes." });
     const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+    if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: "Email is not valid." });
+    const password = String((req.body && req.body.password) || "");
+    if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
     const list = clients();
-    const c = list.find((x) => x.email === email);
-    if (!c || !verifyPassword(String((req.body && req.body.password) || ""), c.passwordHash)) {
-      loginFails.hit(req.ip);
-      logger.warn("client_login_failed", { email: mask(email || "-") });
-      return res.status(401).json({ error: "Wrong email or password." });
+    let c = list.find((x) => x.email === email);
+
+    if (c) {
+      if (!verifyPassword(password, c.passwordHash)) {
+        loginFails.hit(req.ip);
+        logger.warn("client_login_failed", { email: mask(email) });
+        return res.status(401).json({ error: "Wrong email or password." });
+      }
+      loginFails.reset(req.ip);
+      c.lastLoginAt = new Date().toISOString();
+      save(list);
+      return res.json(session(c));
     }
+
+    // Auto-create account when email not found
     loginFails.reset(req.ip);
-    c.lastLoginAt = new Date().toISOString();
+    const name = email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    let code = generateReferralCode(name);
+    while (list.some((x) => x.referralCode === code)) code = generateReferralCode(name);
+
+    c = {
+      id: id(), email, name, phone: "",
+      passwordHash: hashPassword(password), pwv: 0, plan: emptyPlan(), painLog: [],
+      referralCode: code, referredBy: null, freeUntil: null,
+      createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
+    };
+    list.push(c);
     save(list);
-    res.json(session(c));
+    activity("client_signup", { email, via: "auto_login" });
+    notify.owner(`New client account: ${c.name}`, `${c.name}\n${c.email}\n(auto-created from login)`);
+    res.status(201).json(session(c));
   });
 
   // Always answers the same way so it can't be used to find out who has an account.
