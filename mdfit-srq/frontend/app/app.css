@@ -423,6 +423,11 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
   .toast { bottom: 28px; left: calc(50% + 124px); }
 }
 
+/* Referral card */
+.referral-code-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.referral-code { font-size: 18px; font-weight: 700; letter-spacing: .08em; background: var(--bg, #0d2240); color: var(--accent, #E8922A); padding: 8px 14px; border-radius: 8px; user-select: all; flex: 1; text-align: center; }
+.referral-share { margin-top: 8px; }
+
 @media (max-width: 380px) {
   .areas { grid-template-columns: 1fr; }
   .name { font-size: 28px; }

@@ -41,6 +41,7 @@
         <label>Email<input name="email" type="email" required autocomplete="email"></label>
         <label>Mobile phone<input name="phone" type="tel" maxlength="30" autocomplete="tel"></label>
         <label>Password (8+ characters)<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+        <label>Referral code <span class="muted">(optional)</span><input name="referralCode" maxlength="20" placeholder="e.g. JARE1A2B3C" autocomplete="off"></label>
         <input name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button class="btn btn-lg btn-block" type="submit">Create account</button>
         <p class="fine">Already booked with us? Use the same email and your appointments show up automatically.</p>
@@ -90,8 +91,11 @@
       wire($("#forgot-form"), (d) => api("/api/clients/forgot", d));
       wire($("#reset-form"), async (d) => done(await api("/api/clients/reset", { ...d, token: q.get("reset") })), { reset: false });
 
+      const ref = q.get("ref");
+      if (ref) { const ri = $("#signup-form [name=referralCode]"); if (ri) ri.value = ref; }
+
       if (q.get("reset")) { auth.clear(); mode("reset"); }
-      else if (q.get("signup") !== null) mode("signup");
+      else if (q.get("signup") !== null || ref) mode("signup");
     })();
   </script>
 </body>
