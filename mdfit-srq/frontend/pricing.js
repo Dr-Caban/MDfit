@@ -16,7 +16,6 @@
     return {
       base, sessions, evalRate: ev,
       guarantee: sessions >= p.guaranteeMin,
-      credit: (amt) => amt * (p.participation.creditPct / 100),
       options: [
         { id: "gold", name: "Gold", tag: p.gold ? `Save ${p.gold}%` : "Paid in full", total: gold, pay: money(gold), per: `everything paid upfront`, save: base - gold },
         { id: "silver", name: "Silver", tag: p.silver ? `Save ${p.silver}%` : `${p.silverPayments} payments`, total: silver, pay: `${p.silverPayments} × ${money2(silver / p.silverPayments)}`, per: `one a month · ${money(silver)} total`, save: base - silver },
@@ -82,12 +81,6 @@
               <li>You did not see a significant change in your pain.</li>
             </ol>
           </div>
-        </article>
-        <article class="credit">
-          <h3>Show up, get paid back</h3>
-          <p>Your <strong>participation score</strong> is half visits attended (goal ${p.participation.attendPct}%) and half home workouts logged in the MD Fit app (goal ${p.participation.homePerWeek} a week).</p>
-          <ul class="credit-tiers"><li><b>Score 100</b> <span>${p.participation.creditPct}% of what you paid comes back</span></li><li><b>Score 80+</b> <span>${p.participation.creditPct / 2}% comes back</span></li></ul>
-          <p class="muted">Credit goes toward your next protocol, massage or membership. Watch your score live in the app's Progress tab.</p>
         </article>
       </div>`;
 

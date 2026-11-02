@@ -773,7 +773,6 @@
     $("#svc-rows").innerHTML = ""; s.services.forEach(addSvc);
     const P = s.plans;
     ["gold", "silver", "silverPayments", "ext12", "ext24", "guaranteeMin"].forEach((k) => (sf["plan_" + k].value = P[k]));
-    ["creditPct", "attendPct", "homePerWeek"].forEach((k) => (sf["plan_" + k].value = P.participation[k]));
     sf.plan_packageSizes.value = P.packageSizes.join(", ");
     sf.testimonials.value = s.testimonials.map((t) => `${t.name} | ${t.quote}`).join("\n");
   }
@@ -811,7 +810,6 @@
     body.plans = {
       gold: num("gold"), silver: num("silver"), silverPayments: num("silverPayments"), ext12: num("ext12"), ext24: num("ext24"), guaranteeMin: num("guaranteeMin"),
       packageSizes: sf.plan_packageSizes.value.split(/[,\s]+/).filter(Boolean).map(Number),
-      participation: { creditPct: num("creditPct"), attendPct: num("attendPct"), homePerWeek: num("homePerWeek") }
     };
     body.testimonials = sf.testimonials.value.split("\n").map((x) => x.trim()).filter(Boolean)
       .map((line) => { const i = line.indexOf("|"); return i < 0 ? { name: "", quote: line } : { name: line.slice(0, i).trim(), quote: line.slice(i + 1).trim() }; });

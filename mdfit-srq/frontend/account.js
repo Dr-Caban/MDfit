@@ -1089,23 +1089,9 @@
         ${hr ? `<div class="stats3 dev-stats"><div><b>${hr.avg}</b><span>Avg heart rate</span></div><div><b>${hr.max}</b><span>Max heart rate</span></div><div><b>${esc(HR.name || "Device")}</b><span>Source</span></div></div>` : ""}`;
       allWorkouts.push(r.workout);
       numbersForm($("#done-form"), r.workout, "How hard was that?");
-      renderStats(); renderActivity(); renderNotes(); renderCalendar(); renderPerf(); loadParticipation();
+      renderStats(); renderActivity(); renderNotes(); renderCalendar(); renderPerf();
       loadRewards(true);
     } catch (err) { $("#done-msg").textContent = "Couldn't save this workout: " + err.message; }
-  }
-
-  // ---- Participation credit: score, what it's worth, and what's left this week
-  async function loadParticipation() {
-    const p = await apiAuth("GET", "/api/me/participation").catch(() => null); if (!p) return;
-    const bar = (v, t) => `<span class="pbar"><i style="width:${Math.min(100, Math.round((v / t) * 100))}%"></i></span>`;
-    $("#part-card").hidden = false;
-    $("#part-card").innerHTML = `<div class="card-head"><span class="label accent">Participation credit</span><b class="part-score">${p.score}<small>/100</small></b></div>
-      <p class="part-earn">${p.earnedPct ? `You're on track to earn <b>${p.earnedPct}% back</b> on your protocol.` : `Reach 80 to earn ${p.creditPct / 2}% back, 100 to earn ${p.creditPct}%.`}</p>
-      <div class="part-rows">
-        <div><span>Visits attended</span><b>${p.attendance === null ? "No visits yet" : `${p.attendance}%`} <small>goal ${p.attendTarget}%</small></b>${bar(p.attendance === null ? p.attendTarget : p.attendance, p.attendTarget)}</div>
-        <div><span>Home workouts a week</span><b>${p.homePerWeek} <small>goal ${p.homeTarget}</small></b>${bar(p.homePerWeek, p.homeTarget)}</div>
-      </div>
-      <p class="part-week">${p.leftThisWeek ? `<b>${p.leftThisWeek} more workout${p.leftThisWeek === 1 ? "" : "s"}</b> this week keeps you on track.` : `This week's home workouts are done. Nice work.`}</p>`;
   }
 
   // ---- Performance: daily vitals + side-by-side comparison of saved workouts
@@ -1669,7 +1655,7 @@
     if (s.status === "fulfilled") stats = s.value;
     if (wl.status === "fulfilled") allWorkouts = wl.value;
     apiAuth("GET", "/api/me/vitals").then((v) => { vitals = v; renderPerf(); }).catch(() => renderPerf());
-    loadParticipation(); pollUnread();
+    pollUnread();
     apiAuth("GET", "/api/me/access").then((a) => { access = a; renderToday(); renderAccessBadge(); }).catch(() => {});
     loadContent().then(() => { const t = location.hash.slice(1).split("/"); if (["programs", "learn", "premium", "tips"].includes(t[0])) renderContent(t[0], t[1]); });
     if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }

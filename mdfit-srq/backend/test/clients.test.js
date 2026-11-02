@@ -303,21 +303,6 @@ test("member content: locked links, membership requests, admin grants tiers, mon
   assert.equal((await s.call("GET", "/api/me/content", undefined, tok)).body.live.locked, false);
 });
 
-test("participation score and credit tiers", () => {
-  const { participation } = require("../lib/clients");
-  const T = { attendPct: 90, homePerWeek: 3, creditPct: 10 };
-  const wk = (n, from = "2026-11-02") => Array.from({ length: n }, (_, i) => ({ date: new Date(Date.parse(from + "T12:00:00Z") - i * 864e5 * 2).toISOString().slice(0, 10) }));
-  const v = (c, m) => [...Array(c).fill({ status: "completed" }), ...Array(m).fill({ status: "no-show" })];
-  const full = participation({ visits: v(10, 0), workouts: wk(12), targets: T, today: "2026-11-02" });
-  assert.equal(full.score, 100); assert.equal(full.earnedPct, 10);
-  const near = participation({ visits: v(9, 1), workouts: wk(8), targets: T, today: "2026-11-02" });
-  assert.equal(near.attendance, 90); assert.equal(near.homePerWeek, 2);
-  assert.equal(near.score, 83); assert.equal(near.earnedPct, 5, "a near-miss still earns half");
-  const low = participation({ visits: v(5, 5), workouts: [], targets: T, today: "2026-11-02" });
-  assert.equal(low.earnedPct, 0);
-  assert.equal(participation({ visits: [], workouts: [], targets: T, today: "2026-11-02" }).score, 50, "no visits yet: attendance not held against them");
-});
-
 test("health-app batch vitals and app config", async (t) => {
   const s = await start(); t.after(s.close);
   const tok = (await signup(s)).body.token;
@@ -460,10 +445,6 @@ test("stripe: membership + protocol checkout, verified webhooks drive access, id
   await send({ id: "evt_5", type: "customer.subscription.deleted", data: { object: { id: "sub_m", customer: "cus_1", status: "canceled", metadata: { kind: "membership", tier: "premium" }, items: { data: [] } } } });
   acc = (await s.call("GET", "/api/me/access", undefined, tok)).body;
   assert.equal(acc.member, true, "all users treated as members regardless of subscription");
-  // participation credit -> negative customer balance
-  const adm = await s.adminToken();
-  assert.equal((await s.call("POST", `/api/admin/clients/${me.id}/credit`, { amount: 162, note: "Participation credit" }, adm)).status, 201);
-  assert.deepEqual(calls.find((c) => c[0] === "credit").slice(1), ["cus_1", { amount: -16200, currency: "usd", description: "Participation credit" }]);
 });
 
 test("stripe: a secret key without the webhook secret keeps checkout off (no unfulfillable payments)", async (t) => {

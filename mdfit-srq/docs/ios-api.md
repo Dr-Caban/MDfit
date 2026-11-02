@@ -88,8 +88,6 @@ The generator is deterministic: the same inputs and `seed` always give the same 
 | `GET /api/me/workouts` | | Every workout, oldest first (for the calendar and comparisons) |
 | `GET /api/me/stats` | | `{ streak, bestStreak, workouts, hours, week[7], todayIndex, recent[10] }` |
 | `GET /api/me/rewards` | | `{ xp, level, title, levelStart, nextLevel, todayXp, dailyGoal, week[7], badges[] }` |
-| `GET /api/me/participation` | | `{ score, earnedPct, creditPct, attendance, attendTarget, homePerWeek, homeTarget, thisWeek, leftThisWeek, tiers }` |
-
 - `key` groups repeat sessions so they can be compared. Program days use `prog-<programId>-d<day>`; saved programs use `program-<id>`.
 - Ranges: `hrAvg` 30–230, `hrMax` 30–240, `hrv` 5–300 ms, `vo2max` 10–95, `rpe` 1–10, `seconds` up to 18000.
 - **Comparing:** pick two workouts with the same `key` and show `seconds`, heart rate, effort and each lift's weight side by side, as the web Progress tab does.

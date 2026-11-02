@@ -174,28 +174,6 @@ paths:
       summary: XP, level, daily goal and badges (recomputed from history)
       responses:
         "200": { description: OK, content: { application/json: { schema: { type: object } } } }
-  /api/me/participation:
-    get:
-      tags: [Workouts]
-      summary: Participation score (half attendance, half home workouts) and the credit it earns
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  score: { type: integer, minimum: 0, maximum: 100 }
-                  earnedPct: { type: number }
-                  creditPct: { type: number }
-                  attendance: { type: integer, nullable: true }
-                  attendTarget: { type: integer }
-                  homePerWeek: { type: number }
-                  homeTarget: { type: number }
-                  thisWeek: { type: integer }
-                  leftThisWeek: { type: integer }
-
   /api/me/vitals:
     get:
       tags: [Vitals]

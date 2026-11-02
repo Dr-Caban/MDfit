@@ -56,6 +56,7 @@ function defaultSettings() {
       { id: "eval", name: "Evaluation", rate: 300, unit: "90 minutes", protocol: false, description: "Rehabilitation, functional mobility, strength & performance, stability or cognitive fortitude: full assessment, hands-on treatment, your plan and your first homework." },
       { id: "eval-remote", name: "Online Evaluation (Telehealth)", rate: 300, unit: "60 minutes", protocol: false, remote: true, description: "A video evaluation with Dr. Jared when you can't come in. We'll review your history, assess movement on camera, and build your plan." },
       { id: "followup", name: "Follow-up Visit", rate: 150, unit: "60 minutes", protocol: true, withEval: true, description: "Treatment and progression. You leave with homework for the days before your next visit." },
+      { id: "session-remote", name: "Remote Session (Telehealth)", rate: 200, unit: "60 minutes", protocol: true, remote: true, description: "A full 60-minute telehealth session with Dr. Jared: treatment, progression and homework, all on video." },
       { id: "followup-remote", name: "Online Follow-up (Telehealth)", rate: 150, unit: "45 minutes", protocol: true, remote: true, description: "A remote check-in: review your homework, progress your plan and answer questions on video." },
       { id: "massage", name: "Medical Massage", rate: 250, unit: "60 minutes", protocol: true, description: "Targeted soft-tissue treatment for the muscles driving your pain. No evaluation needed: just a short intake form." },
       { id: "massage90", name: "Medical Massage, Extended", rate: 300, unit: "90 minutes", protocol: true, description: "More time on more areas, for widespread or stubborn pain." }
@@ -64,14 +65,13 @@ function defaultSettings() {
     // Bronze: pay as you go. Platinum: spread over 12 or 24 months for +ext12% / +ext24%.
     plans: {
       gold: 20, silver: 0, silverPayments: 3, ext12: 5, ext24: 10, packageSizes: [6, 12, 24], guaranteeMin: 12,
-      // Participation credit: attend at least attendPct% of booked visits and log homePerWeek home sessions a week to earn creditPct% back
-      participation: { creditPct: 10, attendPct: 90, homePerWeek: 3 },
       reviewDiscountPct: 30
     },
     appointmentTypes: [
       { id: "eval", name: "In-Studio Evaluation", minutes: 90, description: "Rehab, functional mobility, strength & performance, stability or cognitive fortitude at the studio in Sarasota. $300." },
       { id: "eval-remote", name: "Online Evaluation (Telehealth)", minutes: 60, remote: true, description: "A video evaluation with Dr. Jared when you can't come in. $300." },
       { id: "session", name: "In-Studio Follow-up / Training Session", minutes: 60, description: "For existing clients continuing their plan. $150." },
+      { id: "session-remote", name: "Remote Session (Telehealth)", minutes: 60, remote: true, description: "A full telehealth session with Dr. Jared. $200." },
       { id: "followup-remote", name: "Online Follow-up (Telehealth)", minutes: 45, remote: true, description: "A remote check-in by video. $150." },
       { id: "massage", name: "Medical Massage", minutes: 60, description: "No evaluation needed; you'll fill out a short intake form. $250." },
       { id: "massage90", name: "Medical Massage, 90 min", minutes: 90, description: "Extended session for more areas. $300." },
@@ -314,13 +314,6 @@ function mergeSettings(current, body) {
       s.plans.packageSizes = [...new Set(b.packageSizes.map((n) => int(n, "Package size", { min: 1, max: 100 })))].sort((x, y) => x - y);
     }
     if (b.reviewDiscountPct !== undefined) s.plans.reviewDiscountPct = int(b.reviewDiscountPct, "Review discount", { min: 0, max: 100 });
-    if (b.participation !== undefined) {
-      const p = obj(b.participation, "participation");
-      s.plans.participation = { ...s.plans.participation };
-      if (p.creditPct !== undefined) s.plans.participation.creditPct = int(p.creditPct, "Participation credit", { min: 0, max: 50 });
-      if (p.attendPct !== undefined) s.plans.participation.attendPct = int(p.attendPct, "Attendance target", { min: 0, max: 100 });
-      if (p.homePerWeek !== undefined) s.plans.participation.homePerWeek = int(p.homePerWeek, "Home sessions per week", { min: 0, max: 14 });
-    }
   }
 
   if (body.testimonials !== undefined) {

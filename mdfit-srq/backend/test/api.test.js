@@ -314,12 +314,12 @@ test("services, payment plans and Medical Massage are public and admin-editable"
   assert.ok(site.options.services.includes("Medical massage"));
   assert.ok(!site.options.services.includes("Group classes"), "classes are off the public site for now");
   const types = Object.fromEntries(site.settings.appointmentTypes.map((a) => [a.id, a.minutes]));
-  assert.deepEqual(types, { eval: 90, "eval-remote": 60, session: 60, "followup-remote": 45, massage: 60, massage90: 90, call: 15 });
+  assert.deepEqual(types, { eval: 90, "eval-remote": 60, session: 60, "session-remote": 60, "followup-remote": 45, massage: 60, massage90: 90, call: 15 });
   await s.login();
-  const r = await s.call("PUT", "/api/admin/settings", { services: [...site.settings.services, { id: "dry-needling", name: "Dry Needling", rate: 180, protocol: true, description: "" }], plans: { gold: 25, participation: { creditPct: 15 } } });
+  const r = await s.call("PUT", "/api/admin/settings", { services: [...site.settings.services, { id: "dry-needling", name: "Dry Needling", rate: 180, protocol: true, description: "" }], plans: { gold: 25 } });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const after = (await s.call("GET", "/api/site")).body.settings;
-  assert.equal(after.services.length, 7); assert.equal(after.plans.gold, 25); assert.equal(after.plans.participation.creditPct, 15); assert.equal(after.plans.participation.attendPct, 90);
+  assert.equal(after.services.length, 8); assert.equal(after.plans.gold, 25);
   assert.equal((await s.call("PUT", "/api/admin/settings", { services: [{ id: "Bad Id", name: "x", rate: 1 }] })).status, 400);
 });
 

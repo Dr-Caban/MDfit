@@ -64,26 +64,6 @@ const passwordOf = (v, field = "Password") => {
 const emptyPlan = () => ({ guides: [], exercises: [], notes: "", updatedAt: null });
 const id = () => crypto.randomBytes(6).toString("hex");
 
-// Participation score (0-100): half attendance, half home workouts per week, each capped at its target.
-// 100 earns the full credit, 80+ earns half, so a near-miss still pays and every session moves the number.
-function participation({ visits, workouts, targets, today }) {
-  const t = { attendPct: 90, homePerWeek: 3, creditPct: 10, ...targets };
-  const done = visits.filter((a) => a.status === "completed").length, missed = visits.filter((a) => a.status === "no-show").length;
-  const attendance = done + missed ? Math.round((done / (done + missed)) * 100) : null;
-  const since = addDay(today, -27);
-  const recent = workouts.filter((w) => w.date >= since && w.date <= today).length;
-  const homePerWeek = Math.round((recent / 4) * 10) / 10;
-  const dow = (new Date(today + "T12:00:00Z").getUTCDay() + 6) % 7; // Monday = 0
-  const thisWeek = workouts.filter((w) => w.date >= addDay(today, -dow) && w.date <= today).length;
-  const aPart = attendance === null ? 1 : Math.min(1, attendance / t.attendPct);
-  const hPart = t.homePerWeek ? Math.min(1, homePerWeek / t.homePerWeek) : 1;
-  const score = Math.round(100 * (aPart + hPart) / 2);
-  const earned = score >= 100 ? t.creditPct : score >= 80 ? t.creditPct / 2 : 0;
-  return { score, earnedPct: earned, creditPct: t.creditPct, attendance, attendTarget: t.attendPct, visitsDone: done, visitsMissed: missed,
-    homePerWeek, homeTarget: t.homePerWeek, thisWeek, leftThisWeek: Math.max(0, t.homePerWeek - thisWeek),
-    tiers: [{ score: 100, pct: t.creditPct }, { score: 80, pct: t.creditPct / 2 }] };
-}
-
 function mountClients(ctx) {
   const { app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings, onCancel } = ctx;
   const clients = () => store.read("clients", []);
@@ -560,13 +540,6 @@ function mountClients(ctx) {
   // Full log, for the calendar
   me.get("/workouts", (req, res) => res.json(req.client.workouts || []));
 
-  // Participation credit: how much of the protocol credit the client is on track to earn
-  me.get("/participation", (req, res) => {
-    const plans = settings ? settings().plans : { participation: { creditPct: 10, attendPct: 90, homePerWeek: 3 } };
-    const c = req.client;
-    res.json(participation({ visits: appointments().filter((a) => a.email === c.email), workouts: c.workouts || [], targets: plans.participation, today: today() }));
-  });
-
   // XP, level, badges and daily goal, recomputed from history every time
   const visitsOf = (c) => appointments().filter((a) => a.email === c.email && a.status === "completed");
   me.get("/rewards", (req, res) => {
@@ -708,4 +681,4 @@ function mountClients(ctx) {
   return { me, clients, save, today };
 }
 
-module.exports = { mountClients, GUIDE_IDS, workoutStats, participation };
+module.exports = { mountClients, GUIDE_IDS, workoutStats };

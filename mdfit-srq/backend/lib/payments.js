@@ -287,19 +287,6 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
     res.json({ enabled: enabled(), webhook: !!whsec, clients: clients().filter((c) => c.stripeCustomerId || (c.protocols || []).length).map((c) => ({
       id: c.id, name: c.name, email: c.email, stripeCustomerId: c.stripeCustomerId || null, membership: c.membership || null, protocols: c.protocols || [] })) });
   });
-  // Participation credit: a negative customer balance is applied to the client's next Stripe invoice
-  admin.post("/clients/:id/credit", async (req, res) => {
-    if (!enabled()) return off(res);
-    const c = clients().find((x) => x.id === req.params.id);
-    if (!c) return res.status(404).json({ error: "Client not found." });
-    const amt = Number((req.body || {}).amount);
-    if (!(amt > 0 && amt <= 10000)) fail("Credit must be between $0.01 and $10,000.");
-    const customer = await ensureCustomer(c.id);
-    const tx = await stripe.customers.createBalanceTransaction(customer, { amount: -cents(amt), currency: "usd", description: String((req.body || {}).note || "MD Fit participation credit").slice(0, 200) });
-    activity("credit_issued", { email: c.email, amount: amt });
-    res.status(201).json({ ok: true, id: tx.id, amount: amt });
-  });
-
   return { enabled, protocolQuote };
 }
 

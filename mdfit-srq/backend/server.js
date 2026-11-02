@@ -177,7 +177,7 @@ function createApp(cfg = loadConfig()) {
       ...d, ...s,
       business: { ...d.business, ...s.business }, coach: { ...d.coach, ...s.coach },
       rating: { ...d.rating, ...s.rating }, scheduling: { ...d.scheduling, ...s.scheduling }, booking: { ...d.booking, ...s.booking },
-      plans: { ...d.plans, ...s.plans, participation: { ...d.plans.participation, ...(s.plans || {}).participation } },
+      plans: { ...d.plans, ...s.plans },
       // Saved appointment types from before Medical Massage existed get it added once
       appointmentTypes: s.appointmentTypes && !s.massageAdded && !s.appointmentTypes.some((t) => t.id === "massage")
         ? [...s.appointmentTypes, d.appointmentTypes.find((t) => t.id === "massage")] : (s.appointmentTypes || d.appointmentTypes)
