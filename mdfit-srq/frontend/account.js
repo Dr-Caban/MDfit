@@ -269,12 +269,24 @@
       ["Exercises per round", choice.perRound], ["Total rounds", choice.rounds], ["Rest between exercises", secs(choice.restEx)], ["Rest between rounds", secs(choice.restRound)]];
     $("#summary").innerHTML = rows.map(([k, v, c]) => `<dt>${k}</dt><dd${c ? ` class="${c}"` : ""}>${esc(v)}</dd>`).join("");
   }
+  // Keep the estimate close to the chosen workout length. If the user picks fewer rounds (or fewer exercises
+  // per round) than the preset, bump the other knob up so a 30-minute workout stays about 30 minutes.
+  const fitLength = () => {
+    const target = choice.length * 60;
+    const warmS = (choice.addons.warmup ? (choice.length <= 15 ? 1 : 2) : 0) * 75;
+    const coolS = (choice.addons.cooldown ? (choice.length <= 20 ? 1 : 2) : 0) * 75;
+    const estAt = (perRound, rounds) => warmS + coolS + rounds * (perRound * 45 + Math.max(0, perRound - 1) * choice.restEx) + Math.max(0, rounds - 1) * choice.restRound;
+    const MAX_PR = Math.max(...Gen.PER_ROUND), MAX_R = Math.max(...Gen.ROUNDS);
+    while (estAt(choice.perRound, choice.rounds) < target * 0.9 && choice.perRound < MAX_PR) choice.perRound = Gen.PER_ROUND.find((n) => n > choice.perRound) || MAX_PR;
+    while (estAt(choice.perRound, choice.rounds) < target * 0.9 && choice.rounds < MAX_R) choice.rounds = Gen.ROUNDS.find((n) => n > choice.rounds) || MAX_R;
+  };
   $("#steps").addEventListener("click", (e) => {
     const b = e.target.closest("[data-v]");
     if (!b) return;
     const key = b.closest(".step").dataset.key, num = ["length", "perRound", "rounds", "restEx", "restRound"].includes(key);
     choice[key] = num ? Number(b.dataset.v) : b.dataset.v;
     if (key === "length") Object.assign(choice, Gen.presetFor(choice.length));
+    if (["rounds", "perRound", "restEx", "restRound"].includes(key)) fitLength();
     renderChoices();
   });
   $("#addons").addEventListener("click", (e) => {
@@ -887,7 +899,7 @@
   const driveMp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
   const PLAY_KEY = "mdfit.player";
   const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false, left: 0, paused: false,
-    opt: { auto: true, breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}) } };
+    opt: { auto: true, breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}), auto: true } };
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   function buildSteps(w) {
     const out = [];

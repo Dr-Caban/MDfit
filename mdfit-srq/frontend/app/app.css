@@ -352,8 +352,14 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .tabbar .long, .side-brand, .side-foot { display: none; }
 
 @media (min-width: 640px) {
-  .opt-cards { grid-template-columns: repeat(5, 1fr); }
+  /* respect the container width (step-pair halves) so 5 Focus cards wrap into
+     two rows instead of overflowing into the Location block */
+  .opt-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 86px), 1fr)); }
   .step-pair { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1240px) {
+  /* at wider widths there is room for all 5 Focus cards in a single row */
+  .opt-cards { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 }
 
 /* ---- Desktop: navy sidebar like the generator design, content in columns */
