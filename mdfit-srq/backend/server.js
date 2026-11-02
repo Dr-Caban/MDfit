@@ -536,7 +536,8 @@ function createApp(cfg = loadConfig()) {
   app.get("/api/app/config", (req, res) => {
     res.set("Cache-Control", "no-cache");
     res.json({ apiVersion: 1, minIosBuild: Number(env("MIN_IOS_BUILD", "1")) || 1, timeZone: cfg.tz,
-      features: { payments: !!((cfg.stripeClient || process.env.STRIPE_SECRET_KEY) && (cfg.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET)), healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false } });
+      features: { payments: !!((cfg.stripeClient || process.env.STRIPE_SECRET_KEY) && (cfg.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET)), healthSync: true, liveQa: true, bluetoothHeartRate: true, googleCalendar: false },
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "" });
   });
 
   app.get("/api/availability", async (req, res) => {

@@ -554,3 +554,14 @@ dialog .book-when { margin: -6px 0 4px; }
 .type-badge { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; background: var(--accent); color: var(--ink); padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: 1px; }
 .type-note { margin: 10px 0 0; padding: 10px 12px; background: var(--accent-soft); border-radius: 10px; color: var(--heading); font-size: 13.5px; }
 .type-note:empty { display: none; }
+/* Pay button on each service card + embedded Stripe checkout dialog */
+.rate-buy { margin-top: 14px; display: grid; justify-items: center; padding: 10px 16px; gap: 2px; }
+.rate-buy small { font-weight: 500; font-size: 11px; opacity: .85; }
+.stripe-dlg { width: min(560px, 100% - 24px); max-height: calc(100vh - 24px); padding: 0; border: 0; border-radius: 20px; background: var(--paper); color: var(--text); overflow: hidden; }
+.stripe-dlg::backdrop { background: rgba(10, 26, 46, .78); }
+.stripe-dlg header { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; background: var(--ink); color: #fff; }
+.stripe-dlg header b { font: 700 18px/1 var(--display); }
+.stripe-close { background: none; border: 0; color: #fff; font-size: 28px; line-height: 1; padding: 0 4px; cursor: pointer; }
+.stripe-meta { margin: 10px 18px 4px; font-size: 12.5px; color: var(--muted); }
+.stripe-mount { padding: 10px 18px 24px; max-height: calc(100vh - 180px); overflow-y: auto; }
+.stripe-loading { text-align: center; color: var(--muted); padding: 40px 10px; }

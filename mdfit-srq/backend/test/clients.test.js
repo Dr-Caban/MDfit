@@ -489,3 +489,39 @@ test("stripe: a secret key without the webhook secret keeps checkout off (no unf
   assert.equal(r.status, 503);
   assert.equal(created, 0, "no Stripe checkout was created");
 });
+
+test("embedded checkout: service and protocol endpoints return a clientSecret and Apple Pay/Google Pay/Link via dynamic payment methods", async (t) => {
+  const Stripe = require("stripe");
+  const real = new Stripe("sk_test_fake", { apiVersion: "2026-10-28.endive" });
+  const calls = [];
+  const fake = {
+    webhooks: real.webhooks,
+    customers: { create: async (p) => (calls.push(["cust", p]), { id: "cus_e" }) },
+    checkout: { sessions: { create: async (p) => (calls.push(["session", p]), { id: "cs_1", url: p.ui_mode === "embedded" ? null : "https://checkout.stripe.com/x", client_secret: p.ui_mode === "embedded" ? "cs_test_secret" : null }) } }
+  };
+  const whsec = "whsec_" + require("crypto").randomBytes(16).toString("hex");
+  const s = await start({ stripeClient: fake, stripeWebhookSecret: whsec }); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  // Service: eval
+  const r1 = await s.call("POST", "/api/me/checkout/service", { service: "eval", ui: "embedded" }, tok);
+  assert.equal(r1.status, 200);
+  assert.equal(r1.body.clientSecret, "cs_test_secret");
+  const svcSess = calls.filter((c) => c[0] === "session").pop()[1];
+  assert.equal(svcSess.ui_mode, "embedded");
+  assert.ok(svcSess.return_url.includes("checkout=success"));
+  assert.equal(svcSess.payment_method_types, undefined, "dynamic payment methods (Apple Pay / Google Pay / Link / Card) via omitted payment_method_types");
+  assert.equal(svcSess.mode, "payment");
+  assert.equal(svcSess.line_items[0].price_data.unit_amount, 30000);
+  // Protocol with embedded flag
+  const r2 = await s.call("POST", "/api/me/checkout/protocol", { service: "followup", sessions: 12, plan: "gold", ui: "embedded" }, tok);
+  assert.equal(r2.status, 200);
+  assert.equal(r2.body.clientSecret, "cs_test_secret");
+  const protoSess = calls.filter((c) => c[0] === "session").pop()[1];
+  assert.equal(protoSess.ui_mode, "embedded");
+  assert.equal(protoSess.payment_method_types, undefined);
+  // Non-embedded still works and returns a URL
+  const r3 = await s.call("POST", "/api/me/checkout/service", { service: "massage" }, tok);
+  assert.equal(r3.body.url, "https://checkout.stripe.com/x");
+  // Bad service id
+  assert.equal((await s.call("POST", "/api/me/checkout/service", { service: "nope" }, tok)).status, 400);
+});

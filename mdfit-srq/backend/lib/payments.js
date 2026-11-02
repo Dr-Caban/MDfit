@@ -67,6 +67,18 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
     priceCache.set(lk, price.id);
     return price.id;
   }
+  // If the client requests the embedded UI, return a client_secret instead of a redirect URL. The embedded
+  // Stripe Checkout respects dynamic payment methods, so Apple Pay, Google Pay and Link all appear
+  // automatically when they are enabled in the Stripe dashboard.
+  function withUiMode(params, body, returnPath) {
+    if (body && body.ui === "embedded") {
+      const { success_url, cancel_url, ...rest } = params;
+      return { ...rest, ui_mode: "embedded", return_url: `${site()}${returnPath}?session_id={CHECKOUT_SESSION_ID}` };
+    }
+    return params;
+  }
+  const respond = (res, session) => res.json(session.url ? { url: session.url, id: session.id } : { clientSecret: session.client_secret, id: session.id });
+
   async function reviewCoupon(pct) {
     const id = `mdfit-review-${pct}`;
     try { return (await stripe.coupons.retrieve(id)).id; }
@@ -88,7 +100,7 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
     if (active(c) && c.membership.stripeSubscriptionId) return res.status(409).json({ error: "You already have a membership. Use Manage billing to change it.", manage: true });
     const customer = await ensureCustomer(c.id);
     const review = unusedReview((req.body && req.body.rewardCode) || c.reviewCode);
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create(withUiMode({
       mode: "subscription", customer, client_reference_id: c.id,
       line_items: [{ price: await tierPrice(t), quantity: 1 }],
       ...(review ? { discounts: [{ coupon: await reviewCoupon(review.pct) }] } : { allow_promotion_codes: true }),
@@ -96,9 +108,9 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
       subscription_data: { metadata: { kind: "membership", tier: t.id, clientId: c.id } },
       success_url: `${site()}/account?checkout=success#premium`, cancel_url: `${site()}/account#premium`,
       integration_identifier: `mdfit_membership_${letters()}`
-    });
+    }, req.body, "/account?checkout=success&kind=membership#premium"));
     activity("checkout_started", { email: c.email, kind: "membership", tier: t.id });
-    res.json({ url: session.url });
+    respond(res, session);
   });
 
   me.post("/checkout/protocol", async (req, res) => {
@@ -116,21 +128,55 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
     const per = cents(q.total / q.payments);
     const pid = crypto.randomBytes(6).toString("hex");
     const meta = { kind: "protocol", protocolId: pid, clientId: c.id, service: svc.id, sessions: String(visits), plan: b.plan, payments: String(q.payments) };
-    const session = await stripe.checkout.sessions.create(q.mode === "payment"
+    const base = q.mode === "payment"
       ? { mode: "payment", customer, client_reference_id: c.id, line_items: [{ price_data: { currency: "usd", unit_amount: cents(q.total), product_data: { name } }, quantity: 1 }],
           payment_intent_data: { metadata: meta }, metadata: meta,
           success_url: `${site()}/account?checkout=success#premium`, cancel_url: `${site()}/#pricing`, integration_identifier: `mdfit_protocol_${letters()}` }
       : { mode: "subscription", customer, client_reference_id: c.id,
           line_items: [{ price_data: { currency: "usd", unit_amount: per, recurring: { interval: "month" }, product_data: { name } }, quantity: 1 }],
           subscription_data: { metadata: meta }, metadata: meta,
-          success_url: `${site()}/account?checkout=success#premium`, cancel_url: `${site()}/#pricing`, integration_identifier: `mdfit_installments_${letters()}` });
+          success_url: `${site()}/account?checkout=success#premium`, cancel_url: `${site()}/#pricing`, integration_identifier: `mdfit_installments_${letters()}` };
+    const session = await stripe.checkout.sessions.create(withUiMode(base, req.body, "/account?checkout=success&kind=protocol#premium"));
     const list = clients(), cl = list.find((x) => x.id === c.id);
     cl.protocols = [...(cl.protocols || []), { id: pid, service: svc.id, serviceName: svc.name, sessions: visits, plan: b.plan, label: q.label,
       total: Math.round(q.total * 100) / 100, payments: q.payments, paid: 0, status: "pending", guarantee: n >= s.plans.guaranteeMin && !q.single,
       checkoutSessionId: session.id, createdAt: new Date().toISOString() }];
     save(list);
     activity("checkout_started", { email: c.email, kind: "protocol", plan: b.plan });
-    res.json({ url: session.url });
+    respond(res, session);
+  });
+
+  // Single service payment: pay for one evaluation, follow-up or massage without committing to a plan.
+  // Each service row on the pricing page uses this endpoint.
+  me.post("/checkout/service", async (req, res) => {
+    if (!enabled()) return off(res);
+    const s = settings();
+    const svc = (s.services || []).find((x) => x.id === (req.body && req.body.service));
+    if (!svc) fail("Pick a service.");
+    const c = req.client, customer = await ensureCustomer(c.id);
+    const name = `${svc.name} · 1 visit`;
+    const meta = { kind: "service", service: svc.id, clientId: c.id };
+    const base = {
+      mode: "payment", customer, client_reference_id: c.id,
+      line_items: [{ price_data: { currency: "usd", unit_amount: cents(svc.rate), product_data: { name } }, quantity: 1 }],
+      payment_intent_data: { metadata: meta }, metadata: meta,
+      success_url: `${site()}/account?checkout=success&kind=service&svc=${svc.id}`,
+      cancel_url: `${site()}/#services`,
+      integration_identifier: `mdfit_service_${letters()}`
+    };
+    const session = await stripe.checkout.sessions.create(withUiMode(base, req.body, `/account?checkout=success&kind=service&svc=${svc.id}`));
+    activity("checkout_started", { email: c.email, kind: "service", service: svc.id });
+    respond(res, session);
+  });
+
+  // Public: look up a session after return (checks nothing sensitive, used by the embedded flow)
+  me.get("/checkout/session/:id", async (req, res) => {
+    if (!enabled()) return off(res);
+    try {
+      const sess = await stripe.checkout.sessions.retrieve(req.params.id);
+      if (sess.client_reference_id !== req.client.id) return res.status(404).json({ error: "Not found." });
+      res.json({ id: sess.id, status: sess.status, paymentStatus: sess.payment_status });
+    } catch { res.status(404).json({ error: "Not found." }); }
   });
 
   me.post("/billing-portal", async (req, res) => {

@@ -27,8 +27,10 @@
     };
   }
 
-  let payOn = false;
+  let payOn = false, pub = "";
+  let mountArgs = null;
   function mount(root, settings) {
+    mountArgs = { root, settings };
     const services = settings.services || [], p = settings.plans;
     if (!root || !services.length || !p) return;
     const proto = services.filter((s) => s.protocol);
@@ -43,6 +45,7 @@
           <div><span class="price">${money(s.rate)}</span> <span class="unit">· ${esc(s.unit || "visit")}</span></div>
           <p>${esc(s.description)}</p>
           ${s.protocol ? `<span class="rate-tag">Available as a protocol plan</span>` : `<span class="rate-tag first">Where every plan starts</span>`}
+          ${payOn ? `<button type="button" class="btn btn-sm rate-buy" data-pay-service="${esc(s.id)}">Pay ${money(s.rate)}<small>Apple Pay · Google Pay · Link · Card</small></button>` : ""}
         </article>`).join("")}
       </div>
 
@@ -112,8 +115,23 @@
         const M = window.MDFit, me = M && M.auth && M.auth.client && M.auth.client();
         if (!me) { location.href = "/login?next=" + encodeURIComponent("/#pricing"); return; }
         buy.disabled = true; buy.textContent = "Opening secure checkout…";
-        try { const r = await M.apiAuth("POST", "/api/me/checkout/protocol", { service: state.svc, sessions: state.n, plan: buy.dataset.buy }); location.href = r.url; }
-        catch (err) { buy.disabled = false; buy.textContent = "Start this plan"; alert(err.message); }
+        try {
+          const r = await M.apiAuth("POST", "/api/me/checkout/protocol", { service: state.svc, sessions: state.n, plan: buy.dataset.buy, ui: "embedded" });
+          window.MDFitStripe.open({ clientSecret: r.clientSecret, publishableKey: pub });
+        } catch (err) { alert(err.message); }
+        buy.disabled = false; buy.textContent = "Start this plan";
+        return;
+      }
+      const pay = e.target.closest("[data-pay-service]");
+      if (pay) {
+        const M = window.MDFit, me = M && M.auth && M.auth.client && M.auth.client();
+        if (!me) { location.href = "/login?next=" + encodeURIComponent("/#pricing"); return; }
+        pay.disabled = true;
+        try {
+          const r = await M.apiAuth("POST", "/api/me/checkout/service", { service: pay.dataset.payService, ui: "embedded" });
+          window.MDFitStripe.open({ clientSecret: r.clientSecret, publishableKey: pub });
+        } catch (err) { alert(err.message); }
+        pay.disabled = false;
         return;
       }
       const b = e.target.closest(".chips button"); if (!b) return;
@@ -121,7 +139,14 @@
     });
     draw();
     const cfgUrl = (window.MDFIT_CONFIG || {}).apiUrl;
-    if (cfgUrl) fetch(cfgUrl + "/api/app/config").then((r) => r.json()).then((c) => { if (c.features && c.features.payments) { payOn = true; draw(); } }).catch(() => {});
+    if (cfgUrl) fetch(cfgUrl + "/api/app/config").then((r) => r.json()).then((c) => {
+      pub = c.stripePublishableKey || "";
+      if (c.features && c.features.payments && pub) {
+        payOn = true;
+        // Re-mount the pricing section so each service card shows its new Pay button.
+        if (mountArgs) mount(mountArgs.root, mountArgs.settings);
+      }
+    }).catch(() => {});
   }
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   window.MDFitPricing = { quote, mount, money };
