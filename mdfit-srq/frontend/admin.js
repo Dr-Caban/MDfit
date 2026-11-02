@@ -64,8 +64,19 @@
     $$("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== name));
     run(loaders[name])();
   }
+  function rtToast(text, icon) {
+    const box = $("#rt-toasts"); if (!box) return;
+    const el = document.createElement("div"); el.className = "rt-toast";
+    el.innerHTML = `<span class="rt-icon">${icon || "🔔"}</span><span>${esc(text)}</span>`;
+    box.appendChild(el);
+    setTimeout(() => { el.classList.add("fade-out"); setTimeout(() => el.remove(), 300); }, 5000);
+    if (Notification.permission === "granted") { try { new Notification("MD Fit", { body: text, icon: "/assets/icon-64.png" }); } catch {} }
+  }
+  const TOAST_ICONS = { appointment: "📅", appointment_cancelled: "❌", lead: "🎯", booking: "🏋️", message: "💬", subscribe: "📧", bug_report: "🐛", suggestion: "💡", feedback: "⭐" };
+
   function show() {
     $("#login").hidden = true; $("#app").hidden = false; openTab(current);
+    if (Notification.permission === "default") Notification.requestPermission().catch(() => {});
     if (window.MDFitRT) {
       MDFitRT.connect({ namespace: "/admin", token });
       MDFitRT.on("activity", (ev) => {
@@ -80,6 +91,14 @@
         if (current === "messages") run(loadThreads)();
         else pollBadges();
       });
+      MDFitRT.on("toast", (ev) => { rtToast(ev.text, TOAST_ICONS[ev.type]); });
+      MDFitRT.on("online_count", (ev) => {
+        const bar = $("#online-bar"); if (!bar) return;
+        bar.classList.add("live");
+        $("#online-text").textContent = `${ev.members} member${ev.members !== 1 ? "s" : ""} and ${ev.pages} visitor${ev.pages !== 1 ? "s" : ""} online now`;
+      });
+      document.addEventListener("mdfit:connected", () => { const bar = $("#online-bar"); if (bar) bar.classList.add("live"); });
+      document.addEventListener("mdfit:disconnected", () => { const bar = $("#online-bar"); if (bar) { bar.classList.remove("live"); $("#online-text").textContent = "Reconnecting…"; } });
     }
   }
 

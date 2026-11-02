@@ -52,11 +52,16 @@
       </div>
     </header>
 
+    <div class="rt-toasts" id="rt-toasts"></div>
     <main class="wrap panel-wrap">
       <p id="toast" class="toast" role="status" hidden></p>
 
       <section data-panel="dash">
         <p class="banner" id="email-banner" hidden>Email notifications are off. Add <code>RESEND_API_KEY</code> and <code>NOTIFY_FROM</code> in Railway to get an email for every booking and request.</p>
+        <div class="online-bar" id="online-bar">
+          <span class="online-dot"></span>
+          <span id="online-text">Connecting…</span>
+        </div>
         <div class="share-card">
           <div><b>Your booking link</b><span class="muted">Put it in your Instagram bio, Google Business Profile ("Appointment link") and text messages.</span></div>
           <div class="share-row"><input id="book-link" readonly><button class="btn btn-sm" id="copy-link" type="button">Copy</button></div>

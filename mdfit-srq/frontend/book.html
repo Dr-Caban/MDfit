@@ -80,6 +80,7 @@
 
   <script src="config.js?v=73fb174c"></script>
   <script src="analytics.js?v=1" defer></script>
+  <script src="realtime.js?v=1"></script>
   <script src="common.js?v=303aeac7"></script>
   <script src="booking.js?v=4d1ccca3"></script>
   <script>
@@ -104,6 +105,7 @@
         $(".booker").innerHTML = `<div class="booker-step"><h2 class="step-title">Online booking is unavailable right now</h2><p>Call <a href="tel:+19413130562">941-313-0562</a> and we'll get you scheduled.</p></div>`;
       });
     })();
+    if (window.MDFitRT) MDFitRT.connect({ namespace: "/public" });
   </script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>

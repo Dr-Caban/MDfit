@@ -586,6 +586,7 @@ function createApp(cfg = loadConfig()) {
     list.push(appt);
     store.write("appointments", list);
     activity("appointment", { email: a.email, type: type.id, date: a.date });
+    const rt = app.get("rt"); if (rt) rt.emitBookingUpdate(a.date);
     syncBooking(appt);
 
     const when = `${prettyDate(a.date)} at ${prettyTime(a.time)}`;
@@ -622,6 +623,7 @@ function createApp(cfg = loadConfig()) {
     store.write("appointments", list);
     unsyncBooking(appt);
     activity("appointment_cancelled", { email: appt.email, date: appt.date });
+    const rt = app.get("rt"); if (rt) rt.emitBookingUpdate(appt.date);
     notify.owner(`Cancelled: ${appt.typeName}, ${prettyDate(appt.date)} at ${prettyTime(appt.time)}`, `${appt.name} (${appt.email}) cancelled online.`);
     res.json({ ok: true });
   });
@@ -752,6 +754,7 @@ function createApp(cfg = loadConfig()) {
   admin.use(requireAdmin);
 
   admin.get("/me", (req, res) => res.json({ email: req.admin, emailNotifications: notify.enabled, mfa: mfaOn() }));
+  admin.get("/online", (req, res) => { const rt = app.get("rt"); res.json(rt ? rt.onlineStats() : { members: [], memberCount: 0, visitorCount: 0 }); });
   admin.get("/mfa", (req, res) => res.json({ enabled: mfaOn(), method: "email", emailReady: notify.enabled, forcedOff: !!cfg.mfaForceOff, sendsTo: mask(cfg.adminEmail) }));
   admin.post("/mfa/start", async (req, res) => {
     if (!notify.enabled) return res.status(503).json({ error: "Email isn't connected yet (RESEND_API_KEY and NOTIFY_FROM)." });
