@@ -125,7 +125,8 @@ function defaultContent() {
     events: [
       { id: "simc-nov-2026", title: "Sarasota Integrative Medicine Consortium", date: "2026-11-05", time: "6:00 PM", location: "Sarasota, FL", description: "Dr. Jared Caban attends the Sarasota Integrative Medicine Consortium meeting — networking with local integrative health practitioners.", link: "", free: true },
       { id: "nxf-nov-2026", title: "NXF Classic & Forge Wellness Festival", date: "2026-11-14", time: "11:00 AM – 6:00 PM", location: "Robarts Arena, 3000 Ringling Blvd, Sarasota, FL 34237", description: "Dr. Jared Caban will be at the inaugural NXF Classic & Forge Wellness Festival offering complimentary soft-tissue bodywork and movement assessments. Come say hello!", link: "", free: true },
-      { id: "integrative-health-2027", title: "Integrative Health Event — Dr. Caban Speaking", date: "2027-01-01", time: "TBA", location: "Sarasota, FL", description: "Dr. Jared Caban is a featured speaker at the Integrative Health Event. Exact date and details coming soon.", link: "", free: false }
+      { id: "dimmitt-wellness-dec-2026", title: "Free Wellness Experience at Dimmitt Bentley SRQ", date: "2026-12-05", time: "8:00 AM – 2:00 PM", location: "Dimmitt Automotive Group (Bentley SRQ), 1518 State Street, Sarasota, FL", description: "Dr. Jared Caban will be giving a complimentary wellness talk and offering soft-tissue bodywork at this free wellness experience. Yoga, pilates, and other wellness offerings also available.", link: "", free: true },
+      { id: "integrative-health-jan-2027", title: "Integrative Health Event — Dr. Caban Speaking", date: "2027-01-01", time: "TBA", location: "Dimmitt Automotive Group (Bentley SRQ), Sarasota, FL", description: "Dr. Jared Caban is a featured speaker at the Integrative Health Event. Exact date coming soon.", link: "", free: true }
     ]
   };
 }
