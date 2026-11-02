@@ -111,3 +111,24 @@
 .or-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--muted, #8899aa); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
 .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--line, #1e344e); }
 .g-btn-wrap { display: flex; justify-content: center; min-height: 44px; }
+
+/* App pain map (account page) */
+.app-painmap { margin: 0 -16px; }
+.app-painmap .painmap-figure { background: var(--paper); border-radius: 14px; overflow: hidden; margin: 0 16px; }
+.app-painmap .pm-toggle { display: flex; justify-content: center; gap: 6px; padding: 10px 0 4px; }
+.app-painmap .pm-toggle button { background: var(--paper-2); border: 1px solid var(--line); border-radius: 20px; padding: 6px 18px; font: 600 13px var(--body); color: var(--muted); cursor: pointer; }
+.app-painmap .pm-toggle button[aria-pressed="true"] { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.app-painmap .pm-viewport { overflow: hidden; }
+.app-painmap .pm-stage { position: relative; }
+.app-painmap .pm-stage img.pm-figures { width: 100%; display: block; }
+.app-painmap .pm-regions { position: absolute; inset: 0; width: 100%; height: 100%; }
+@media (max-width: 600px) {
+  .app-painmap .pm-stage { width: 227.3%; }
+  .app-painmap .pm-stage[data-view="front"] { transform: translateX(0); }
+  .app-painmap .pm-stage[data-view="back"] { transform: translateX(-56%); }
+}
+
+.pain-secondary { margin-top: 20px; }
+.pain-secondary > summary { font: 600 14px var(--body); color: var(--muted); cursor: pointer; padding: 10px 0; }
+.pain-secondary > summary:hover { color: var(--fg); }
+.pain-disclaimer { margin-top: 16px; font-size: 12px; }

@@ -242,29 +242,45 @@
     <!-- ================= PAIN TOOL ================= -->
     <section class="view" id="view-pain" data-view="pain" hidden>
       <header class="hero">
-        <div><h1>Pain <em>Tool</em></h1><p>Find where your pain may be coming from.</p></div>
+        <div><h1>Pain <em>Tool</em></h1><p>Tap the area that hurts to start your protocol.</p></div>
       </header>
-      <div class="info"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>Educational tool only. Not medical advice or diagnosis.</div>
-      <button type="button" class="intro-btn" data-intro="pain"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Watch: how the pain tool works</button>
-      <div class="seg mode-seg" role="tablist" aria-label="How to search"><button type="button" role="tab" data-mode="muscle" aria-selected="true">Body diagram</button><button type="button" role="tab" data-mode="area" aria-selected="false">Find by area</button></div>
-      <div id="mode-area" hidden>
-        <div class="seg" role="tablist"><button type="button" role="tab" data-side="front" aria-selected="true">Front</button><button type="button" role="tab" data-side="back" aria-selected="false">Back</button></div>
-        <p class="center muted">Select the area(s) where you feel discomfort</p>
-        <div class="areas" id="areas"></div>
-        <div id="pain-refine"></div>
-        <button type="button" class="btn-gold sticky-cta" id="pain-go" disabled>Select an area</button>
-        <div id="pain-results"></div>
-        <a class="link center block" href="/#pain-map">Open the interactive body map</a>
+
+      <div class="painmap app-painmap" data-painmap="app">
+        <div class="painmap-figure">
+          <div class="pm-toggle" role="tablist" aria-label="Body view">
+            <button type="button" data-pmview="front" aria-pressed="true">Front</button>
+            <button type="button" data-pmview="back" aria-pressed="false">Back</button>
+          </div>
+          <div class="pm-viewport"><div class="pm-stage" data-view="front">
+            <img class="pm-figures" src="assets/pain/body-figures.webp" alt="Front and back anatomy" width="1182" height="1073">
+          </div></div>
+        </div>
       </div>
-      <div id="mode-muscle">
-        <div class="card map-card"><span class="label accent">Tap the muscle</span><div id="muscle-map"></div></div>
-        <p class="label list-label">Or find it in the list</p>
-        <input type="search" id="muscle-search" class="search" placeholder="Search muscles, e.g. piriformis, rotator cuff, calf" aria-label="Search muscles">
-        <div id="muscle-list"></div>
-      </div>
+
       <div id="muscle-report" hidden></div>
+
+      <details class="pain-secondary" id="pain-secondary">
+        <summary>Search by muscle or area</summary>
+        <div class="seg mode-seg" role="tablist" aria-label="How to search"><button type="button" role="tab" data-mode="muscle" aria-selected="true">Body diagram</button><button type="button" role="tab" data-mode="area" aria-selected="false">Find by area</button></div>
+        <div id="mode-area" hidden>
+          <div class="seg" role="tablist"><button type="button" role="tab" data-side="front" aria-selected="true">Front</button><button type="button" role="tab" data-side="back" aria-selected="false">Back</button></div>
+          <p class="center muted">Select the area(s) where you feel discomfort</p>
+          <div class="areas" id="areas"></div>
+          <div id="pain-refine"></div>
+          <button type="button" class="btn-gold sticky-cta" id="pain-go" disabled>Select an area</button>
+          <div id="pain-results"></div>
+        </div>
+        <div id="mode-muscle" hidden>
+          <div class="card map-card"><span class="label accent">Tap the muscle</span><div id="muscle-map"></div></div>
+          <p class="label list-label">Or find it in the list</p>
+          <input type="search" id="muscle-search" class="search" placeholder="Search muscles, e.g. piriformis, rotator cuff, calf" aria-label="Search muscles">
+          <div id="muscle-list"></div>
+        </div>
+      </details>
+
       <div class="card-head lect-head pain-guides-head"><span class="label accent">Dr. Jared's pain guides</span></div>
       <div class="guide-library app-guides" id="pain-guides"></div>
+      <div class="info pain-disclaimer"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg>Educational tool only. Not medical advice or diagnosis.</div>
     </section>
 
     <!-- ================= PROGRESS ================= -->
@@ -515,6 +531,7 @@
   <script src="painmuscles.js?v=74e3b348"></script>
   <script src="painpatterns.js?v=eefa906e"></script>
   <script src="paintracks.js?v=1c44032f"></script>
+  <script src="painmap.js?v=pm2"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
   <script src="stripe-checkout.js?v=0b68bde3"></script>

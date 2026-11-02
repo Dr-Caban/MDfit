@@ -38,7 +38,7 @@
     $$("[data-view]").forEach((v) => (v.hidden = v.dataset.view !== tab));
     $$(".tabbar [data-tab]").forEach((b) => (b.dataset.tab === tab ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
     if (tab === "videos") renderVideos();
-    if (tab === "pain" && !show.painMap) { show.painMap = true; renderMap(); renderMuscleList(); }
+    if (tab === "pain" && !show.painMap) { show.painMap = true; if (window.MDFitPainMap) window.MDFitPainMap.init($("[data-painmap='app']")); }
     if (tab === "pain" && !show.painGuides && window.MDFitGuides.mountLibrary) { window.MDFitGuides.mountLibrary($("#pain-guides")); show.painGuides = true; }
     if (tab === "progress") renderCalendar();
     if (["programs", "learn", "premium", "tips"].includes(tab)) renderContent(tab, sub);
@@ -623,6 +623,8 @@
     if (mode === "muscle") { renderMap(); renderMuscleList(); }
   }
   $$(".mode-seg [data-mode]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  const painSec = $("#pain-secondary");
+  if (painSec) painSec.addEventListener("toggle", () => { if (painSec.open && !show.muscleMap) { show.muscleMap = true; renderMap(); renderMuscleList(); } });
   // Tap the muscle on Dr. Jared's anatomy figure (zoomed crops from painmuscles.js MAPS)
   let mapView = "body-front", mapPick = null;
   function renderMap() {
