@@ -903,3 +903,8 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .dev-only[hidden] { display: none !important; }
 .dev-stats { margin-top: 10px; }
 .dev-stats b { font-size: 20px; overflow-wrap: anywhere; }
+/* Dr. Jared's programs: image headers on cards and detail */
+.prog-card-img { padding-top: 0; overflow: hidden; }
+.pc-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: linear-gradient(135deg, #10233b, #0A1A2E); margin: -14px -14px 10px; }
+.prog-head-img { padding-top: 0; overflow: hidden; }
+.ph-img { width: 100%; aspect-ratio: 16/6; object-fit: cover; display: block; background: linear-gradient(135deg, #10233b, #0A1A2E); margin: -16px -16px 10px; }

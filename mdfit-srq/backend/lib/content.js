@@ -22,7 +22,7 @@ const list = (v, label, max, fn) => { if (!Array.isArray(v) || v.length > max) f
 const GOALS = ["upper", "lower", "full", "core", "mobility"];
 const LOCS = ["home", "gym", "outdoor", "office"];
 const LEVELS = ["beginner", "intermediate", "advanced", "elite"];
-const PROGRAM_CATS = ["Hypertrophy", "Strength", "Anti-inflammatory", "Weight loss", "Mobility", "Rehabilitation", "Desk & posture", "Performance"];
+const PROGRAM_CATS = ["Hypertrophy", "Strength", "Anti-inflammatory", "Weight loss", "Mobility", "Rehabilitation", "Desk & posture", "Performance", "Sport Performance"];
 const LECTURE_TOPICS = ["Health", "Wellness", "Hormones", "Inflammation", "Pain science", "Nutrition", "Sleep & recovery"];
 const ACCESS = ["free", "member", "premium"];
 
@@ -30,31 +30,74 @@ const day = (name, goal, length, extra = {}) => ({ name, goal, length, ...extra 
 function defaultContent() {
   return {
     programs: [
-      { id: "hypertrophy-4", title: "Hypertrophy Foundations", category: "Hypertrophy", level: "intermediate", location: "gym", weeks: 6, seed: 4101, access: "member",
-        summary: "Build muscle with an upper / lower split. Same sessions each week so you can watch your weights climb.",
-        notes: "Add weight when every round feels like 2 reps left in the tank. Protein with every meal, 7 to 9 hours of sleep.",
+      // ----- Dr. Jared's programs. Covered on the homepage and in the client app's Programs tab.
+      { id: "hypertrophy-12", title: "12-Week Hypertrophy", category: "Hypertrophy", level: "intermediate", location: "gym", weeks: 12, seed: 1001, access: "member",
+        summary: "Build muscle with an upper/lower split, 4 days a week for 12 weeks. The same four sessions each week so you can watch your weights climb.",
+        notes: "Add weight when every round feels like 2 reps left in the tank. Protein with every meal, 7-9 hours of sleep.",
+        image: "assets/programs/hypertrophy.webp",
         days: [day("Upper A", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower A", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Upper B", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower B", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 })] },
-      { id: "anti-inflammatory", title: "Anti-Inflammatory Reset", category: "Anti-inflammatory", level: "beginner", location: "home", weeks: 4, seed: 4202, access: "member",
-        summary: "Gentle full-body strength, mobility and daily walking to calm things down without flaring them up.",
-        notes: "Walk 20 to 30 minutes a day at a pace you can still talk at. Keep every session at an effort of 5 out of 10 or less.",
+      { id: "dream-lean-12", title: "12-Week Dream Lean", category: "Weight loss", level: "intermediate", location: "home", weeks: 12, seed: 1002, access: "member",
+        summary: "Full-body circuits with short rests to drop body fat and keep every ounce of muscle. 3 strength circuits plus mobility, every week for 12 weeks.",
+        notes: "Pair with a daily step goal and protein at every meal. Rest days are walking days (20-30 min).",
+        image: "assets/programs/dream-lean.webp",
+        days: [day("Full-body circuit A", "full", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Lower circuit", "lower", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Upper circuit", "upper", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Mobility & core", "mobility", 20)] },
+      { id: "shoulder-6", title: "6-Week Shoulder Program", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1003, access: "member",
+        summary: "A protocol for cranky shoulders: rotator-cuff control, scapular mobility and graded loading. 3 sessions a week for 6 weeks.",
+        notes: "Pair with your shoulder pain track. Stop and book a visit if you get numbness or tingling down the arm.",
+        image: "assets/programs/shoulder.webp",
+        days: [day("Cuff & posture", "upper", 20, { rounds: 2, restEx: 20, restRound: 60 }), day("Scapular control", "upper", 20, { rounds: 2, restEx: 20, restRound: 60 }), day("Mobility flow", "mobility", 15)] },
+      { id: "hip-6", title: "6-Week Hip Program", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1004, access: "member",
+        summary: "Hip range, glute activation and core control. 3 sessions a week for 6 weeks to clear up stiff hips, lateral hip pain and low-back aches that start at the hip.",
+        notes: "Walk 20-30 min a day. Stop and book a visit if pain shoots down the leg past the knee.",
+        image: "assets/programs/hip.webp",
+        days: [day("Hip mobility & glutes", "lower", 25, { rounds: 2, restEx: 20, restRound: 60 }), day("Core & spine", "core", 20, { rounds: 2 }), day("Lower-body strength", "lower", 25, { rounds: 3, restEx: 30, restRound: 60 })] },
+      { id: "low-back-6", title: "6-Week Low Back Mobility", category: "Mobility", level: "beginner", location: "home", weeks: 6, seed: 1005, access: "member",
+        summary: "Core control, hip mobility and graded loading for a cranky low back. Three short sessions a week; keep every effort at 5/10 or less.",
+        notes: "Pair with the low back pain track. Walk after meals. Stop and call us if pain spreads down the leg.",
+        image: "assets/programs/low-back.webp",
+        days: [day("Core control", "core", 20, { rounds: 2, restEx: 20 }), day("Hips & glutes", "lower", 20, { rounds: 2, restEx: 20 }), day("Mobility & breath", "mobility", 15)] },
+      { id: "mobility-ladder", title: "5-Round Mobility Ladder", category: "Mobility", level: "intermediate", location: "home", weeks: 5, seed: 1006, access: "member",
+        summary: "Dr. Jared's 5-round progression. Same six movements each round; rounds grow from 1 to 25 reps as you take the assistance away.",
+        notes: "Each week, add 5 reps per movement and drop one layer of assistance (e.g., deeper on the Cossack, less wall help on the burpee). Stop any round that gets ugly; form before reps.",
+        image: "assets/programs/mobility-ladder.webp",
+        days: [day("Mobility Ladder", "full", 30, {
+          rounds: 5, restEx: 15, restRound: 60,
+          circuit: [
+            { ex: "TRX Squat", sets: "5 reps · deeper each week" },
+            { ex: "Cossack Squat", sets: "5 reps / side" },
+            { ex: "Burpee", sets: "5 reps" },
+            { ex: "Pistol Squat", sets: "5 reps / side (assisted)" },
+            { ex: "Bear Crawl", sets: "20 ft / 6 m" },
+            { ex: "Wall Burpee", sets: "5 reps (wall climb substitute)" }
+          ]
+        })] },
+      { id: "anti-inflammatory", title: "Anti-Inflammatory Reset", category: "Anti-inflammatory", level: "beginner", location: "home", weeks: 4, seed: 1007, access: "member",
+        summary: "Gentle full-body strength, mobility and daily walking to calm things down without flaring them up. 3 sessions a week for 4 weeks.",
+        notes: "Walk 20-30 min a day at a pace you can still talk at. Keep every session at an effort of 5/10 or less. Omega-3s, protein, 7-9 hours of sleep.",
+        image: "assets/programs/anti-inflammatory.webp",
         days: [day("Strength & breath", "full", 30, { rounds: 2, restEx: 20, restRound: 60 }), day("Mobility flow", "mobility", 20), day("Core & spine", "core", 20, { rounds: 2 })] },
-      { id: "weight-loss", title: "Lean & Conditioned", category: "Weight loss", level: "intermediate", location: "home", weeks: 8, seed: 4303, access: "member",
-        summary: "Full-body circuits with short rests to burn more and keep the muscle you have.",
-        notes: "Pair with a daily step goal and protein at every meal. Rest days are walking days.",
-        days: [day("Circuit A", "full", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Circuit B", "lower", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Circuit C", "upper", 30, { rounds: 4, restEx: 15, restRound: 45 })] },
-      { id: "mobility-daily", title: "Daily Mobility", category: "Mobility", level: "beginner", location: "home", weeks: 4, seed: 4404, access: "member",
-        summary: "Fifteen to twenty minutes a day to open up hips, spine and shoulders.",
-        notes: "Move slowly and breathe through each position. Mild stretch is fine; sharp pain is not.",
-        days: [day("Hips & spine", "mobility", 20), day("Shoulders & neck", "mobility", 15, { seedOffset: 7 }), day("Full flow", "mobility", 20, { seedOffset: 13 })] },
-      { id: "rehab-back", title: "Back Pain Rehab", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 4505, access: "member",
-        summary: "Core control, hip mobility and graded loading for a cranky low back. Pair it with your pain track.",
-        notes: "Use the Pain tool first and follow your track's Level 1 videos. Stop and book a visit if pain spreads down the leg.",
-        days: [day("Core control", "core", 20, { rounds: 2, restEx: 20 }), day("Hips & glutes", "lower", 20, { rounds: 2, restEx: 20 }), day("Mobility", "mobility", 15)] },
-      { id: "desk-reset", title: "Desk Worker Reset", category: "Desk & posture", level: "beginner", location: "office", weeks: 4, seed: 4606, access: "member",
-        summary: "Short sessions you can do at your desk to undo hours of sitting.",
-        notes: "Set a timer to move every 30 to 45 minutes.",
-        days: [day("Neck & shoulders", "upper", 15, { rounds: 2 }), day("Spine & hips", "mobility", 15)] }
+      { id: "golf", title: "Golf Performance", category: "Sport Performance", level: "intermediate", location: "home", weeks: 4, seed: 1008, access: "member",
+        summary: "Rotational power, hip mobility and anti-rotation core for a longer, more consistent swing. 2 sessions a week for 4 weeks.",
+        notes: "Do this twice a week on non-golf days. Warm up before every round with the day's mobility flow.",
+        image: "assets/programs/golf.webp",
+        days: [day("Rotational power & core", "core", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Hip & T-spine mobility", "mobility", 20)] },
+      { id: "tennis", title: "Tennis Performance", category: "Sport Performance", level: "intermediate", location: "home", weeks: 4, seed: 1009, access: "member",
+        summary: "Lateral agility, shoulder stability and single-leg strength for the court. 2 sessions a week for 4 weeks.",
+        notes: "Do this twice a week on non-match days. Warm up before every match with the mobility flow.",
+        image: "assets/programs/tennis.webp",
+        days: [day("Lateral agility & cuff", "upper", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Single-leg & core", "lower", 25, { rounds: 3, restEx: 20, restRound: 60 })] },
+      { id: "running", title: "Running Performance", category: "Sport Performance", level: "intermediate", location: "home", weeks: 6, seed: 1010, access: "member",
+        summary: "Hip strength, calf and foot work, and single-leg stability to run faster with fewer injuries. 3 sessions a week to pair with your runs.",
+        notes: "These are the strength and mobility days: do them on your easy-run days or on rest days. Your long run is your long run.",
+        image: "assets/programs/running.webp",
+        days: [day("Hip & glute strength", "lower", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Calf, foot & ankle", "lower", 20, { rounds: 2 }), day("Mobility & core", "mobility", 20)] },
+      { id: "marathon", title: "Marathon Prep", category: "Sport Performance", level: "advanced", location: "home", weeks: 12, seed: 1011, access: "member",
+        summary: "A 12-week strength-and-mobility block to carry you through marathon training without breaking down. 4 sessions a week built around your run calendar.",
+        notes: "Pair with your running plan. Deload every 4 weeks: cut rounds in half the week before a long effort.",
+        image: "assets/programs/marathon.webp",
+        days: [day("Hip & glute strength", "lower", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Core & spine", "core", 25, { rounds: 3 }), day("Calf, foot & ankle", "lower", 20, { rounds: 2 }), day("Mobility & recovery", "mobility", 25)] }
     ],
+
     lectures: [
       { id: "inflammation-101", title: "Inflammation: friend and foe", topic: "Inflammation", minutes: 0, url: "", downloadUrl: "", access: "member", summary: "What inflammation is for, why it lingers, and the daily habits that calm it." },
       { id: "hormones-training", title: "Hormones and training", topic: "Hormones", minutes: 0, url: "", downloadUrl: "", access: "member", summary: "How sleep, stress and training shape your hormones, and what you can control." },
@@ -91,13 +134,18 @@ function programIn(p, i) {
     level: oneOf(p.level, LEVELS, `${L} level`), location: oneOf(p.location, LOCS, `${L} location`), weeks: int(p.weeks, `${L} weeks`, { min: 1, max: 52 }),
     seed: int(p.seed ?? 1, `${L} seed`, { min: 1, max: 999999 }), access: oneOf(p.access || "free", ACCESS, `${L} access`),
     summary: str(p.summary, `${L} summary`, { max: 400 }), notes: str(p.notes, `${L} notes`, { max: 1000 }),
+    image: str(p.image || "", `${L} image`, { max: 500 }),
     days: p.days.map((d, j) => ({
       name: str(d.name, `${L} day ${j + 1} name`, { min: 1, max: 40 }), goal: oneOf(d.goal, GOALS, `${L} day ${j + 1} focus`),
       length: oneOf(Number(d.length), [15, 20, 30, 45, 60, 90], `${L} day ${j + 1} length`),
       ...(d.rounds !== undefined ? { rounds: int(d.rounds, "Rounds", { min: 1, max: 10 }) } : {}),
       ...(d.restEx !== undefined ? { restEx: int(d.restEx, "Rest between exercises", { min: 0, max: 180 }) } : {}),
       ...(d.restRound !== undefined ? { restRound: int(d.restRound, "Rest between rounds", { min: 0, max: 300 }) } : {}),
-      ...(d.seedOffset !== undefined ? { seedOffset: int(d.seedOffset, "Seed offset", { min: 0, max: 9999 }) } : {})
+      ...(d.seedOffset !== undefined ? { seedOffset: int(d.seedOffset, "Seed offset", { min: 0, max: 9999 }) } : {}),
+      ...(Array.isArray(d.circuit) ? { circuit: d.circuit.slice(0, 20).map((x, k) => ({
+        ex: str(x.ex, `Day ${j + 1} exercise ${k + 1}`, { min: 1, max: 80 }),
+        sets: str(x.sets || "", `Day ${j + 1} exercise ${k + 1} sets`, { max: 40 })
+      })) } : {})
     }))
   };
 }
@@ -155,7 +203,16 @@ function liveIn(b, prev) {
 }
 
 function mountContent({ app, admin, store, me, clients, save, today, notify, activity }) {
-  const content = () => ({ ...defaultContent(), ...store.read("content", {}) });
+  // One-time refresh: when the admin hasn't customized programs yet, use the current defaults so the new
+  // Dr. Jared programs ship live. Admin edits set contentVersion to opt out.
+  const content = () => {
+    const saved = store.read("content", {});
+    const d = defaultContent();
+    if (!saved.contentVersion || saved.contentVersion < 2) {
+      if (!saved.programs || !saved.programs.length) saved.programs = d.programs;
+    }
+    return { ...d, ...saved };
+  };
   const rank = { free: 0, member: 1, premium: 2 };
   // What a viewer may open: free for everyone, member for any tier, premium for tiers with 1-on-1 meetings
   const levelOf = (c, tiers) => {
@@ -236,7 +293,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     if (b.recommendations !== undefined) next.recommendations = list(b.recommendations, "Recommendations", 100, recIn);
     if (b.live !== undefined) next.live = liveIn(b.live || {}, c.live);
     if (b.tracks !== undefined) next.tracks = list(b.tracks, "Pain tracks", 80, trackIn);
-    store.write("content", next);
+    store.write("content", { ...next, contentVersion: 2 });
     res.json(content());
   });
   admin.get("/members", (req, res) => {

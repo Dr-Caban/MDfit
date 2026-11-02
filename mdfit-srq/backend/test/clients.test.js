@@ -270,8 +270,8 @@ test("member content: locked links, membership requests, admin grants tiers, mon
   const s = await start(); t.after(s.close);
   const pub = (await s.call("GET", "/api/content")).body;
   assert.ok(pub.programs.length >= 5 && pub.recommendations.some((r) => r.id === "pillow-progression"));
-  assert.equal(pub.programs.find((p) => p.id === "hypertrophy-4").locked, true);
-  assert.equal(pub.programs.find((p) => p.id === "mobility-daily").locked, true, "programs need a membership");
+  assert.equal(pub.programs.find((p) => p.id === "hypertrophy-12").locked, true);
+  assert.equal(pub.programs.find((p) => p.id === "low-back-6").locked, true, "programs need a membership");
   const adm = await s.adminToken();
   // admin adds a lecture link and a live session link
   const c0 = (await s.call("GET", "/api/admin/content", undefined, adm)).body;

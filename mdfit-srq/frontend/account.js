@@ -1304,6 +1304,12 @@
     const w = Gen.generate({ goal: d.goal, location: p.location, level: p.level, length: d.length, ...Gen.presetFor(d.length),
       ...(d.rounds ? { rounds: d.rounds } : {}), ...(d.restEx !== undefined ? { restEx: d.restEx } : {}), ...(d.restRound !== undefined ? { restRound: d.restRound } : {}),
       addons: { warmup: true, cooldown: true }, seed: p.seed + (d.seedOffset || 0) + i * 101 });
+    // Fixed circuit: use exactly the exercises Dr. Jared specified (looked up by name)
+    if (Array.isArray(d.circuit) && d.circuit.length) {
+      const byName = Object.fromEntries(EX.map((e) => [e.name, e]));
+      const chosen = d.circuit.map((x) => ({ ...(byName[x.ex] || { id: "", name: x.ex }), sets: x.sets || "" })).filter((x) => x.name);
+      if (chosen.length) w.circuit = chosen;
+    }
     return { ...w, title: `${p.title}: ${d.name}`, key: `prog-${p.id}-d${i}` };
   };
   const doneCount = (p, i) => allWorkouts.filter((w) => w.key === `prog-${p.id}-d${i}`).length;
@@ -1313,7 +1319,8 @@
     const list = C.programs.filter((p) => progCat === "All" || p.category === progCat);
     $("#prog-grid").innerHTML = list.map((p) => {
       const sessions = p.weeks * p.days.length, done = p.days.reduce((n, _, i) => n + doneCount(p, i), 0);
-      return `<button type="button" class="prog-card" data-prog="${p.id}">
+      return `<button type="button" class="prog-card${p.image ? " prog-card-img" : ""}" data-prog="${p.id}">
+        ${p.image ? `<img class="pc-img" src="${esc(p.image)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
         <span class="pc-cat">${esc(p.category)}</span>${p.locked ? lockBadge : ""}
         <b>${esc(p.title)}</b><p>${esc(p.summary)}</p>
         <span class="pc-meta">${p.weeks} weeks · ${p.days.length} days/week · ${esc(p.level[0].toUpperCase() + p.level.slice(1))} · ${esc((Gen.LOCATIONS.find((l) => l.id === p.location) || {}).label || "")}</span>
@@ -1327,7 +1334,7 @@
   function renderProgram(p) {
     const wk = (i) => Math.min(p.weeks, doneCount(p, i) + 1);
     $("#prog-detail").innerHTML = `<button type="button" class="link-sm back-link" data-goto="programs">‹ All programs</button>
-      <div class="card prog-head"><span class="pc-cat">${esc(p.category)}</span>${p.locked ? lockBadge : ""}<h2>${esc(p.title)}</h2><p>${esc(p.summary)}</p>
+      <div class="card prog-head${p.image ? " prog-head-img" : ""}">${p.image ? `<img class="ph-img" src="${esc(p.image)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="pc-cat">${esc(p.category)}</span>${p.locked ? lockBadge : ""}<h2>${esc(p.title)}</h2><p>${esc(p.summary)}</p>
         <p class="muted small">${p.weeks} weeks · ${p.days.length} sessions a week · ${esc(p.level)} · ${esc((Gen.LOCATIONS.find((l) => l.id === p.location) || {}).label || "")}</p>
         ${p.notes ? `<p class="prog-notes">${esc(p.notes)}</p>` : ""}</div>
       ${p.days.map((d, i) => { const w = progDayWorkout(p, i); return `<div class="card prog-day">
