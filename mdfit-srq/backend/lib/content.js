@@ -123,11 +123,9 @@ function defaultContent() {
       { id: "sleep-hours", area: "Recovery", title: "Protect 7 to 9 hours of sleep", body: "Tissue repairs while you sleep. Keep the same bed and wake time, and keep screens out of the last 30 minutes.", link: "" }
     ],
     events: [
-      { id: "nxf-nov-2026", title: "NXF Community Day — Free Bodywork", date: "2026-11-14", time: "10:00 AM – 2:00 PM", location: "NXF Fitness, Sarasota", description: "Stop by for complimentary soft-tissue bodywork and movement assessments with Dr. Jared Caban. Open to everyone — no appointment needed.", link: "", free: true },
-      { id: "integrative-health-dec-2026", title: "Integrative Health Conference", date: "2026-12-05", time: "TBA", location: "Sarasota, FL", description: "Dr. Jared Caban presents on integrative approaches to physical rehabilitation and pain management. Open to practitioners and the public.", link: "", free: false },
-      { id: "renova-jan-2027", title: "Renova Conference — Dr. Caban Speaking", date: "2027-01-17", time: "TBA", location: "Sarasota, FL", description: "Dr. Jared Caban is a featured speaker at the Renova event, covering rehabilitation medicine and functional movement strategies.", link: "", free: false },
-      { id: "feb-2027", title: "Pain-Free Living Seminar", date: "2027-02-07", time: "TBA", location: "Sarasota, FL", description: "Learn the MD Fit approach to eliminating chronic pain. Details coming soon.", link: "", free: false },
-      { id: "mar-2027", title: "Spring Movement Workshop", date: "2027-03-07", time: "TBA", location: "Sarasota, FL", description: "Functional movement and injury prevention workshop. Details coming soon.", link: "", free: false }
+      { id: "simc-nov-2026", title: "Sarasota Integrative Medicine Consortium", date: "2026-11-05", time: "6:00 PM", location: "Sarasota, FL", description: "Dr. Jared Caban attends the Sarasota Integrative Medicine Consortium meeting — networking with local integrative health practitioners.", link: "", free: true },
+      { id: "nxf-nov-2026", title: "NXF Classic & Forge Wellness Festival", date: "2026-11-14", time: "11:00 AM – 6:00 PM", location: "Robarts Arena, 3000 Ringling Blvd, Sarasota, FL 34237", description: "Dr. Jared Caban will be at the inaugural NXF Classic & Forge Wellness Festival offering complimentary soft-tissue bodywork and movement assessments. Come say hello!", link: "", free: true },
+      { id: "integrative-health-2027", title: "Integrative Health Event — Dr. Caban Speaking", date: "2027-01-01", time: "TBA", location: "Sarasota, FL", description: "Dr. Jared Caban is a featured speaker at the Integrative Health Event. Exact date and details coming soon.", link: "", free: false }
     ]
   };
 }
