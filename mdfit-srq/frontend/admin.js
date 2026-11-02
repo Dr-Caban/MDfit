@@ -51,7 +51,7 @@
       msg.className = "form-msg err"; msg.textContent = err.message;
     }
   });
-  function logout() { token = ""; session.set(""); $("#app").hidden = true; $("#login").hidden = false; }
+  function logout() { token = ""; session.set(""); $("#app").hidden = true; $("#login").hidden = false; if (window.MDFitRT) MDFitRT.disconnect(); }
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
@@ -64,7 +64,24 @@
     $$("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== name));
     run(loaders[name])();
   }
-  function show() { $("#login").hidden = true; $("#app").hidden = false; openTab(current); }
+  function show() {
+    $("#login").hidden = true; $("#app").hidden = false; openTab(current);
+    if (window.MDFitRT) {
+      MDFitRT.connect({ namespace: "/admin", token });
+      MDFitRT.on("activity", (ev) => {
+        if (current === "dash") run(loadDash)();
+        if (ev.type === "appointment" || ev.type === "appointment_cancelled") { if (current === "appts") run(loadAppts)(); }
+        if (ev.type === "booking" || ev.type === "booking_cancelled") { if (current === "bookings") run(loadBookings)(); }
+        if (ev.type === "lead") { if (current === "leads") run(loadLeads)(); }
+        if (ev.type === "subscribe") { if (current === "subs") run(loadSubs)(); }
+        if (ev.type === "feedback" || ev.type === "bug_report" || ev.type === "suggestion") { if (current === "feedback") run(loadFeedback)(); }
+      });
+      MDFitRT.on("new_message", () => {
+        if (current === "messages") run(loadThreads)();
+        else pollBadges();
+      });
+    }
+  }
 
   const table = (el, head, rows, empty) => {
     el.innerHTML = `<thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${
@@ -471,7 +488,12 @@
     }));
   }
   $("#msg-threads").addEventListener("click", (e) => { const r = e.target.closest("[data-cid]"); if (r) { showThread(r.dataset.cid).then(loadThreads); } });
-  setInterval(() => { if (token && !document.hidden) api("GET", "/api/admin/messages").then((d) => { const c = $("#admin-msg-count"); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {}); }, 60000);
+  function pollBadges() {
+    if (!token) return;
+    api("GET", "/api/admin/messages").then((d) => { const c = $("#admin-msg-count"); c.hidden = !d.unread; c.textContent = d.unread; }).catch(() => {});
+    api("GET", "/api/admin/feedback-reports").then((d) => { const c = $("#admin-fb-count"); c.hidden = !d.open; c.textContent = d.open; }).catch(() => {});
+  }
+  setInterval(() => { if (token && !document.hidden) pollBadges(); }, 60000);
 
   // ---- Reviews from the website
   async function loadReviews() {
@@ -524,8 +546,7 @@
   }));
   $("#fb-filter-kind").addEventListener("change", loadFeedback);
   $("#fb-filter-status").addEventListener("change", loadFeedback);
-  // Poll for new feedback like we do for messages
-  setInterval(() => { if (token && !document.hidden) api("GET", "/api/admin/feedback-reports").then((d) => { const c = $("#admin-fb-count"); c.hidden = !d.open; c.textContent = d.open; }).catch(() => {}); }, 60000);
+  // Feedback badge polling now handled by pollBadges()
 
   // ---- Members: requests, tiers, 1-on-1 scheduling
   let contentCache = null;

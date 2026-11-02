@@ -2,6 +2,7 @@
 (() => {
   const { $, $$, esc, auth, apiAuth, api, wire, fmtDate, fmtTime, todayInTz, addDays, zonedToUtc, icsStamp, AREAS, loadSite } = window.MDFit;
   if (!auth.get()) { location.replace("/login?next=" + encodeURIComponent("/account" + location.hash)); return; }
+  if (window.MDFitRT) { MDFitRT.connect({ namespace: "/member", token: auth.get().token }); MDFitRT.on("new_message", () => { const pollUnread = () => window.MDFit.apiAuth("GET", "/api/me/messages/unread-count").then((r) => { const b = document.querySelector("#msg-badge"); if (b) { b.hidden = !r.unread; b.textContent = r.unread > 9 ? "9+" : r.unread; } }).catch(() => {}); pollUnread(); }); }
   const EX = window.MDFIT_EXERCISES || [], INTROS = window.MDFIT_INTROS || {}, Gen = window.MDFitGen;
 
   const ADDRESS = "3214 Clark Road, Sarasota, FL 34231";

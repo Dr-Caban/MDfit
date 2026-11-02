@@ -15,6 +15,7 @@ const { mountMessages } = require("./lib/messages");
 const { mountIntake, MASSAGE_TYPES } = require("./lib/intake");
 const { mountFeedbackReports } = require("./lib/feedback-reports");
 const { mountAnalytics } = require("./lib/analytics");
+const { createRealtime } = require("./lib/realtime");
 const { mountPayments } = require("./lib/payments");
 const { createSecurity } = require("./lib/security");
 const { createCalSync } = require("./lib/calsync");
@@ -202,6 +203,8 @@ function createApp(cfg = loadConfig()) {
     list.unshift({ time: new Date().toISOString(), type, ...detail });
     store.write("activity", list.slice(0, ACTIVITY_MAX));
     logger.info("activity", { type, ...detail, email: detail.email ? mask(detail.email) : undefined });
+    const rt = app.get("rt");
+    if (rt) rt.emitActivity(type, detail);
   }
 
   // ---- Cal.com: username + event types for the embed. Cached in memory, last good copy kept on disk
@@ -1026,9 +1029,14 @@ function createApp(cfg = loadConfig()) {
 }
 
 if (require.main === module) {
+  const http = require("http");
   const cfg = loadConfig();
   const port = Number(process.env.PORT) || 3000;
-  createApp(cfg).listen(port, () => logger.info("listening", { port, dataDir: cfg.dataDir, tz: cfg.tz, origins: cfg.origins, email: Boolean(cfg.resendKey && cfg.notifyFrom) }));
+  const app = createApp(cfg);
+  const server = http.createServer(app);
+  const rt = createRealtime(server, cfg);
+  app.set("rt", rt);
+  server.listen(port, () => logger.info("listening", { port, dataDir: cfg.dataDir, tz: cfg.tz, origins: cfg.origins, email: Boolean(cfg.resendKey && cfg.notifyFrom) }));
 }
 
 module.exports = { createApp, loadConfig, nowParts, addDays, weekday, toCsv };

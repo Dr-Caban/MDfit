@@ -72,6 +72,8 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
     const list = all(); list.push(m); write(list);
     activity("message", { email: c.email });
     notify.owner(`New message from ${c.name}`, `${c.name} (${c.email}) sent you a message in the MD Fit app.\n\nRead and reply in Admin → Messages:\n${cfg.siteUrl || ""}/admin`);
+    const rt = app.get("rt");
+    if (rt) rt.emitToAdmin("new_message", { clientId: c.id, clientName: c.name, at: m.at });
     res.status(201).json(view(m));
   });
 
@@ -103,6 +105,8 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
     const m = { id: id(), clientId: c.id, from: "doctor", body: C.enc(bodyOf(req.body)), at: new Date().toISOString(), readAt: null };
     const list = all(); list.push(m); write(list);
     notify.client(c.email, "Dr. Jared replied to your message", `Hi ${c.name.split(" ")[0]},\n\nDr. Jared answered your message. Read it in the MD Fit app:\n${cfg.siteUrl || ""}/account#messages\n\nMD Fit`);
+    const rt = app.get("rt");
+    if (rt) rt.emitToClient(c.id, "new_message", { from: "doctor", at: m.at });
     res.status(201).json(view(m));
   });
 }
