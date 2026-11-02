@@ -792,6 +792,28 @@
   });
   $("#logout").addEventListener("click", () => { auth.clear(); location.href = "/"; });
 
+  async function loadReferral() {
+    try {
+      const r = await apiAuth("GET", "/api/me/referral");
+      if (r.code) {
+        $("#ref-code").textContent = r.code;
+        $("#ref-stats").textContent = r.referrals ? `${r.referrals} friend${r.referrals === 1 ? "" : "s"} signed up with your code` : "No one has used your code yet — share it!";
+      }
+    } catch {}
+  }
+  $("#copy-ref").addEventListener("click", () => {
+    const code = $("#ref-code").textContent;
+    if (!code || code === "—") return;
+    navigator.clipboard.writeText(code).then(() => { toast("Referral code copied!"); $("#copy-ref").textContent = "Copied"; setTimeout(() => ($("#copy-ref").textContent = "Copy"), 2000); }).catch(() => toast("Couldn't copy — long-press the code to select it."));
+  });
+  $("#share-ref").addEventListener("click", () => {
+    const code = $("#ref-code").textContent;
+    if (!code || code === "—") return;
+    const url = `${location.origin}/login?ref=${code}&signup`;
+    if (navigator.share) navigator.share({ title: "Join MD Fit", text: `Sign up with my referral code ${code} and get 3 months free!`, url }).catch(() => {});
+    else navigator.clipboard.writeText(url).then(() => toast("Share link copied!")).catch(() => toast("Couldn't copy the link."));
+  });
+
   async function loadAppointments() {
     appts = await apiAuth("GET", "/api/me/appointments");
     $("#p-appts").innerHTML = appts.upcoming.map((a) => apptLi(a, { cancel: true, cal: true })).join("") ||
@@ -1640,7 +1662,7 @@
       renderProfile(); renderPlan();
     } catch (err) { toast("Couldn't reach MD Fit right now. Call 941-313-0562 if you need help."); return; }
     const [s, , , sched, wl, lb] = await Promise.allSettled([
-      apiAuth("GET", "/api/me/stats"), loadAppointments(), loadPain(), api("/api/schedule?days=14"), apiAuth("GET", "/api/me/workouts"), apiAuth("GET", "/api/me/library")
+      apiAuth("GET", "/api/me/stats"), loadAppointments(), loadPain(), api("/api/schedule?days=14"), apiAuth("GET", "/api/me/workouts"), apiAuth("GET", "/api/me/library"), loadReferral()
     ]);
     if (s.status === "fulfilled") stats = s.value;
     if (sched.status === "fulfilled") classes = sched.value.sessions || [];

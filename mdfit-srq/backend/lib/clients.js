@@ -11,6 +11,13 @@ const RESET_HOURS = 24;
 const GUIDE_IDS = ["posterior-neck", "scalenes", "rotator-cuff", "iliopsoas", "lateral-hip", "quads", "calf"];
 const PAIN_LOG_MAX = 1000;
 const WORKOUT_LOG_MAX = 2000;
+const FREE_MONTHS = 3;
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/tokeninfo";
+
+function generateReferralCode(name) {
+  const prefix = name.replace(/[^a-zA-Z]/g, "").slice(0, 4).toUpperCase() || "MDFT";
+  return prefix + crypto.randomBytes(3).toString("hex").toUpperCase();
+}
 const FAVORITES_MAX = 500;
 const PROGRAMS_MAX = 50;
 const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
@@ -88,7 +95,10 @@ function mountClients(ctx) {
   const loginFails = limiter(10, 15 * 60 * 1000);
 
   const activeMembership = (c) => (c.membership && (!c.membership.until || c.membership.until >= today()) ? c.membership : null);
-  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c) });
+  const referrals = () => store.read("referrals", []);
+  const saveReferrals = (list) => store.write("referrals", list);
+
+  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c), referralCode: c.referralCode || null, freeUntil: c.freeUntil || null });
   const session = (c) => {
     const exp = Date.now() + SESSION_DAYS * 864e5;
     return { token: signToken({ sub: c.id, role: "client", pwv: c.pwv || 0, exp }, cfg.sessionSecret), expiresAt: new Date(exp).toISOString(), client: pub(c) };
@@ -114,17 +124,39 @@ function mountClients(ctx) {
     const b = req.body || {};
     if (b.company) return res.status(201).json({ ok: true });
     const email = emailOf(b.email);
-    const c = {
-      id: id(), email, name: text(b.name, "Name", { min: 2, max: 100 }), phone: phoneOf(b.phone),
-      passwordHash: hashPassword(passwordOf(b.password)), pwv: 0, plan: emptyPlan(), painLog: [],
-      createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
-    };
+    const name = text(b.name, "Name", { min: 2, max: 100 });
     const list = clients();
     if (list.some((x) => x.email === email)) return res.status(409).json({ error: "There's already an account with that email. Log in instead." });
+
+    let code = generateReferralCode(name);
+    while (list.some((x) => x.referralCode === code)) code = generateReferralCode(name);
+
+    const c = {
+      id: id(), email, name, phone: phoneOf(b.phone),
+      passwordHash: hashPassword(passwordOf(b.password)), pwv: 0, plan: emptyPlan(), painLog: [],
+      referralCode: code, referredBy: null, freeUntil: null,
+      createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
+    };
+
+    const refCode = text(b.referralCode, "Referral code", { max: 20 });
+    if (refCode) {
+      const referrer = list.find((x) => x.referralCode === refCode);
+      if (referrer) {
+        c.referredBy = referrer.id;
+        const freeEnd = addDay(today(), FREE_MONTHS * 30);
+        c.freeUntil = freeEnd;
+        const refs = referrals();
+        refs.push({ id: id(), referrerId: referrer.id, referredId: c.id, referredEmail: email, freeUntil: freeEnd, createdAt: new Date().toISOString() });
+        saveReferrals(refs);
+        activity("referral_used", { referrer: referrer.email, referred: email });
+      }
+    }
+
     list.push(c);
     save(list);
     activity("client_signup", { email });
-    notify.owner(`New client account: ${c.name}`, `${c.name}\n${c.email}\n${c.phone || "(no phone)"}`);
+    const refNote = c.referredBy ? `\nReferred by: ${list.find((x) => x.id === c.referredBy)?.name || "unknown"}` : "";
+    notify.owner(`New client account: ${c.name}`, `${c.name}\n${c.email}\n${c.phone || "(no phone)"}${refNote}`);
     res.status(201).json(session(c));
   });
 
@@ -170,6 +202,68 @@ function mountClients(ctx) {
     save(list);
     activity("client_password_reset", { email: c.email });
     res.json(session(c));
+  });
+
+  // Google sign-in
+  app.post("/api/clients/google", signupLimit.mw, async (req, res) => {
+    if (!ready) return notReady(res);
+    const googleClientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
+    if (!googleClientId) return res.status(503).json({ error: "Google sign-in isn't configured on the server." });
+    const credential = String((req.body && req.body.credential) || "");
+    if (!credential) return res.status(400).json({ error: "Missing Google credential." });
+
+    let gUser;
+    try {
+      const r = await fetch(`${GOOGLE_TOKEN_URL}?id_token=${encodeURIComponent(credential)}`);
+      gUser = await r.json();
+      if (!r.ok || gUser.aud !== googleClientId) throw new Error("Invalid token");
+    } catch (err) {
+      logger.warn("google_signin_failed", { error: err.message });
+      return res.status(401).json({ error: "Google sign-in failed. Try again." });
+    }
+
+    const email = (gUser.email || "").toLowerCase();
+    if (!email || !gUser.email_verified) return res.status(400).json({ error: "Google account has no verified email." });
+
+    const list = clients();
+    let c = list.find((x) => x.email === email);
+
+    if (c) {
+      c.lastLoginAt = new Date().toISOString();
+      if (!c.googleSub) c.googleSub = gUser.sub;
+      save(list);
+      return res.json(session(c));
+    }
+
+    const name = gUser.name || email.split("@")[0];
+    let code = generateReferralCode(name);
+    while (list.some((x) => x.referralCode === code)) code = generateReferralCode(name);
+
+    c = {
+      id: id(), email, name, phone: "",
+      passwordHash: null, googleSub: gUser.sub, pwv: 0, plan: emptyPlan(), painLog: [],
+      referralCode: code, referredBy: null, freeUntil: null,
+      createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
+    };
+
+    const refCode = text(req.body.referralCode, "Referral code", { max: 20 });
+    if (refCode) {
+      const referrer = list.find((x) => x.referralCode === refCode);
+      if (referrer) {
+        c.referredBy = referrer.id;
+        c.freeUntil = addDay(today(), FREE_MONTHS * 30);
+        const refs = referrals();
+        refs.push({ id: id(), referrerId: referrer.id, referredId: c.id, referredEmail: email, freeUntil: c.freeUntil, createdAt: new Date().toISOString() });
+        saveReferrals(refs);
+        activity("referral_used", { referrer: referrer.email, referred: email });
+      }
+    }
+
+    list.push(c);
+    save(list);
+    activity("client_signup", { email, via: "google" });
+    notify.owner(`New client account (Google): ${c.name}`, `${c.name}\n${c.email}`);
+    res.status(201).json(session(c));
   });
 
   // ================= Client dashboard =================
@@ -337,6 +431,19 @@ function mountClients(ctx) {
     mergeVitals(c, rows, text(b.source || "Health app", "Source", { max: 40 }));
     save(list);
     res.status(201).json({ saved: rows.length, total: c.vitals.length });
+  });
+
+  me.get("/referral", (req, res) => {
+    const list = clients();
+    const c = list.find((x) => x.id === req.client.id);
+    if (!c.referralCode) {
+      let code = generateReferralCode(c.name);
+      while (list.some((x) => x.referralCode === code)) code = generateReferralCode(c.name);
+      c.referralCode = code;
+      save(list);
+    }
+    const refs = referrals().filter((r) => r.referrerId === c.id);
+    res.json({ code: c.referralCode, freeUntil: c.freeUntil || null, referrals: refs.length, freeMonths: FREE_MONTHS });
   });
 
   me.get("/stats", (req, res) => {

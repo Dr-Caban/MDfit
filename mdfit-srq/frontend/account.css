@@ -99,3 +99,8 @@
   .pain-form { grid-template-columns: 1fr; }
   .acct-nav .btn-ghost { padding: 9px 12px; }
 }
+
+/* Google sign-in divider */
+.or-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--muted, #8899aa); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+.or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--line, #1e344e); }
+.g-btn-wrap { display: flex; justify-content: center; min-height: 44px; }

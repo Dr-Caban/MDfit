@@ -462,7 +462,7 @@ function createApp(cfg = loadConfig()) {
     const calData = booking.provider === "cal" ? await calInfo(s) : null;
     res.set("Cache-Control", "no-cache");
     res.json({
-      settings: pub, timeZone: cfg.tz,
+      settings: pub, timeZone: cfg.tz, googleClientId: (process.env.GOOGLE_CLIENT_ID || "").trim() || null,
       booking: { provider: calData ? "cal" : "builtin", cal: calData },
       // Small-group classes are off the public site for now
       options: { goals: GOALS, services: SERVICES.filter((x) => x !== "Group classes"), areas: AREAS, durations: DURATIONS, surgery: SURGERY },

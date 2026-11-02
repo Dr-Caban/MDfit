@@ -14,6 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=0b38bd9e">
   <link rel="stylesheet" href="account.css?v=76f2d405">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="auth-page">
   <main class="auth-wrap">
@@ -30,6 +31,8 @@
         <label>Email<input name="email" type="email" required autocomplete="username"></label>
         <label>Password<input name="password" type="password" required minlength="8" autocomplete="current-password"></label>
         <button class="btn btn-lg btn-block" type="submit">Log in</button>
+        <div class="or-divider"><span>or</span></div>
+        <div id="g-login-btn" class="g-btn-wrap"></div>
         <button type="button" class="link-btn" data-mode="forgot">Forgot password?</button>
         <p class="form-msg" role="status"></p>
       </form>
@@ -41,9 +44,12 @@
         <label>Email<input name="email" type="email" required autocomplete="email"></label>
         <label>Mobile phone<input name="phone" type="tel" maxlength="30" autocomplete="tel"></label>
         <label>Password (8+ characters)<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+        <label>Referral code <span class="muted">(optional)</span><input name="referralCode" maxlength="20" placeholder="e.g. JARE1A2B3C" autocomplete="off"></label>
         <input name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
         <p class="fine">By creating an account you agree to the <a href="/terms">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>
         <button class="btn btn-lg btn-block" type="submit">Create account</button>
+        <div class="or-divider"><span>or</span></div>
+        <div id="g-signup-btn" class="g-btn-wrap"></div>
         <p class="fine">Already booked with us? Use the same email and your appointments show up automatically.</p>
         <p class="form-msg" role="status"></p>
       </form>
@@ -93,8 +99,44 @@
       wire($("#forgot-form"), (d) => api("/api/clients/forgot", d));
       wire($("#reset-form"), async (d) => done(await api("/api/clients/reset", { ...d, token: q.get("reset") })), { reset: false });
 
+      const ref = q.get("ref");
+      if (ref) { const ri = $("#signup-form [name=referralCode]"); if (ri) ri.value = ref; }
+
       if (q.get("reset")) { auth.clear(); mode("reset"); }
-      else if (q.get("signup") !== null) mode("signup");
+      else if (q.get("signup") !== null || ref) mode("signup");
+
+      // Google sign-in
+      (async () => {
+        let GID;
+        try { const s = await api("/api/site"); GID = s.googleClientId; } catch {}
+        if (!GID) return;
+
+        function onGoogleLoad() {
+          google.accounts.id.initialize({
+            client_id: GID,
+            callback: async (resp) => {
+              const msg = $("[data-panel]:not([hidden]) .form-msg");
+              try {
+                const refInput = $("#signup-form [name=referralCode]");
+                const body = { credential: resp.credential };
+                if (refInput && refInput.value) body.referralCode = refInput.value;
+                const sess = await api("/api/clients/google", body);
+                done(sess);
+              } catch (err) {
+                if (msg) { msg.className = "form-msg err"; msg.textContent = err.message; }
+              }
+            }
+          });
+          function renderBtn(el) {
+            if (!el) return;
+            google.accounts.id.renderButton(el, { theme: "outline", size: "large", width: el.offsetWidth || 320, text: "continue_with" });
+          }
+          renderBtn(document.getElementById("g-login-btn"));
+          renderBtn(document.getElementById("g-signup-btn"));
+        }
+        if (window.google && google.accounts) onGoogleLoad();
+        else window.addEventListener("load", () => { if (window.google && google.accounts) onGoogleLoad(); });
+      })();
     })();
   </script>
 <script defer src="/_vercel/insights/script.js"></script>
