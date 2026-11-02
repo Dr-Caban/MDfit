@@ -977,19 +977,24 @@
   function renderOpts() {
     $$("#p-opts [data-opt]").forEach((b) => { const on = !!P.opt[b.dataset.opt]; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
   }
+  function goFs(el) { const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen; if (rfs) rfs.call(el).catch(() => {}); }
   function startPlayer(w) {
     P.w = w; P.steps = buildSteps(w); P.i = 0; P.start = Date.now(); P.done = false; P.paused = false; P.log = {};
-    $("#player").hidden = false;
+    const pl = $("#player");
+    pl.hidden = false;
     document.body.style.overflow = "hidden";
     clearInterval(P.tick);
     P.tick = setInterval(onTick, 1000);
     $("#p-timer").textContent = "0:00";
     renderOpts();
     renderStep();
+    goFs(pl);
   }
+  function exitFs() { const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen || d.msExitFullscreen || (() => {})).call(d); }
   function closePlayer() {
     clearInterval(P.tick);
     const v = $("#p-video"); if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
+    exitFs();
     $("#player").hidden = true;
     $("#p-body").innerHTML = "";
     document.body.style.overflow = "";

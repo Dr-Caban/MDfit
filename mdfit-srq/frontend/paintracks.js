@@ -36,11 +36,15 @@
   // Stream the Drive MP4 directly so it autoplays; each clip plays twice, then the next video in the track starts.
   const LOOPS = 2;
   const mp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
+  function goFullscreen(el) {
+    const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (rfs) rfs.call(el).catch(() => {});
+  }
   function play(btn) {
     const f = dlg.querySelector(".tk-frame"), sc = f.querySelector(".tk-screen");
     f.hidden = false;
     const id = btn.dataset.vid;
-    sc.innerHTML = `<video playsinline muted autoplay controls preload="auto"></video>`;
+    sc.innerHTML = `<video playsinline autoplay controls preload="auto"></video>`;
     const vid = sc.querySelector("video");
     let plays = 0;
     vid.addEventListener("error", () => { sc.innerHTML = `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(id)}/preview" title="Exercise video" allow="autoplay; fullscreen" allowfullscreen></iframe>`; }, { once: true });
@@ -48,15 +52,17 @@
       if (++plays < LOOPS) { vid.currentTime = 0; vid.play().catch(() => {}); return; }
       if (!f.querySelector(".tk-auto input").checked) return;
       const all = [...dlg.querySelectorAll("[data-vid]")], nx = all[all.indexOf(btn) + 1];
-      if (nx) play(nx); else f.querySelector(".tk-now").textContent = "Track complete. Nice work.";
+      if (nx) play(nx); else { exitFs(); f.querySelector(".tk-now").textContent = "Track complete. Nice work."; }
     });
     vid.src = mp4(id);
-    vid.play().catch(() => {});
+    vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+    goFullscreen(f);
     const all = [...dlg.querySelectorAll("[data-vid]")];
     f.querySelector(".tk-now").innerHTML = `<b>${all.indexOf(btn) + 1} of ${all.length}</b> · ${btn.dataset.name.replace(/[<>&]/g, "")}`;
     all.forEach((b) => b.classList.toggle("on", b === btn));
     if (btn !== all[0]) btn.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
+  function exitFs() { const d = document; (d.exitFullscreen || d.webkitExitFullscreen || d.msExitFullscreen || (() => {})).call(d); }
 
   function open(id, opts = {}) {
     const t = TRACKS.find((x) => x.id === id);
