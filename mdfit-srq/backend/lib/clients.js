@@ -624,6 +624,18 @@ function mountClients(ctx) {
     res.json({ url: resetUrl(c), hours: RESET_HOURS });
   });
 
+  admin.post("/clients/:id/send-reset-code", (req, res) => {
+    const c = clients().find((x) => x.id === req.params.id);
+    if (!c) return res.status(404).json({ error: "Client not found." });
+    if (!notify.enabled) return res.status(503).json({ error: "Email isn't configured (RESEND_API_KEY)." });
+    const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
+    resetCodes.set(c.email, { code, exp: Date.now() + RESET_CODE_TTL, tries: 0 });
+    notify.client(c.email, `${code} — your MD Fit reset code`,
+      `Hi ${c.name.split(" ")[0]},\n\nYour password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.\n\nMD Fit`);
+    activity("admin_sent_reset_code", { email: c.email });
+    res.json({ ok: true, message: `Reset code sent to ${c.email}.` });
+  });
+
   admin.delete("/clients/:id", (req, res) => {
     const list = clients();
     const next = list.filter((x) => x.id !== req.params.id);

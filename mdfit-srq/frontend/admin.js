@@ -306,7 +306,7 @@
       <button type="button" class="mini" data-back>← All clients</button>
       <div class="client-head"><div><h2>${esc(c.name)}</h2>
         <p class="muted"><a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.phone ? ` · <a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ""} · joined ${when(c.createdAt)}${c.lastLoginAt ? ` · last login ${when(c.lastLoginAt)}` : ""}</p></div>
-        <div class="client-actions"><button type="button" class="mini" data-reset>Copy password-reset link</button><button type="button" class="mini danger" data-delete>Delete account</button></div></div>
+        <div class="client-actions"><button type="button" class="mini" data-reset>Send reset code</button><button type="button" class="mini danger" data-delete>Delete account</button></div></div>
       <div class="client-grid">
         <form class="form" id="plan-form" novalidate>
           <h2>Plan</h2>
@@ -330,9 +330,8 @@
 
     $("[data-back]", box).addEventListener("click", run(loadClients));
     $("[data-reset]", box).addEventListener("click", run(async () => {
-      const r = await api("POST", `/api/admin/clients/${id}/reset-link`);
-      try { await navigator.clipboard.writeText(r.url); toast(`Reset link copied (works for ${r.hours} hours). Text it to the client.`); }
-      catch { prompt("Send this link to the client:", r.url); }
+      const r = await api("POST", `/api/admin/clients/${id}/send-reset-code`);
+      toast(r.message);
     }));
     $("[data-delete]", box).addEventListener("click", run(async () => {
       if (!confirm(`Delete ${c.name}'s account? Their appointments stay; their plan and pain log are removed.`)) return;
