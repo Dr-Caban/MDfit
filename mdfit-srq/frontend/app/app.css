@@ -914,3 +914,9 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .pc-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: linear-gradient(135deg, #10233b, #0A1A2E); margin: -14px -14px 10px; }
 .prog-head-img { padding-top: 0; overflow: hidden; }
 .ph-img { width: 100%; aspect-ratio: 16/6; object-fit: cover; display: block; background: linear-gradient(135deg, #10233b, #0A1A2E); margin: -16px -16px 10px; }
+/* Member Profile: Help us improve card */
+.fb-tabs { display: flex; gap: 6px; background: var(--card-2); padding: 4px; border-radius: 10px; margin: 10px 0; }
+.fb-tab { flex: 1; border: 0; background: none; padding: 8px 10px; border-radius: 8px; font: 600 13.5px var(--body); color: var(--muted); cursor: pointer; }
+.fb-tab[aria-selected="true"] { background: var(--card); color: var(--navy); box-shadow: 0 1px 3px rgba(10,26,46,.08); }
+#fb-mine-wrap { margin-top: 10px; }
+#fb-mine .pill { font-size: 10.5px; margin-left: 6px; }

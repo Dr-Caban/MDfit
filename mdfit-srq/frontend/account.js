@@ -880,6 +880,45 @@
     });
   }
 
+  // Bug reports & feature suggestions (member profile card). Admin sees them under Admin -> Feedback.
+  const fbForm = $("#fb-form");
+  if (fbForm) {
+    const titleLabel = { bug: "What went wrong, in one line?", suggestion: "Your idea, in one line" };
+    const bodyLabel = { bug: "Details (what you did, what happened, what you expected)", suggestion: "Describe your suggestion in more detail" };
+    const setKind = (k) => {
+      fbForm.kind.value = k;
+      $("#fb-title-label").textContent = titleLabel[k];
+      $("#fb-body-label").textContent = bodyLabel[k];
+      $$("#fb-form").forEach(() => {});
+      $$(".fb-tab").forEach((b) => b.setAttribute("aria-selected", b.dataset.fbKind === k));
+    };
+    $$(".fb-tab").forEach((b) => b.addEventListener("click", () => setKind(b.dataset.fbKind)));
+    async function loadMine() {
+      try {
+        const list = await apiAuth("GET", "/api/me/feedback-reports");
+        $("#fb-count").textContent = list.length;
+        $("#fb-mine-wrap").hidden = !list.length;
+        $("#fb-mine").innerHTML = list.map((r) => `<li><div><b>${esc(r.title)}</b><span class="pill ${r.kind}">${r.kind}</span> <span class="pill ${r.status}">${r.status}</span></div><small>${fmtDate(r.createdAt.slice(0, 10))}</small></li>`).join("");
+      } catch {}
+    }
+    let fbSending = false;
+    fbForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (fbSending) return; // guard against double-fire
+      const msg = $(".form-msg", fbForm), btn = $("button[type=submit]", fbForm);
+      if (!fbForm.title.value.trim() || !fbForm.body.value.trim()) { msg.className = "form-msg err"; msg.textContent = "Fill in both fields."; return; }
+      fbSending = true; btn.disabled = true; msg.className = "form-msg"; msg.textContent = "Sending…";
+      try {
+        await apiAuth("POST", "/api/me/feedback-reports", { kind: fbForm.kind.value, title: fbForm.title.value, body: fbForm.body.value, page: location.hash || "/account", userAgent: navigator.userAgent });
+        msg.className = "form-msg ok"; msg.textContent = fbForm.kind.value === "bug" ? "Thanks. Dr. Jared will take a look." : "Thanks for the idea. Dr. Jared reads every one.";
+        fbForm.reset(); fbForm.kind.value = $(".fb-tab[aria-selected=true]").dataset.fbKind;
+        loadMine();
+      } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+      fbSending = false; btn.disabled = false;
+    });
+    loadMine();
+  }
+
   // Install as an app: Android/desktop Chrome get a button; iPhone gets Share → Add to Home Screen
   let installEvt = null;
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;

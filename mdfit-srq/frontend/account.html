@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=442d75dd">
+  <link rel="stylesheet" href="app/app.css?v=133dff3e">
   <link rel="stylesheet" href="guides.css?v=0f55d5cd">
 </head>
 <body class="mdapp">
@@ -375,6 +375,23 @@
         </details>
       </div>
 
+      <div class="card">
+        <div class="card-head"><span class="label accent">Help us improve</span></div>
+        <p class="small muted" id="fb-intro">Found a bug? Have an idea for a feature? Dr. Jared reads every one.</p>
+        <div class="fb-tabs" role="tablist" aria-label="Feedback kind">
+          <button type="button" role="tab" class="fb-tab" data-fb-kind="bug" aria-selected="true">Report a bug</button>
+          <button type="button" role="tab" class="fb-tab" data-fb-kind="suggestion" aria-selected="false">Suggest a feature</button>
+        </div>
+        <form id="fb-form" class="stack-form" novalidate>
+          <input type="hidden" name="kind" value="bug">
+          <label><span id="fb-title-label">What went wrong, in one line?</span><input name="title" class="input" required minlength="2" maxlength="100" autocomplete="off"></label>
+          <label><span id="fb-body-label">Details (what you did, what happened, what you expected)</span><textarea name="body" class="input" required minlength="2" maxlength="4000" rows="4"></textarea></label>
+          <button class="btn-gold sm" type="submit">Send</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+        <details class="sub" id="fb-mine-wrap"><summary>What I've sent (<span id="fb-count">0</span>)</summary><ul class="activity" id="fb-mine"></ul></details>
+      </div>
+
       <div class="card install" id="install-card">
         <div class="card-head"><span class="label accent">Get the app</span></div>
         <p class="small" id="install-text">Add MD Fit to your home screen for one-tap access.</p>
@@ -474,6 +491,6 @@
   <script src="paintracks.js?v=1c44032f"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
-  <script src="account.js?v=b7a145b3"></script>
+  <script src="account.js?v=000c7761"></script>
 </body>
 </html>

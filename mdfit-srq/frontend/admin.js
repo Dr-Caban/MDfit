@@ -55,7 +55,7 @@
   $("#logout").addEventListener("click", logout);
 
   // ---- Tabs
-  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, audit: loadAudit, messages: loadThreads, members: loadMembers, content: loadContent, settings: loadSettings };
+  const loaders = { dash: loadDash, clients: loadClients, appts: loadAppts, hours: loadHours, leads: loadLeads, classes: loadClasses, bookings: loadBookings, subs: loadSubs, reviews: loadReviews, audit: loadAudit, messages: loadThreads, members: loadMembers, content: loadContent, settings: loadSettings, feedback: loadFeedback };
   let current = "dash";
   $$(".tabs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   function openTab(name) {
@@ -490,6 +490,42 @@
     const b = e.target.closest("[data-st]"); if (!b) return;
     await api("PATCH", `/api/admin/feedback/${b.closest("[data-id]").dataset.id}`, { status: b.dataset.st }); toast("Updated."); loadReviews();
   }));
+
+  // ---- Feedback: bug reports and suggestions from members
+  async function loadFeedback() {
+    const kind = $("#fb-filter-kind").value, status = $("#fb-filter-status").value;
+    const q = new URLSearchParams(); if (kind) q.set("kind", kind); if (status) q.set("status", status);
+    const d = await api("GET", "/api/admin/feedback-reports" + (q.toString() ? "?" + q : ""));
+    const c = $("#admin-fb-count"); c.hidden = !d.open; c.textContent = d.open;
+    $("#feedback-list").innerHTML = d.reports.length ? d.reports.map((r) => `
+      <article class="item" data-id="${r.id}">
+        <div class="item-head"><b>${esc(r.title)}</b>
+          <span class="pill ${r.kind}">${r.kind === "bug" ? "Bug" : "Suggestion"}</span>
+          <span class="pill ${r.status}">${r.status}</span>
+          <span class="muted">${when(r.createdAt)}</span></div>
+        <p>${esc(r.body)}</p>
+        <p class="muted small">${esc(r.clientName)} &lt;${esc(r.clientEmail)}&gt;${r.page ? ` · from ${esc(r.page)}` : ""}${r.userAgent ? ` · ${esc(String(r.userAgent).slice(0, 80))}` : ""}${r.resolvedAt ? ` · resolved ${when(r.resolvedAt)}` : ""}</p>
+        <div class="row-actions">
+          ${r.status !== "working" ? `<button class="mini" data-st="working">Mark working</button>` : ""}
+          ${r.status !== "resolved" ? `<button class="mini" data-st="resolved">Mark resolved</button>` : ""}
+          ${r.status === "resolved" ? `<button class="mini" data-st="new">Reopen</button>` : ""}
+          <button class="mini danger" data-del>Delete</button>
+        </div>
+      </article>`).join("") : `<p class="muted">No feedback yet. Members submit it from Account → Profile → Help us improve.</p>`;
+  }
+  $("#feedback-list").addEventListener("click", run(async (e) => {
+    const card = e.target.closest("[data-id]"); if (!card) return;
+    if (e.target.matches("[data-del]")) {
+      if (!confirm("Delete this report? This can't be undone.")) return;
+      await api("DELETE", `/api/admin/feedback-reports/${card.dataset.id}`); toast("Deleted."); loadFeedback(); return;
+    }
+    const st = e.target.closest("[data-st]"); if (!st) return;
+    await api("PATCH", `/api/admin/feedback-reports/${card.dataset.id}`, { status: st.dataset.st }); toast("Updated."); loadFeedback();
+  }));
+  $("#fb-filter-kind").addEventListener("change", loadFeedback);
+  $("#fb-filter-status").addEventListener("change", loadFeedback);
+  // Poll for new feedback like we do for messages
+  setInterval(() => { if (token && !document.hidden) api("GET", "/api/admin/feedback-reports").then((d) => { const c = $("#admin-fb-count"); c.hidden = !d.open; c.textContent = d.open; }).catch(() => {}); }, 60000);
 
   // ---- Members: requests, tiers, 1-on-1 scheduling
   let contentCache = null;

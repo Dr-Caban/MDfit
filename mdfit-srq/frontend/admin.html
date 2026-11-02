@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=37b461f0">
-  <link rel="stylesheet" href="admin.css?v=700ae282">
+  <link rel="stylesheet" href="admin.css?v=51dbaf9e">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -40,6 +40,7 @@
           <button data-tab="subs">Subscribers</button>
           <button data-tab="messages">Messages <span class="pill pending" id="admin-msg-count" hidden></span></button>
           <button data-tab="reviews">Reviews</button>
+          <button data-tab="feedback">Feedback <span class="pill pending" id="admin-fb-count" hidden></span></button>
           <button data-tab="members">Members</button>
           <button data-tab="content">Content</button>
           <button data-tab="hours">Booking</button>
@@ -195,7 +196,16 @@
         <div id="reviews-list" class="stack"></div>
       </section>
 
-      <section data-panel="members" hidden>
+      <section data-panel="feedback" hidden>
+        <p class="muted">Bug reports and suggestions from members, from Account → Profile → Help us improve. Mark as working or resolved; delete spam.</p>
+        <div class="bar">
+          <select id="fb-filter-kind"><option value="">All kinds</option><option value="bug">Bugs</option><option value="suggestion">Suggestions</option></select>
+          <select id="fb-filter-status"><option value="">All statuses</option><option value="new">New</option><option value="working">Working</option><option value="resolved">Resolved</option></select>
+        </div>
+        <div id="feedback-list" class="stack"></div>
+      </section>
+
+            <section data-panel="members" hidden>
         <p class="muted">Membership requests and members. Turn a membership on after payment; set "paid through" so it locks again if they stop paying. Schedule 1-on-1 requests here (paste a Google Meet or Zoom link).</p>
         <div id="members-list" class="stack"></div>
       </section>
@@ -308,6 +318,6 @@
   <script src="config.js?v=73fb174c"></script>
   <script src="painmuscles.js?v=74e3b348"></script>
   <script src="paintracks.js?v=1c44032f"></script>
-  <script src="admin.js?v=c064756c"></script>
+  <script src="admin.js?v=522e8e1e"></script>
 </body>
 </html>

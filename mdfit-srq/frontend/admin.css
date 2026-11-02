@@ -161,3 +161,8 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .intake-view b { color: #0A1A2E; }
 @media (max-width: 600px) { .intake-view div { grid-template-columns: 1fr; gap: 2px; } }
 .badge.remote { background: var(--accent); color: var(--ink); }
+.pill.bug { background: #FEE2E2; color: #991B1B; }
+.pill.suggestion { background: #DBEAFE; color: #1E3A8A; }
+.pill.working { background: #FEF3C7; color: #92400E; }
+.pill.resolved { background: #D1FAE5; color: #065F46; }
+.pill.new { background: var(--accent-soft); color: var(--accent-text); }
