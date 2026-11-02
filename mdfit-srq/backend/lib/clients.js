@@ -105,6 +105,11 @@ function mountClients(ctx) {
     newClient.membership = { tier: "member", until, via: "referral", referredBy: referrer.id };
     newClient.referralReward = { code, grantedAt: new Date().toISOString(), months: 3 };
     referrer.referrals = (referrer.referrals || 0) + 1;
+    const now = new Date();
+    const referrerBase = referrer.membership && referrer.membership.until && referrer.membership.until >= today() ? new Date(referrer.membership.until) : now;
+    const referrerUntil = new Date(referrerBase.getTime() + 30 * 864e5).toISOString().slice(0, 10);
+    referrer.membership = { tier: "member", until: referrerUntil, via: referrer.membership?.via || "referral-reward" };
+    referrer.referralReward = { lastReferral: now.toISOString(), totalReferred: referrer.referrals };
   }
   const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c), referralCode: referralCode(c) });
   const session = (c) => {

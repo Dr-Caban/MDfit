@@ -124,10 +124,10 @@ function defaultContent() {
     ],
     events: [
       { id: "nxf-nov-2026", title: "NXF Community Day — Free Bodywork", date: "2026-11-14", time: "10:00 AM – 2:00 PM", location: "NXF Fitness, Sarasota", description: "Stop by for complimentary soft-tissue bodywork and movement assessments with Dr. Jared Caban. Open to everyone — no appointment needed.", link: "", free: true },
-      { id: "dec-2026", title: "MD Fit Holiday Open House", date: "2026-12-05", time: "TBA", location: "3214 Clark Road, Sarasota", description: "Details coming soon.", link: "", free: true },
-      { id: "jan-2027", title: "New Year Movement Workshop", date: "2027-01-10", time: "TBA", location: "Sarasota, FL", description: "Start the year moving better. Details coming soon.", link: "", free: false },
+      { id: "integrative-health-dec-2026", title: "Integrative Health Conference", date: "2026-12-05", time: "TBA", location: "Sarasota, FL", description: "Dr. Jared Caban presents on integrative approaches to physical rehabilitation and pain management. Open to practitioners and the public.", link: "", free: false },
+      { id: "renova-jan-2027", title: "Renova Conference — Dr. Caban Speaking", date: "2027-01-17", time: "TBA", location: "Sarasota, FL", description: "Dr. Jared Caban is a featured speaker at the Renova event, covering rehabilitation medicine and functional movement strategies.", link: "", free: false },
       { id: "feb-2027", title: "Pain-Free Living Seminar", date: "2027-02-07", time: "TBA", location: "Sarasota, FL", description: "Learn the MD Fit approach to eliminating chronic pain. Details coming soon.", link: "", free: false },
-      { id: "mar-2027", title: "Spring Into Strength Workshop", date: "2027-03-07", time: "TBA", location: "Sarasota, FL", description: "Details coming soon.", link: "", free: false }
+      { id: "mar-2027", title: "Spring Movement Workshop", date: "2027-03-07", time: "TBA", location: "Sarasota, FL", description: "Functional movement and injury prevention workshop. Details coming soon.", link: "", free: false }
     ]
   };
 }
