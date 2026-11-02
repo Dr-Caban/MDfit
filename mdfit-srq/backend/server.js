@@ -1,4 +1,4 @@
-// MD Fit API: site content, evaluation intake, 1-on-1 appointment scheduling, group classes, newsletter, admin.
+// MD Fit API: site content, evaluation intake, 1-on-1 appointment scheduling, newsletter, admin.
 // Deploy on Railway with Root Directory = mdfit-srq/backend.
 const express = require("express");
 const crypto = require("crypto");
@@ -464,7 +464,6 @@ function createApp(cfg = loadConfig()) {
     res.json({
       settings: pub, timeZone: cfg.tz, googleClientId: (process.env.GOOGLE_CLIENT_ID || "").trim() || null,
       booking: { provider: calData ? "cal" : "builtin", cal: calData },
-      // Small-group classes are off the public site for now
       options: { goals: GOALS, services: SERVICES.filter((x) => x !== "Group classes"), areas: AREAS, durations: DURATIONS, surgery: SURGERY },
       // kept for older frontends
       goals: GOALS, services: SERVICES

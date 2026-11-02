@@ -1,4 +1,4 @@
-// MD Fit homepage: content, booking widget, class booking, intake and newsletter, all from the Railway API.
+// MD Fit homepage: content, booking widget, intake and newsletter, all from the Railway API.
 (() => {
   const { GOOGLE_G, loadGoogleReviews, applyGoogleRating, $, $$, esc, get, api, fmtTime, fmtDate, todayInTz, addDays, telHref, wire, AREAS, areaChips, loadSite, mountBooker } = window.MDFit;
 
@@ -144,59 +144,6 @@
     finally { btn.disabled = false; }
   });
 
-  // ================= Group classes (section hidden from the site for now; this runs only if it's back) =================
-  let loadSchedule = () => {};
-  if ($("#classes")) {
-  let sessions = [], activeDay = null;
-  function renderSchedule() {
-    const today = todayInTz();
-    const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
-    if (!activeDay) activeDay = days.find((d) => sessions.some((s) => s.date === d)) || days[0];
-    $(".day-tabs").innerHTML = days.map((d) => `<button class="day-tab" role="tab" aria-selected="${d === activeDay}" data-day="${d}">
-        ${fmtDate(d, { weekday: "short" })}<small>${fmtDate(d, { month: "short", day: "numeric" })}</small></button>`).join("");
-    const list = sessions.filter((s) => s.date === activeDay);
-    $(".sessions").innerHTML = list.length ? list.map((s) => {
-      const cls = s.spotsLeft === 0 ? "full" : s.spotsLeft <= 3 ? "low" : "";
-      const spots = s.spotsLeft === 0 ? "Full" : `${s.spotsLeft} spot${s.spotsLeft === 1 ? "" : "s"} left`;
-      return `<article class="session">
-        <div class="time">${fmtTime(s.time)}<small>${s.durationMin} min</small></div>
-        <div><h3>${esc(s.title)}</h3><p>${esc(s.description)}</p>
-          <p>${[s.coach && "With " + esc(s.coach), esc(s.location)].filter(Boolean).join(" · ")}</p>
-          <span class="spots ${cls}">${spots}</span></div>
-        <button class="btn btn-sm" data-i="${sessions.indexOf(s)}" ${s.spotsLeft ? "" : "disabled"}>${s.spotsLeft ? "Reserve" : "Full"}</button>
-      </article>`;
-    }).join("") : `<p class="muted">No classes this day. <a href="#book">Book a 1-on-1 instead.</a></p>`;
-  }
-  $(".day-tabs").addEventListener("click", (e) => {
-    const t = e.target.closest(".day-tab");
-    if (t) { activeDay = t.dataset.day; renderSchedule(); }
-  });
-  loadSchedule = () => api("/api/schedule?days=7")
-    .then((d) => { sessions = d.sessions; $("#classes").hidden = !sessions.length; if (sessions.length) renderSchedule(); })
-    .catch(() => { $(".sessions").innerHTML = `<p class="muted">Class schedule is unavailable right now.</p>`; });
-
-  const dlg = $("#book-dialog"), bookForm = $("#book-form");
-  let picked = null;
-  $(".sessions").addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-i]");
-    if (!b) return;
-    picked = sessions[b.dataset.i];
-    $(".book-title", dlg).textContent = picked.title;
-    $(".book-when", dlg).textContent = `${fmtDate(picked.date, { weekday: "long", month: "long", day: "numeric" })} · ${fmtTime(picked.time)} · ${picked.durationMin} min`;
-    $(".form-msg", dlg).textContent = "";
-    $("button[type=submit]", dlg).hidden = false;
-    dlg.showModal();
-  });
-  $(".close", dlg).addEventListener("click", () => dlg.close());
-  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
-  wire(bookForm, async (data) => {
-    const out = await api("/api/bookings", { ...data, classId: picked.classId, date: picked.date });
-    $("button[type=submit]", dlg).hidden = true;
-    loadSchedule();
-    return out;
-  });
-
-  }
 
   // ================= Intake + newsletter =================
   wire($("#lead-form"), (data) => {

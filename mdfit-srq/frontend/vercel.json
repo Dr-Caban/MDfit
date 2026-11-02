@@ -142,11 +142,6 @@
       "permanent": false
     },
     {
-      "source": "/classes",
-      "destination": "/#classes",
-      "permanent": false
-    },
-    {
       "source": "/assets/pain/guide-:id-thumb.webp",
       "destination": "/assets/guides/:id-thumb.webp",
       "permanent": false

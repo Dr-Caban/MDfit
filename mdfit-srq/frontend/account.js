@@ -17,7 +17,7 @@
     get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
   };
-  let client = auth.client(), stats = null, appts = { upcoming: [], past: [] }, painLog = [], classes = [], allWorkouts = [], reward = null;
+  let client = auth.client(), stats = null, appts = { upcoming: [], past: [] }, painLog = [], allWorkouts = [], reward = null;
   let lib = { favorites: [], programs: [] };
 
   function toast(msg) {
@@ -158,34 +158,9 @@
     </li>`;
   function renderEvents() {
     const mine = appts.upcoming.slice(0, 3).map((a) => apptLi(a));
-    const cls = classes.slice(0, 4).map((c) => `
-      <li class="ev" data-class="${esc(c.classId)}" data-date="${c.date}">${dateBox(c.date, "purple")}
-        <div class="ev-info"><b>${esc(c.title)}</b><span>${fmtDate(c.date, { weekday: "short" })} · ${fmtTime(c.time)} · ${c.durationMin} min</span>
-          <span class="spots ${c.spotsLeft > 3 ? "ok" : ""}">${c.spotsLeft ? `${c.spotsLeft} spot${c.spotsLeft === 1 ? "" : "s"} left` : "Full"}</span></div>
-        ${c.mine ? `<span class="muted tiny">Booked</span>` : c.spotsLeft ? `<button type="button" class="ev-act" data-reserve>Reserve</button>` : ""}
-      </li>`);
-    $("#events").innerHTML = [...mine, ...cls].join("") ||
+    $("#events").innerHTML = mine.join("") ||
       `<li class="muted small">Nothing scheduled. <a class="link-sm" href="/book">Book a visit</a></li>`;
   }
-  $("#events").addEventListener("click", async (e) => {
-    const b = e.target.closest("[data-reserve]");
-    if (!b) return;
-    const li = b.closest("[data-class]");
-    b.disabled = true;
-    try {
-      await api("/api/bookings", { classId: li.dataset.class, date: li.dataset.date, name: client.name, email: client.email, phone: client.phone || "", company: "" });
-      const c = classes.find((x) => x.classId === li.dataset.class && x.date === li.dataset.date);
-      if (c) { c.mine = true; c.spotsLeft = Math.max(0, c.spotsLeft - 1); }
-      renderEvents(); toast("You're in. Check your email for details.");
-    } catch (err) {
-      if (err.status === 409 && /already/i.test(err.message)) {
-        const c = classes.find((x) => x.classId === li.dataset.class && x.date === li.dataset.date);
-        if (c) c.mine = true;
-        renderEvents();
-      }
-      toast(err.message); b.disabled = false;
-    }
-  });
 
   function renderActivity() {
     const items = [
@@ -1684,10 +1659,9 @@
       renderProfile(); renderPlan();
     } catch (err) { toast("Couldn't reach MD Fit right now. Call 941-313-0562 if you need help."); return; }
     const [s, , , sched, wl, lb] = await Promise.allSettled([
-      apiAuth("GET", "/api/me/stats"), loadAppointments(), loadPain(), api("/api/schedule?days=14"), apiAuth("GET", "/api/me/workouts"), apiAuth("GET", "/api/me/library"), loadReferral()
+      apiAuth("GET", "/api/me/stats"), loadAppointments(), loadPain(), Promise.resolve(), apiAuth("GET", "/api/me/workouts"), apiAuth("GET", "/api/me/library"), loadReferral()
     ]);
     if (s.status === "fulfilled") stats = s.value;
-    if (sched.status === "fulfilled") classes = sched.value.sessions || [];
     if (wl.status === "fulfilled") allWorkouts = wl.value;
     apiAuth("GET", "/api/me/vitals").then((v) => { vitals = v; renderPerf(); }).catch(() => renderPerf());
     loadParticipation(); pollUnread();
