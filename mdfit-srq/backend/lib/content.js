@@ -34,7 +34,7 @@ function defaultContent() {
       { id: "hypertrophy-12", title: "PSG — State of Perpetual Growth", category: "Hypertrophy", level: "intermediate", location: "gym", weeks: 12, seed: 1001, access: "member",
         summary: "A continuous progression program for strength, size and mobility. 7-day repeating cycle: two upper-body days, two lower-body days, two full-body mobility days and one rest day. Long workout days are break cycles — rare and far apart. Quality over frequency.",
         notes: "Long Workout Days are BREAK CYCLES — rare and far apart. Short days: reduce weight by minimum 20%, ideally 30-40%. Key principles: full range of motion, controlled tempo, deep stretches, mind-muscle connection, consistency over intensity. Nutrition: 40% protein, 30% fat, 30% carbs. Supplements: whey protein, creatine monohydrate, omega-3, vitamin D3+K2, magnesium. Cold exposure: ice baths 2-3 min, cold showers 2-5 min.",
-        image: "assets/programs/hypertrophy.webp",
+        image: "assets/programs/hypertrophy-new.png",
         days: [
           day("Upper Body — Long (Break Cycle)", "upper", 60, { rounds: 5, restEx: 60, restRound: 120, circuit: [
             { ex: "Overhead Press (DB)", sets: "50,40,30,20,10 reps (do NOT come back up)" },
