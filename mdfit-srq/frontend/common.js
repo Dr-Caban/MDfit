@@ -113,18 +113,18 @@
   document.addEventListener("DOMContentLoaded", accountLinks);
 
   // Video hosting: Cloudinary for every video that has been copied there (list cached on the device), Drive otherwise
-  const VKEY = "mdfit-cdn";
-  let cdn = (() => { try { const c = JSON.parse(localStorage.getItem(VKEY) || "null"); return c && c.cloud ? { cloud: c.cloud, ids: new Set(c.ids) } : null; } catch { return null; } })();
+  const VKEY = "mdfit-cdn2";
+  let cdn = (() => { try { const c = JSON.parse(localStorage.getItem(VKEY) || "null"); return c && c.cloud ? c : null; } catch { return null; } })();
   fetch(API + "/api/videos").then((r) => r.ok ? r.json() : null).then((c) => {
-    if (!c) return; cdn = c.cloud ? { cloud: c.cloud, ids: new Set(c.ids) } : null;
-    try { localStorage.setItem(VKEY, JSON.stringify(c)); } catch {}
+    if (!c) return; cdn = c.cloud ? { cloud: c.cloud, map: c.map || {} } : null;
+    try { localStorage.setItem(VKEY, JSON.stringify(cdn)); } catch {}
   }).catch(() => {});
-  const onCdn = (id) => !!(cdn && cdn.ids.has(id));
-  const CLD = (id, t, ext) => `https://res.cloudinary.com/${cdn.cloud}/video/upload/${t}/mdfit/${encodeURIComponent(id)}.${ext}`;
+  const hit = (id) => (cdn && cdn.map && cdn.map[id]) || null;
+  const CLD = (kind, t, pid, ver, ext) => `https://res.cloudinary.com/${cdn.cloud}/${kind}/upload/${t}/${ver ? "v" + ver + "/" : ""}${pid.split("/").map(encodeURIComponent).join("/")}${ext ? "." + ext : ""}`;
   window.MDFitVideo = {
-    onCdn,
-    mp4: (id) => onCdn(id) ? CLD(id, "q_auto,vc_h264", "mp4") : `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`,
-    thumb: (id, w = 480) => onCdn(id) ? CLD(id, `so_1,w_${w},c_limit,q_auto`, "jpg") : `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`,
+    onCdn: (id) => !!hit(id),
+    mp4: (id) => { const h = hit(id); return h && h[1] === "v" ? CLD("video", "q_auto,vc_h264", h[0], h[2], "mp4") : `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`; },
+    thumb: (id, w = 480) => { const h = hit(id); if (h) return h[1] === "v" ? CLD("video", `so_1,w_${w},c_limit,q_auto`, h[0], h[2], "jpg") : CLD("image", `f_auto,q_auto,w_${w},c_limit`, h[0], h[2]); return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`; },
     preview: (id) => `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`
   };
 
