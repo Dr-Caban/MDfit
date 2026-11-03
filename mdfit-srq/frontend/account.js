@@ -1757,10 +1757,11 @@
     $("#board-sub").textContent = d.myLeague === d.league
       ? (d.league === "olympic" ? "You're in the Olympic League, the top tier. Defend your spot." : `You're in the Pro League. Reach level ${d.olympicLevel} to move up to the Olympic League.`)
       : (d.league === "olympic" ? `Reach level ${d.olympicLevel} to compete here.` : "Where everyone starts.");
-    $("#board-list").innerHTML = d.top.length ? d.top.map((r) => `<li class="${r.me ? "me" : ""}"><span class="rk rk-${r.rank}">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</span><span class="nm">${esc(r.name)}${r.me ? " (you)" : ""}<small>Lv ${r.level}</small></span><b>${r.score.toLocaleString()}</b></li>`).join("")
+    $("#board-list").innerHTML = d.top.length ? d.top.map((r) => `<li class="${r.me ? "me" : ""}"><span class="rk rk-${r.rank}">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</span><span class="nm">${esc(r.name)}${r.me ? " (you)" : ""}${r.pacer ? ` <em class="pacer-tag">Pacer</em>` : ""}<small>Lv ${r.level}</small></span><b>${r.score.toLocaleString()}</b></li>`).join("")
       : `<li class="empty muted small">No one in the ${lname} has XP ${d.period === "week" ? "this week" : "yet"}.${d.myLeague === d.league ? " Log a workout, check-in or pain entry to take #1." : ""}</li>`;
     $("#board-me").textContent = d.hidden ? "You're hidden from the leaderboard." : d.me ? (d.me.rank > 10 ? `You're #${d.me.rank} of ${d.total} with ${d.me.score.toLocaleString()} ${unit}.` : "") : "Log anything to join the rankings.";
     $("#board-hide").checked = d.hidden;
+    $("#board-pacers").hidden = !d.pacers;
   }
   if ($("#board")) {
     $("#board").addEventListener("click", (e) => {

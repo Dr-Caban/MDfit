@@ -548,7 +548,7 @@ function mountClients(ctx) {
   const OLYMPIC_LEVEL = 5;
   const leagueOf = (level) => (level >= OLYMPIC_LEVEL ? "olympic" : "pro");
   let board = { at: 0, rows: [] };
-  // Seeded competitors so leagues feel active during testing. Turn off with LEADERBOARD_PACERS=off.
+  // Pacers: labeled practice competitors that fill a league until 9 real members join. Turn off with LEADERBOARD_PACERS=off.
   const PACER_NAMES = ["Sarah K.", "Mike R.", "Jess T.", "Carlos M.", "Ashley W.", "Dan P.", "Megan L.", "Chris B.", "Nina S.", "Tyler H.", "Rachel D.", "Marcus J.", "Lauren G.", "Kevin O.", "Brittany F.", "Jason C.", "Amanda V.", "Ryan N.", "Olivia E.", "Derek A."];
   const seeded = (str) => { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 10000) / 10000; }; };
   const pacers = (league, realCount) => {
@@ -565,7 +565,7 @@ function mountClients(ctx) {
       const week = Math.round(weekTarget * curve);
       const level = league === "olympic" ? 5 + Math.floor(base() * 4) : 1 + Math.floor(base() * 4);
       const xp = Math.max(week, levelStart(level) + Math.round(base() * (levelStart(level + 1) - levelStart(level) - 1)));
-      return { id: `pacer-${league}-${i}`, name, xp, week, level, league };
+      return { id: `pacer-${league}-${i}`, name, xp, week, level, league, pacer: true };
     });
   };
   const boardRows = () => {
@@ -584,9 +584,9 @@ function mountClients(ctx) {
     const mine = leagueOf(rewardsOf(req.client).level);
     const league = ["pro", "olympic"].includes(req.query.league) ? req.query.league : mine;
     const rows = boardRows().filter((x) => x.league === league && x[by] > 0).sort((a, b) => b[by] - a[by] || b.xp - a.xp);
-    const top = rows.slice(0, 10).map((x, i) => ({ rank: i + 1, name: x.name, score: x[by], level: x.level, me: x.id === req.client.id }));
+    const top = rows.slice(0, 10).map((x, i) => ({ rank: i + 1, name: x.name, score: x[by], level: x.level, me: x.id === req.client.id, pacer: !!x.pacer }));
     const i = rows.findIndex((x) => x.id === req.client.id);
-    res.json({ league, myLeague: mine, olympicLevel: OLYMPIC_LEVEL, period: by === "xp" ? "all" : "week", total: rows.length, top, me: i < 0 ? null : { rank: i + 1, score: rows[i][by] }, hidden: !!req.client.hideRank });
+    res.json({ league, myLeague: mine, olympicLevel: OLYMPIC_LEVEL, period: by === "xp" ? "all" : "week", total: rows.length, pacers: rows.some((x) => x.pacer), top, me: i < 0 ? null : { rank: i + 1, score: rows[i][by] }, hidden: !!req.client.hideRank });
   });
   me.put("/leaderboard/visibility", (req, res) => {
     const list = clients(), c = list.find((x) => x.id === req.client.id);

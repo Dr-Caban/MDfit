@@ -1060,3 +1060,8 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .leagues button span { font-size: 18px; }
 .leagues button[data-league="pro"][aria-selected="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
 .leagues button[data-league="olympic"][aria-selected="true"] { background: linear-gradient(135deg, #b8862f, #e2bc5c); color: #1b1404; border-color: #b8862f; }
+
+.board-list .nm { display: block; }
+.board-list .nm small { display: block; }
+.pacer-tag { font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); background: var(--card-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: 2px; }
+.board-pacers { margin: 6px 0 0; }
