@@ -11,23 +11,62 @@ const SITE = "https://www.mymdfit.com";
 const RATING = { value: "5.0", count: 89 };
 const MAPS = "https://maps.google.com/?cid=18426672193642042879";
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// Review strip baked into every topical page: real client voice, boosts trust and local pack ranking
+const REVIEW_HTML = (() => {
+  try {
+    const f = JSON.parse(fs.readFileSync(path.join(FE, "data/google-reviews.json"), "utf8"));
+    return (f.reviews || []).slice(0, 2).map((r) => `<blockquote class="cd-review"><p>&ldquo;${esc(r.text).slice(0, 280)}&rdquo;</p><cite>&mdash; ${esc(r.author)}, Google review</cite></blockquote>`).join("");
+  } catch { return ""; }
+})();
 const today = new Date().toISOString().slice(0, 10);
+
+// Real Google reviews snapshot (refreshed by scripts/fetch-reviews.js). Baked into every page as Review schema so
+// Google can surface the reviews themselves, not just the aggregate rating. The author link stays as attribution.
+let REVIEWS_FILE = { rating: RATING.value, count: RATING.count, reviews: [] };
+try { REVIEWS_FILE = JSON.parse(fs.readFileSync(path.join(FE, "data/google-reviews.json"), "utf8")); } catch {}
+const REVIEW_SCHEMA = (REVIEWS_FILE.reviews || []).slice(0, 5).map((r) => ({
+  "@type": "Review", reviewRating: { "@type": "Rating", ratingValue: String(r.rating || 5), bestRating: "5" },
+  author: { "@type": "Person", name: r.author || "MD Fit client" }, reviewBody: r.text || "",
+  itemReviewed: { "@id": SITE + "/#clinic" }, publisher: { "@type": "Organization", name: "Google" }
+}));
+
+const DR_JARED = {
+  "@type": "Physician", "@id": SITE + "/#dr-jared",
+  name: "Dr. Jared Caban",
+  honorificSuffix: "MD, MSc, CEP, CCEP, LMT",
+  jobTitle: "Clinical Exercise Physiologist and Licensed Massage Therapist",
+  worksFor: { "@id": SITE + "/#clinic" },
+  medicalSpecialty: ["PhysicalMedicine", "SportsMedicine", "Rehabilitation"],
+  knowsAbout: ["Rehabilitation", "Post-surgical rehabilitation", "Chronic pain", "Medical massage", "Clinical exercise physiology", "Functional mobility", "Strength training", "Balance and fall prevention"],
+  url: SITE + "/#dr", image: SITE + "/assets/dr-jared.jpg", telephone: "+1-941-313-0562",
+  address: { "@type": "PostalAddress", streetAddress: "3214 Clark Road", addressLocality: "Sarasota", addressRegion: "FL", postalCode: "34231", addressCountry: "US" }
+};
 
 const BUSINESS = {
   "@type": ["MedicalClinic", "HealthAndBeautyBusiness"],
   "@id": SITE + "/#clinic",
   name: "MD Fit",
+  alternateName: "MD Fit Sarasota",
   url: SITE + "/",
   telephone: "+1-941-313-0562",
   image: SITE + "/assets/logo.webp",
+  logo: SITE + "/assets/logo.webp",
   priceRange: "$$",
   address: { "@type": "PostalAddress", streetAddress: "3214 Clark Road", addressLocality: "Sarasota", addressRegion: "FL", postalCode: "34231", addressCountry: "US" },
+  geo: { "@type": "GeoCoordinates", latitude: 27.2824, longitude: -82.5111 },
   hasMap: MAPS,
-  aggregateRating: { "@type": "AggregateRating", ratingValue: RATING.value, reviewCount: RATING.count, bestRating: "5" }
+  openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], opens: "08:00", closes: "16:00" }],
+  medicalSpecialty: ["PhysicalMedicine", "SportsMedicine", "Rehabilitation"],
+  availableService: [],
+  areaServed: ["Sarasota", "Bradenton", "Lakewood Ranch", "Venice", "Siesta Key", "Osprey"].map((n) => ({ "@type": "City", name: n })),
+  founder: { "@id": SITE + "/#dr-jared" },
+  employee: { "@id": SITE + "/#dr-jared" },
+  aggregateRating: { "@type": "AggregateRating", ratingValue: String(REVIEWS_FILE.rating || RATING.value), reviewCount: Number(REVIEWS_FILE.count || RATING.count), bestRating: "5" },
+  review: REVIEW_SCHEMA
 };
 
 // Condition pages, treatment pages, service areas and blog articles are in scripts/seo-data.js
-const { CONDITIONS, TREATMENTS, SERVICE_AREAS, BLOG } = require("./seo-data");
+const { CONDITIONS, TREATMENTS, SERVICE_AREAS, BLOG, LANDING = [] } = require("./seo-data");
 
 function page({ url, title, desc, body, ld }) {
   return `<!doctype html>
@@ -104,6 +143,7 @@ for (const c of CONDITIONS) {
     <h1>${esc(c.name)} Treatment in Sarasota, FL</h1>
     <p class="cd-rating"><a href="${MAPS}" rel="noopener">★★★★★ ${RATING.value} · ${RATING.count} Google reviews</a></p>
     <p class="cd-lead">${esc(c.intro)}</p>
+    ${REVIEW_HTML}
     <p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="tel:+19413130562">Call 941-313-0562</a></p>
     <h2>Common causes we see</h2>
     <ul>${c.causes.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
@@ -126,7 +166,7 @@ for (const c of CONDITIONS) {
   </main>`;
   fs.writeFileSync(path.join(FE, "conditions", c.slug + ".html"), page({ url, title, desc, body, ld }));
 }
-const hubLd = { "@context": "https://schema.org", "@graph": [BUSINESS, { "@type": "CollectionPage", url: SITE + "/conditions/", name: "Conditions we treat" }] };
+const hubLd = { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED, { "@type": "CollectionPage", url: SITE + "/conditions/", name: "Conditions we treat" }] };
 fs.writeFileSync(path.join(FE, "conditions", "index.html"), page({
   url: "/conditions/", title: "Pain & Rehabilitation Conditions We Treat in Sarasota, FL | MD Fit",
   desc: `Back pain, sciatica, neck, shoulder, knee and hip pain, post-surgical and sports injury rehab, chronic pain and medical massage in Sarasota. ★ ${RATING.value} from ${RATING.count} Google reviews.`,
@@ -150,8 +190,9 @@ for (const t of TREATMENTS) {
   const url = `/treatments/${t.slug}`;
   const title = `${t.name} in Sarasota, FL | MD Fit`;
   const desc = `${t.name} with Dr. Jared Caban, MD, MSc, CEP in Sarasota. ★ ${RATING.value} from ${RATING.count} Google reviews. Book an evaluation online.`;
-  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS,
+  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED,
     { "@type": "MedicalWebPage", url: SITE + url, name: title, description: desc, lastReviewed: today, provider: { "@id": SITE + "/#clinic" } },
+    { "@type": "Service", name: t.name, serviceType: t.name, provider: { "@id": SITE + "/#clinic" }, areaServed: { "@type": "City", name: "Sarasota" }, description: t.intro, offers: { "@type": "Offer", url: SITE + "/book", availability: "https://schema.org/InStock" } },
     (t.faqs && t.faqs.length ? { "@type": "FAQPage", mainEntity: t.faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) } : null),
     { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: SITE + "/" }, { "@type": "ListItem", position: 2, name: "Treatments", item: SITE + "/treatments/" }, { "@type": "ListItem", position: 3, name: t.name, item: SITE + url }] }
   ].filter(Boolean) };
@@ -160,6 +201,7 @@ for (const t of TREATMENTS) {
     <h1>${esc(t.name)} in Sarasota, FL</h1>
     <p class="cd-rating"><a href="${MAPS}" rel="noopener">★★★★★ ${RATING.value} · ${RATING.count} Google reviews</a></p>
     <p class="cd-lead">${esc(t.intro)}</p>
+    ${REVIEW_HTML}
     <p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="tel:+19413130562">Call 941-313-0562</a></p>
     ${(t.sections || []).map((sec) => `<h2>${esc(sec.h2)}</h2><p>${esc(sec.body)}</p>`).join("\n    ")}
     ${(t.faqs || []).length ? `<h2>Frequently asked questions</h2>${t.faqs.map(([q, a]) => `<details class="cd-faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}` : ""}
@@ -172,7 +214,7 @@ for (const t of TREATMENTS) {
 fs.writeFileSync(path.join(FE, "treatments", "index.html"), page({
   url: "/treatments/", title: "Treatments at MD Fit: Rehab, Medical Massage & Strength in Sarasota, FL",
   desc: `What MD Fit treats: medical massage, functional mobility, rehabilitation, clinical exercise physiology and strength training in Sarasota. ★ ${RATING.value} from ${RATING.count} Google reviews.`,
-  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, { "@type": "CollectionPage", url: SITE + "/treatments/", name: "Treatments" }] },
+  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED, { "@type": "CollectionPage", url: SITE + "/treatments/", name: "Treatments" }] },
   body: `  <main class="cd-main">
     <h1>Treatments at MD Fit</h1>
     <p class="cd-rating"><a href="${MAPS}" rel="noopener">★★★★★ ${RATING.value} · ${RATING.count} Google reviews</a></p>
@@ -187,7 +229,7 @@ for (const a of SERVICE_AREAS) {
   const url = `/areas/${a.slug}`;
   const title = `Physical Rehabilitation & Pain Treatment for ${a.name} | MD Fit Sarasota`;
   const desc = `MD Fit serves ${a.name} with pain treatment and rehabilitation by Dr. Jared Caban, MD, MSc, CEP. ★ ${RATING.value} from ${RATING.count} Google reviews. Book online.`;
-  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS,
+  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED,
     { "@type": "MedicalWebPage", url: SITE + url, name: title, description: desc, lastReviewed: today, areaServed: { "@type": "City", name: a.name }, provider: { "@id": SITE + "/#clinic" } },
     (a.faqs && a.faqs.length ? { "@type": "FAQPage", mainEntity: a.faqs.map(([q, aa]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: aa } })) } : null),
     { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: SITE + "/" }, { "@type": "ListItem", position: 2, name: "Service areas", item: SITE + "/areas/" }, { "@type": "ListItem", position: 3, name: a.name, item: SITE + url }] }
@@ -197,6 +239,7 @@ for (const a of SERVICE_AREAS) {
     <h1>Pain Treatment & Rehabilitation for ${esc(a.name)}</h1>
     <p class="cd-rating"><a href="${MAPS}" rel="noopener">★★★★★ ${RATING.value} · ${RATING.count} Google reviews</a></p>
     <p class="cd-lead">${esc(a.intro)}</p>
+    ${REVIEW_HTML}
     <p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="tel:+19413130562">Call 941-313-0562</a></p>
     ${(a.sections || []).map((sec) => `<h2>${esc(sec.h2)}</h2><p>${esc(sec.body)}</p>`).join("\n    ")}
     ${(a.faqs || []).length ? `<h2>Frequently asked questions</h2>${a.faqs.map(([q, aa]) => `<details class="cd-faq"><summary>${esc(q)}</summary><p>${esc(aa)}</p></details>`).join("")}` : ""}
@@ -209,7 +252,7 @@ for (const a of SERVICE_AREAS) {
 fs.writeFileSync(path.join(FE, "areas", "index.html"), page({
   url: "/areas/", title: "Service Areas: Sarasota, Bradenton, Lakewood Ranch, Venice, Osprey | MD Fit",
   desc: `MD Fit serves Sarasota and the surrounding Suncoast: Bradenton, Lakewood Ranch, Venice, Siesta Key and Osprey. Book pain treatment with Dr. Jared Caban online.`,
-  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, { "@type": "CollectionPage", url: SITE + "/areas/", name: "Service areas" }] },
+  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED, { "@type": "CollectionPage", url: SITE + "/areas/", name: "Service areas" }] },
   body: `  <main class="cd-main">
     <h1>Where We Serve</h1>
     <p class="cd-lead">MD Fit is on Clark Road in Sarasota, serving the whole Suncoast.</p>
@@ -223,7 +266,7 @@ for (const b of BLOG) {
   const url = `/blog/${b.slug}`;
   const title = `${b.title} | MD Fit Sarasota`;
   const desc = b.excerpt;
-  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS,
+  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED,
     { "@type": "Article", headline: b.title, author: { "@type": "Person", name: "Dr. Jared Caban", honorificSuffix: "MD, MSc, CEP, CCEP, LMT" },
       publisher: { "@id": SITE + "/#clinic" }, datePublished: b.published, dateModified: b.published, mainEntityOfPage: SITE + url,
       image: SITE + "/assets/logo.webp", description: desc },
@@ -245,7 +288,7 @@ for (const b of BLOG) {
 fs.writeFileSync(path.join(FE, "blog", "index.html"), page({
   url: "/blog/", title: "MD Fit Blog: Pain, Rehab & Movement by Dr. Jared Caban",
   desc: `Articles from Dr. Jared Caban at MD Fit Sarasota: pain explained, recovery, and getting back to what you love.`,
-  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, { "@type": "Blog", url: SITE + "/blog/", name: "MD Fit Blog", publisher: { "@id": SITE + "/#clinic" } }] },
+  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED, { "@type": "Blog", url: SITE + "/blog/", name: "MD Fit Blog", publisher: { "@id": SITE + "/#clinic" } }] },
   body: `  <main class="cd-main">
     <h1>MD Fit Blog</h1>
     <p class="cd-lead">Plain-language articles from Dr. Jared on where your pain really comes from and how to fix it.</p>
@@ -253,12 +296,39 @@ fs.writeFileSync(path.join(FE, "blog", "index.html"), page({
   </main>`
 }));
 
+// ---- high-intent landing pages (deep long-tail queries)
+for (const l of LANDING) {
+  const url = `/${l.slug}`;
+  const title = `${l.name} | MD Fit Sarasota`;
+  const desc = l.intro.length > 160 ? l.intro.slice(0, 157) + "..." : l.intro;
+  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS, DR_JARED,
+    { "@type": "MedicalWebPage", url: SITE + url, name: title, description: desc, lastReviewed: today, provider: { "@id": SITE + "/#clinic" } },
+    (l.faqs && l.faqs.length ? { "@type": "FAQPage", mainEntity: l.faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) } : null),
+    { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: SITE + "/" }, { "@type": "ListItem", position: 2, name: l.name, item: SITE + url }] }
+  ].filter(Boolean) };
+  const body = `  <main class="cd-main">
+    <p class="cd-crumbs"><a href="/">Home</a> &rsaquo; ${esc(l.name)}</p>
+    <h1>${esc(l.name)}</h1>
+    <p class="cd-rating"><a href="${MAPS}" rel="noopener">&#9733;&#9733;&#9733;&#9733;&#9733; ${RATING.value} &middot; ${RATING.count} Google reviews</a></p>
+    <p class="cd-lead">${esc(l.intro)}</p>
+    ${REVIEW_HTML}
+    <p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="tel:+19413130562">Call 941-313-0562</a></p>
+    ${(l.sections || []).map((sec) => `<h2>${esc(sec.h2)}</h2><p>${esc(sec.body)}</p>`).join("\n    ")}
+    ${(l.faqs || []).length ? `<h2>Frequently asked questions</h2>${l.faqs.map(([q, a]) => `<details class="cd-faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}` : ""}
+    <div class="cd-cta"><h2>Ready to feel like you again?</h2><p>Serving Sarasota, Bradenton, Lakewood Ranch, Venice, Siesta Key and Osprey.</p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="/book?type=call">Free phone consult</a></div>
+    <h2>Related</h2>
+    <ul class="cd-links">${CONDITIONS.slice(0, 10).map((c) => `<li><a href="/conditions/${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
+  </main>`;
+  fs.writeFileSync(path.join(FE, l.slug + ".html"), page({ url, title, desc, body, ld }));
+}
+
 // ---- expanded sitemap
 const allUrls = [["/", "1.0"], ["/book", "0.9"], ["/conditions/", "0.9"], ["/treatments/", "0.9"], ["/areas/", "0.9"], ["/blog/", "0.8"],
   ...CONDITIONS.map((c) => [`/conditions/${c.slug}`, "0.8"]),
   ...TREATMENTS.map((t) => [`/treatments/${t.slug}`, "0.8"]),
   ...SERVICE_AREAS.map((a) => [`/areas/${a.slug}`, "0.8"]),
   ...BLOG.map((b) => [`/blog/${b.slug}`, "0.7"]),
+  ...LANDING.map((l) => [`/${l.slug}`, "0.85"]),
   ...guideIds.map((g) => [`/guides/${g}`, "0.6"]),
   ["/events", "0.5"], ["/privacy-policy", "0.2"], ["/terms", "0.2"]];
 fs.writeFileSync(path.join(FE, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
@@ -266,4 +336,4 @@ fs.writeFileSync(path.join(FE, "sitemap.xml"), `<?xml version="1.0" encoding="UT
 ${allUrls.map(([u, p]) => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod><priority>${p}</priority></url>`).join("\n")}
 </urlset>
 `);
-console.log(`SEO: ${CONDITIONS.length} conditions, ${TREATMENTS.length} treatments, ${SERVICE_AREAS.length} areas, ${BLOG.length} blog, ${guideIds.length} guides, sitemap ${allUrls.length} urls`);
+console.log(`SEO: ${CONDITIONS.length} conditions, ${TREATMENTS.length} treatments, ${SERVICE_AREAS.length} areas, ${BLOG.length} blog, ${LANDING.length} landing, ${guideIds.length} guides, sitemap ${allUrls.length} urls`);

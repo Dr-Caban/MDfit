@@ -97,6 +97,8 @@ for (const a of seo.SERVICE_AREAS) add({ id: "area:" + a.slug, kind: "area", tit
   keywords: ["Sarasota", "rehab", "pain"], snippet: (a.intro || "").slice(0, 160) });
 for (const b of seo.BLOG) add({ id: "blog:" + b.slug, kind: "blog", title: b.title, url: `/blog/${b.slug}`, boost: 0.9,
   keywords: (b.sections || []).slice(0, 3).map((s) => s.h2), snippet: b.excerpt || "" });
+for (const l of seo.LANDING || []) add({ id: "landing:" + l.slug, kind: "landing", title: l.name, url: `/${l.slug}`, boost: 1.4,
+  keywords: (l.sections || []).slice(0, 3).map((s) => s.h2), snippet: (l.intro || "").slice(0, 160) });
 
 // 5. Programs
 const content = require(path.join(ROOT, "backend/lib/content.js")).defaultContent();

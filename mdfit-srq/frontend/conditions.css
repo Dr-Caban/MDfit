@@ -30,3 +30,6 @@
 .cd-page .gd-nav a { color: #fff; text-decoration: none; font: 700 15px Montserrat, sans-serif; }
 .cd-page .gd-nav a:first-child { display: flex; align-items: center; gap: 8px; margin-right: auto; }
 .cd-page .gd-nav a:last-child { background: #7AAFD7; color: #0A1A2E; padding: 8px 14px; border-radius: 10px; }
+.cd-review { margin: 18px 0; padding: 14px 18px; background: #fffaf0; border-left: 4px solid #e8c25e; border-radius: 10px; font-style: italic; color: #0A1A2E; }
+.cd-review p { margin: 0 0 6px; }
+.cd-review cite { display: block; font-style: normal; font-size: 13px; color: #6b6a6e; }
