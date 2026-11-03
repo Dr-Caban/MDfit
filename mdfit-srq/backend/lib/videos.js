@@ -3,6 +3,14 @@
 // every exercise video and thumbnail from Cloudinary. The API secret stays in Railway; uploads are signed here.
 "use strict";
 const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { Readable } = require("stream");
+const { pipeline } = require("stream/promises");
+const { execFile } = require("child_process");
+let FFMPEG = null; try { FFMPEG = require("ffmpeg-static"); } catch {}
+const LIMIT = 100 * 1024 * 1024;
 
 function mountVideos({ app, admin, store, cfg, logger }) {
   const CLOUD = process.env.CLOUDINARY_CLOUD_NAME || "", KEY = process.env.CLOUDINARY_API_KEY || "", SECRET = process.env.CLOUDINARY_API_SECRET || "";
@@ -23,6 +31,35 @@ function mountVideos({ app, admin, store, cfg, logger }) {
     return { bytes: j.bytes, duration: j.duration, format: j.format, version: j.version };
   }
 
+  // Files over the plan's 100 MB limit: download, shrink to phone-friendly H.264, upload the smaller file
+  const ff = (args) => new Promise((ok, no) => execFile(FFMPEG, args, { maxBuffer: 1 << 20 }, (e) => (e ? no(e) : ok())));
+  async function compressAndUpload(id) {
+    if (!FFMPEG) throw new Error("ffmpeg not available");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mdv-")), src = path.join(dir, "in.mp4");
+    try {
+      const r = await fetch(driveUrl(id));
+      if (!r.ok || /html/.test(r.headers.get("content-type") || "")) throw new Error("Drive download failed");
+      await pipeline(Readable.fromWeb(r.body), fs.createWriteStream(src));
+      let out = null;
+      for (const [h, crf, ab] of [[720, 28, "96k"], [540, 32, "64k"], [432, 36, "48k"]]) {
+        out = path.join(dir, `out${h}.mp4`);
+        await ff(["-y", "-i", src, "-vf", `scale=-2:'min(${h},ih)'`, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-profile:v", "high", "-preset", "veryfast", "-crf", String(crf), "-c:a", "aac", "-b:a", ab, "-movflags", "+faststart", out]);
+        if (fs.statSync(out).size < LIMIT * 0.95) break;
+      }
+      const size = fs.statSync(out).size;
+      if (size >= LIMIT) throw new Error(`Still ${Math.round(size / 1048576)} MB after compression`);
+      const params = { public_id: `mdfit/${id}`, overwrite: "false", timestamp: Math.floor(Date.now() / 1000) };
+      const form = new FormData();
+      for (const [k, v] of Object.entries(params)) form.append(k, String(v));
+      form.append("api_key", KEY); form.append("signature", sign(params));
+      form.append("file", new Blob([fs.readFileSync(out)], { type: "video/mp4" }), id + ".mp4");
+      const u = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/video/upload`, { method: "POST", body: form });
+      const j = await u.json().catch(() => ({}));
+      if (!u.ok) throw new Error((j.error && j.error.message) || `HTTP ${u.status}`);
+      return { bytes: j.bytes, duration: j.duration, format: j.format, version: j.version, compressed: true };
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  }
+
   async function idsFromSite() {
     const site = (cfg.siteUrl || "https://www.mymdfit.com").replace(/\/+$/, "");
     const get = (p) => fetch(site + p, { headers: { "user-agent": "MDFit-API/1.0" } }).then((r) => r.text());
@@ -41,7 +78,12 @@ function mountVideos({ app, admin, store, cfg, logger }) {
     job = { total: todo.length, ok: 0, failed: 0, current: "", startedAt: new Date().toISOString() };
     for (const id of todo) {
       job.current = id;
-      try { const info = await upload(id); d.done[id] = info; delete d.failed[id]; job.ok++; }
+      try {
+        let info;
+        try { info = await upload(id); }
+        catch (e) { if (/too large/i.test(e.message)) info = await compressAndUpload(id); else throw e; }
+        d.done[id] = info; delete d.failed[id]; job.ok++;
+      }
       catch (e) {
         if (/already exists/i.test(e.message)) { d.done[id] = { existed: true }; delete d.failed[id]; job.ok++; }
         else { d.failed[id] = e.message.slice(0, 200); job.failed++; logger && logger.warn && logger.warn("video upload failed", { id, error: e.message }); }
@@ -52,7 +94,7 @@ function mountVideos({ app, admin, store, cfg, logger }) {
   }
 
   // Keep Cloudinary in sync on its own: shortly after start-up, then every 6 hours (only copies what's missing)
-  const autoSync = () => { if (!ready() || (job && !job.finishedAt) || cfg.noVideoSync) return; idsFromSite().then((ids) => run(ids, false)).catch((e) => { job = { error: e.message, finishedAt: new Date().toISOString() }; }); };
+  const autoSync = () => { if (!ready() || (job && !job.finishedAt) || cfg.noVideoSync) return; idsFromSite().then((ids) => run(ids, true)).catch((e) => { job = { error: e.message, finishedAt: new Date().toISOString() }; }); };
   if (ready() && !cfg.noVideoSync) { setTimeout(autoSync, 30000).unref(); setInterval(autoSync, 6 * 3600 * 1000).unref(); }
 
   admin.post("/videos/migrate", async (req, res) => {
