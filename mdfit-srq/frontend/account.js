@@ -950,18 +950,60 @@
     loadMine();
   }
 
-  // Install as an app: Android/desktop Chrome get a button; iPhone gets Share → Add to Home Screen
+  // Install as an app: Android/desktop Chrome get a native prompt; iOS/iPadOS get step-by-step; desktop fallback gets browser instructions
   let installEvt = null;
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-  if (standalone) $("#install-card").hidden = true;
-  else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) $("#install-text").textContent = "On iPhone: tap Share in Safari, then “Add to Home Screen”.";
-  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $("#install-btn").hidden = false; });
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+  const isSafari = /safari/i.test(ua) && !/chrome|crios|fxios/i.test(ua);
+  const isChrome = /chrome/i.test(ua) && !/edg/i.test(ua);
+  const isEdge = /edg/i.test(ua);
+  const stepsEl = $("#install-steps");
+  const stepsOl = stepsEl && stepsEl.querySelector("ol");
+  if (standalone) {
+    $("#install-card").hidden = true;
+  } else if (isIOS) {
+    $("#install-text").innerHTML = isSafari
+      ? "Install MD Fit as an app on your home screen:"
+      : "Open <b>mymdfit.com</b> in <b>Safari</b>, then:";
+    if (stepsOl) {
+      stepsOl.innerHTML = `<li>Tap the <b>Share</b> button <svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:-2px;fill:var(--accent)"><path d="M16 5l-1.4 1.4-1.6-1.6V16h-2V4.8L9.4 6.4 8 5l4-4 4 4zM20 10v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h3v2H6v10h12V10h-3V8h3a2 2 0 0 1 2 2z"/></svg> at the bottom of Safari</li>
+        <li>Scroll down and tap <b>"Add to Home Screen"</b></li>
+        <li>Tap <b>"Add"</b> in the top right</li>`;
+      stepsEl.hidden = false;
+    }
+  } else if (isAndroid) {
+    $("#install-text").textContent = "Install MD Fit as an app on your phone:";
+    if (stepsOl) {
+      stepsOl.innerHTML = `<li>Tap the <b>⋮ menu</b> in Chrome (top right)</li>
+        <li>Tap <b>"Add to Home screen"</b> or <b>"Install app"</b></li>
+        <li>Tap <b>"Install"</b></li>`;
+      stepsEl.hidden = false;
+    }
+  } else {
+    $("#install-text").textContent = "Install MD Fit as a desktop app:";
+    if (stepsOl) {
+      stepsOl.innerHTML = isEdge
+        ? `<li>Click the <b>⋯ menu</b> (top right)</li><li>Click <b>"Apps" → "Install this site as an app"</b></li>`
+        : `<li>Click the <b>install icon</b> in the address bar (or ⋮ menu)</li><li>Click <b>"Install"</b></li>`;
+      stepsEl.hidden = false;
+    }
+  }
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); installEvt = e;
+    $("#install-btn").hidden = false;
+    if (stepsEl) stepsEl.hidden = true;
+    $("#install-text").textContent = "Get one-tap access to MD Fit:";
+  });
   $("#install-btn").addEventListener("click", async () => {
     if (!installEvt) return;
     installEvt.prompt();
-    await installEvt.userChoice.catch(() => {});
+    const { outcome } = await installEvt.userChoice.catch(() => ({ outcome: "dismissed" }));
+    if (outcome === "accepted") $("#install-card").hidden = true;
     installEvt = null; $("#install-btn").hidden = true;
   });
+  window.addEventListener("appinstalled", () => { $("#install-card").hidden = true; });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
   // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
