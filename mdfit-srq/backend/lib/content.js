@@ -31,11 +31,49 @@ function defaultContent() {
   return {
     programs: [
       // ----- Dr. Jared's programs. Covered on the homepage and in the client app's Programs tab.
-      { id: "hypertrophy-12", title: "12-Week Hypertrophy", category: "Hypertrophy", level: "intermediate", location: "gym", weeks: 12, seed: 1001, access: "member",
-        summary: "Build muscle with an upper/lower split, 4 days a week for 12 weeks. The same four sessions each week so you can watch your weights climb.",
-        notes: "Add weight when every round feels like 2 reps left in the tank. Protein with every meal, 7-9 hours of sleep.",
+      { id: "hypertrophy-12", title: "PSG — State of Perpetual Growth", category: "Hypertrophy", level: "intermediate", location: "gym", weeks: 12, seed: 1001, access: "member",
+        summary: "A continuous progression program for strength, size and mobility. 7-day repeating cycle: two upper-body days, two lower-body days, two full-body mobility days and one rest day. Long workout days are break cycles — rare and far apart. Quality over frequency.",
+        notes: "Long Workout Days are BREAK CYCLES — rare and far apart. Short days: reduce weight by minimum 20%, ideally 30-40%. Key principles: full range of motion, controlled tempo, deep stretches, mind-muscle connection, consistency over intensity. Nutrition: 40% protein, 30% fat, 30% carbs. Supplements: whey protein, creatine monohydrate, omega-3, vitamin D3+K2, magnesium. Cold exposure: ice baths 2-3 min, cold showers 2-5 min.",
         image: "assets/programs/hypertrophy.webp",
-        days: [day("Upper A", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower A", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Upper B", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower B", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 })] },
+        days: [
+          day("Upper Body — Long (Break Cycle)", "upper", 60, { rounds: 5, restEx: 60, restRound: 120, circuit: [
+            { ex: "Overhead Press (DB)", sets: "50,40,30,20,10 reps (do NOT come back up)" },
+            { ex: "Dumbbell Bench Press", sets: "50,40,30,20,10,20,30,40,50 reps" },
+            { ex: "Lat Pull-Down", sets: "50,40,30,20,10,20,30,40,50 reps" }
+          ] }),
+          day("Lower Body — Long (Break Cycle)", "lower", 60, { rounds: 5, restEx: 60, restRound: 120, circuit: [
+            { ex: "Bulgarian Split Squat", sets: "50,40,30,20,10 reps (do NOT come back up)" },
+            { ex: "Romanian Deadlift", sets: "50,40,30,20,10 reps (do NOT come back up)" },
+            { ex: "GHD or BOSU Sit-Ups", sets: "Max reps at heaviest controlled weight" }
+          ] }),
+          day("Full Body Mobility", "full", 30, { rounds: 5, restEx: 15, restRound: 60, circuit: [
+            { ex: "TRX Body Squat", sets: "10 reps" },
+            { ex: "Pole Squat", sets: "10 reps" },
+            { ex: "Burpee", sets: "10 reps" },
+            { ex: "Pistol Squat", sets: "10 reps each leg" },
+            { ex: "Cossack Squat", sets: "10 reps each side" },
+            { ex: "Bear Crawl", sets: "4 reps x 20 ft" }
+          ] }),
+          day("Upper Body — Short", "upper", 45, { rounds: 4, restEx: 30, restRound: 90, circuit: [
+            { ex: "Overhead Press (DB)", sets: "Light weight, 30-40% less" },
+            { ex: "Dumbbell Bench Press", sets: "Light weight, 30-40% less" },
+            { ex: "Lat Pull-Down", sets: "Light weight, 30-40% less" }
+          ] }),
+          day("Lower Body — Short", "lower", 45, { rounds: 4, restEx: 30, restRound: 90, circuit: [
+            { ex: "Bulgarian Split Squat", sets: "Light weight, 30-40% less" },
+            { ex: "Romanian Deadlift", sets: "Light weight, 30-40% less" },
+            { ex: "GHD or BOSU Sit-Ups", sets: "Light weight, controlled" }
+          ] }),
+          day("Full Body Mobility", "full", 30, { rounds: 5, restEx: 15, restRound: 60, circuit: [
+            { ex: "TRX Body Squat", sets: "10 reps" },
+            { ex: "Pole Squat", sets: "10 reps" },
+            { ex: "Burpee", sets: "10 reps" },
+            { ex: "Pistol Squat", sets: "10 reps each leg" },
+            { ex: "Cossack Squat", sets: "10 reps each side" },
+            { ex: "Bear Crawl", sets: "4 reps x 20 ft" }
+          ] }),
+          day("Rest or Active Recovery", "mobility", 20)
+        ] },
       { id: "dream-lean-12", title: "12-Week Dream Lean", category: "Weight loss", level: "intermediate", location: "gym", weeks: 12, seed: 1002, access: "member",
         summary: "STRONG · FUNCTIONAL · CONFIDENT. The complete system for a lean, toned and powerful you. 7-day training split with strength training 4-6 days per week, daily movement reset, health shots, ice bath protocol and acupressure mat recovery.",
         notes: "Daily Movement Reset (10-15 min): 90/90 Breathing, Couch Stretch, Thoracic Open Books, Glute Bridge Hold, Dead Bugs, Split Squat Hold, Wall Posture, Deep Squat Hold, Child's Pose with Reach. Take the MD Fit Health Shot daily on an empty stomach. Ice bath 2-4x/week (50-58°F, 2-5 min). Acupressure mat 10-20 min nightly. Nutrition: protein first (30-40g per meal), eat whole real foods, prioritize quality carbs around workouts, stay hydrated. Supplements: Magnesium Glycinate, Omega-3 Fish Oil, Vitamin D3 + K2, Creatine Monohydrate, Curcumin + Black Pepper Extract, Ashwagandha, Probiotic, Glycine. Sleep 7-9 hours. Focus on good form, progressive overload.",
@@ -83,11 +121,19 @@ function defaultContent() {
             { ex: "Sauna or Hot Bath", sets: "15-20 minutes" }
           ] })
         ] },
-      { id: "shoulder-6", title: "6-Week Shoulder Program", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1003, access: "member",
-        summary: "A protocol for cranky shoulders: rotator-cuff control, scapular mobility and graded loading. 3 sessions a week for 6 weeks.",
-        notes: "Pair with your shoulder pain track. Stop and book a visit if you get numbness or tingling down the arm.",
+      { id: "shoulder-6", title: "6-Week Shoulder & Rotator Cuff Protocol", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1003, access: "member",
+        summary: "Progressive release and eccentric shoulder/rotator cuff system. The #1 Rule: Shoulders live in your pockets. Phase 1 (Weeks 1-2): Decompression, exploratory range and cuff control. Phase 2 (Weeks 3-4): End-range control and cervical rotation. Phase 3 (Weeks 5-6): Full cervical control and global integration.",
+        notes: "Phase 1 (Weeks 1-2): Scalene Release (30-60 sec, 1-2 rounds), Eccentric Dumbbell Shrug Drop (10-20 reps, up to 2x daily, 15-25 lb), Rotator Cuff Internal/External Rotation at side (15-20 reps, 1-2 sets, very light band), Repeated Shoulder Drop Stretch (throughout the day), Farmer Carries (15-20 lb, 20-30 ft per lap, 10-20 laps). Phase 2 (Weeks 3-4): All prior movements + progressions with chin rotation, increased band tension, 3-5 sec holds, 12-15 reps x 2 sets. Phase 3 (Weeks 5-6): Three-Part Scalene Sequence (tilt, rotation, tuck), Rotator Cuff in Abduction (10-15 reps x 2 sets), Kneeling Straight-Arm Cable Pulldown (3x12-20), Bear Crawls (20-30 ft, 4-6 sets).",
         image: "assets/programs/shoulder.webp",
-        days: [day("Cuff & posture", "upper", 20, { rounds: 2, restEx: 20, restRound: 60 }), day("Scapular control", "upper", 20, { rounds: 2, restEx: 20, restRound: 60 }), day("Mobility flow", "mobility", 15)] },
+        days: [day("Shoulder Protocol — Daily Routine", "upper", 20, { rounds: 2, restEx: 20, restRound: 60, circuit: [
+          { ex: "Scalene Release", sets: "30-60 sec x 1-2 rounds each side" },
+          { ex: "Eccentric Dumbbell Shrug Drop", sets: "10-20 reps x 1-2 sets (15-25 lb)" },
+          { ex: "Rotator Cuff Int/Ext Rotation", sets: "15-20 reps x 1-2 sets (light band)" },
+          { ex: "Farmer Carries", sets: "10-20 laps x 20-30 ft (15-20 lb)" }
+        ] }), day("Shoulder Awareness & Mobility", "mobility", 15, { circuit: [
+          { ex: "Repeated Shoulder Drop Stretch", sets: "Throughout the day" },
+          { ex: "Shoulder Packing Drill", sets: "10 reps, hold 3-5 sec" }
+        ] })] },
       { id: "hip-6", title: "6-Week Hip Protocol", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1004, access: "member",
         summary: "Build tolerance, improve control, reduce irritation. Build strong, stable, pain-free hips through controlled movement, glute engagement and core stability. Daily exercises for all 6 weeks with weekly progressions.",
         notes: "Key principles: No Pain Rule (stay within pain-free range), Slow & Controlled (quality over quantity), Consistency (daily work builds lasting results), Glute Engagement (glutes on, shoulders down, engage core). Daily Basics — do every day all 6 weeks: Posture (shoulders down, chest tall, core lightly braced), Glute Engagement (keep glutes lightly engaged at all times), Core Bracing (brace before every rep), Breathing (exhale during effort, inhale through nose). Weekly progression: Wk 1 learn movement/control, Wk 2 improve control/stability, Wk 3 increase reps/hold time, Wk 4 increase range/endurance, Wk 5 build strength/stability, Wk 6 max control/full range/confidence. Pain is a signal, not a goal. Stop if symptoms travel farther down the leg.",
@@ -97,11 +143,24 @@ function defaultContent() {
           { ex: "Side Plank (Modified)", sets: "1-2 x 3-5 each side, hold 3-5 sec" },
           { ex: "Knee Drive (Radiating Pain Only)", sets: "1-2 x 5-10 reps" }
         ] })] },
-      { id: "low-back-6", title: "6-Week Low Back Mobility", category: "Mobility", level: "beginner", location: "home", weeks: 6, seed: 1005, access: "member",
-        summary: "Core control, hip mobility and graded loading for a cranky low back. Three short sessions a week; keep every effort at 5/10 or less.",
-        notes: "Pair with the low back pain track. Walk after meals. Stop and call us if pain spreads down the leg.",
+      { id: "low-back-6", title: "Back Stability Protocol", category: "Rehabilitation", level: "beginner", location: "home", weeks: 12, seed: 1005, access: "member",
+        summary: "Foundation & Activation — the starting point for your hip and lower back protocol. Baseline phase with wall-supported hip/glute activation and pelvic floor work, progressing through 12 weeks of dynamic stability. Activate, Connect, Stabilize, Progress.",
+        notes: "Baseline Phase: Wall-Supported Hip/Glute Activation (5-10 reps daily, hold 1-2 sec) and Pelvic Floor Activation (bladder & anal Kegel exercises after every urination). Week 1 — Dynamic Stability (Control the Basics): Posterior Pelvic Tilts, Heel Slides, Bent Knee Fall-Outs, Supine Marches, Bridge Holds, Standing Hip Hinge, Wall Squats (quarter depth), Farmer Carry. Continue daily: SI/pillow belt as needed, shoulders down, 10-20% glute engagement, 10-20% abdominal brace, neutral pelvis, walk 15-20 min. Mobility: Cat-Camel (10 gentle reps). Progress only when you can complete all prescribed movements with good control and without increased symptoms for at least 3 consecutive sessions. Muscle soreness is acceptable; joint pain, sharp pain, numbness, tingling or increasing radiating pain are not.",
         image: "assets/programs/low-back.webp",
-        days: [day("Core control", "core", 20, { rounds: 2, restEx: 20 }), day("Hips & glutes", "lower", 20, { rounds: 2, restEx: 20 }), day("Mobility & breath", "mobility", 15)] },
+        days: [day("Back Stability — Daily Routine", "core", 20, { rounds: 2, restEx: 20, circuit: [
+          { ex: "Posterior Pelvic Tilts", sets: "2 x 15" },
+          { ex: "Heel Slides", sets: "2 x 10 each leg" },
+          { ex: "Bent Knee Fall-Outs", sets: "2 x 10 each" },
+          { ex: "Supine Marches", sets: "2 x 10" },
+          { ex: "Bridge Holds", sets: "2 x 10 (5 sec hold)" },
+          { ex: "Standing Hip Hinge", sets: "2 x 15" },
+          { ex: "Wall Squats (Quarter Depth)", sets: "2 x 12" },
+          { ex: "Farmer Carry", sets: "2 rounds (30-60 sec)" }
+        ] }), day("Mobility & Activation", "mobility", 15, { circuit: [
+          { ex: "Cat-Camel", sets: "10 gentle reps" },
+          { ex: "Wall-Supported Hip/Glute Activation", sets: "5-10 reps (hold 1-2 sec)" },
+          { ex: "Pelvic Floor Activation", sets: "5-10 reps each type" }
+        ] })] },
       { id: "mobility-ladder", title: "5-Round Mobility Ladder", category: "Mobility", level: "intermediate", location: "home", weeks: 5, seed: 1006, access: "member",
         summary: "Dr. Jared's 5-round progression. Same six movements each round; rounds grow from 1 to 25 reps as you take the assistance away.",
         notes: "Each week, add 5 reps per movement and drop one layer of assistance (e.g., deeper on the Cossack, less wall help on the burpee). Stop any round that gets ugly; form before reps.",
