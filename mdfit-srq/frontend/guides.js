@@ -751,8 +751,8 @@
     "Glutes": "Hip & glutes", "Knee": "Knee & thigh", "Calf": "Calf & foot", "Foot": "Calf & foot" };
   const POSTER_GROUP = { "posterior-neck": "Neck & head", "scalenes": "Neck & head", "rotator-cuff": "Shoulder & arm", "iliopsoas": "Hip & glutes", "lateral-hip": "Hip & glutes", "quads": "Knee & thigh", "calf": "Calf & foot" };
   const TK = () => window.MDFitTracks, MUS = () => (window.MDFitMuscles || {}).MUSCLES || {};
-  const driveThumb = (id, w = 900) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
-  const mp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
+  const driveThumb = (id, w = 900) => window.MDFitVideo ? MDFitVideo.thumb(id, w) : `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`;
+  const mp4 = (id) => window.MDFitVideo ? MDFitVideo.mp4(id) : `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download`;
   let reportsLoading = null;
   const loadReports = () => window.MDFIT_MUSCLE_REPORTS ? Promise.resolve() : (reportsLoading = reportsLoading || new Promise((res) => {
     const sc = document.createElement("script"); sc.src = "/musclereports.js"; sc.onload = res; sc.onerror = res; document.head.appendChild(sc);

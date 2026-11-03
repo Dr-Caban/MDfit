@@ -112,5 +112,21 @@
   }
   document.addEventListener("DOMContentLoaded", accountLinks);
 
+  // Video hosting: Cloudinary for every video that has been copied there (list cached on the device), Drive otherwise
+  const VKEY = "mdfit-cdn";
+  let cdn = (() => { try { const c = JSON.parse(localStorage.getItem(VKEY) || "null"); return c && c.cloud ? { cloud: c.cloud, ids: new Set(c.ids) } : null; } catch { return null; } })();
+  fetch(API + "/api/videos").then((r) => r.ok ? r.json() : null).then((c) => {
+    if (!c) return; cdn = c.cloud ? { cloud: c.cloud, ids: new Set(c.ids) } : null;
+    try { localStorage.setItem(VKEY, JSON.stringify(c)); } catch {}
+  }).catch(() => {});
+  const onCdn = (id) => !!(cdn && cdn.ids.has(id));
+  const CLD = (id, t, ext) => `https://res.cloudinary.com/${cdn.cloud}/video/upload/${t}/mdfit/${encodeURIComponent(id)}.${ext}`;
+  window.MDFitVideo = {
+    onCdn,
+    mp4: (id) => onCdn(id) ? CLD(id, "q_auto,vc_h264", "mp4") : `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`,
+    thumb: (id, w = 480) => onCdn(id) ? CLD(id, `so_1,w_${w},c_limit,q_auto`, "jpg") : `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`,
+    preview: (id) => `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`
+  };
+
   window.MDFit = { auth, apiAuth, accountLinks, GOOGLE_G, loadGoogleReviews, applyGoogleRating, API, $, $$, esc, get, api, fmtTime, fmtDate, todayInTz, addDays, zonedToUtc, icsStamp, telHref, formData, wire, AREAS, areaChips, loadSite };
 })();

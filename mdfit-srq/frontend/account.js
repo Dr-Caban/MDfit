@@ -11,14 +11,14 @@
     "iliopsoas": "The Iliopsoas Complex", "lateral-hip": "Lateral Hip Powerhouse", "quads": "Tight Quads: Referred Pain", "calf": "The Calf Complex"
   };
   const shortDate = (d) => fmtDate(d, { month: "short", day: "numeric" });
-  const thumb = (id) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w480`;
+  const thumb = (id) => MDFitVideo.thumb(id, 480);
   const thumbImg = (id) => `<span class="thumb" data-thumb="${esc(id)}"><img src="${thumb(id)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.MDFitThumbFail&&window.MDFitThumbFail(this)" onload="this.naturalWidth<40&&window.MDFitThumbFail&&window.MDFitThumbFail(this)"></span>`;
   // If Drive has no thumbnail, show a still frame from the video itself (#t= makes Safari paint that frame)
   window.MDFitThumbFail = (img) => {
     const box = img.closest(".thumb"); img.remove(); if (!box || box.querySelector("video")) return;
     const v = document.createElement("video");
     v.muted = true; v.playsInline = true; v.preload = "metadata"; v.setAttribute("playsinline", ""); v.setAttribute("aria-hidden", "true"); v.tabIndex = -1;
-    v.src = `https://drive.usercontent.google.com/download?id=${encodeURIComponent(box.dataset.thumb)}&export=download&authuser=jaredcaban0nopills@gmail.com#t=0.8`;
+    v.src = MDFitVideo.mp4(box.dataset.thumb) + "#t=0.8";
     v.addEventListener("loadeddata", () => box.classList.add("has-frame"), { once: true });
     box.prepend(v);
   };
@@ -150,7 +150,7 @@
   $$("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
   // Video preloading: direct MP4 in a native <video>, warmed before the tap. Visible cards fetch metadata
   // (a few at a time); touching a card starts buffering the opening seconds. Drive's player is the fallback.
-  const mp4Url = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`;
+  const mp4Url = (id) => MDFitVideo.mp4(id);
   const saveData = !!(navigator.connection && (navigator.connection.saveData || /(^|-)2g$/.test(navigator.connection.effectiveType || "")));
   const warm = new Map(); const WARM_MAX = 8; let warmQueue = [], warmActive = 0;
   function warmVideo(id, level = "metadata") {
@@ -1145,7 +1145,7 @@
 
   // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
   // Drive serves the raw MP4 (CORS + range requests), so a real <video> can autoplay, loop through the set and move on by itself.
-  const driveMp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`;
+  const driveMp4 = (id) => MDFitVideo.mp4(id);
   const PLAY_KEY = "mdfit.player";
   const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false, left: 0, paused: false,
     opt: { breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}) } };
@@ -1238,7 +1238,7 @@
     vwrap.hidden = noVid;
     v.muted = !P.opt.sound;
     if (noVid) { v.pause(); v.removeAttribute("src"); v.load(); }
-    else v.poster = `https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800`;
+    else v.poster = MDFitVideo.thumb(e.id, 800);
     $("#p-body").innerHTML = `
       <div class="p-info">
         <p class="p-block">${esc(st.label)}</p>
