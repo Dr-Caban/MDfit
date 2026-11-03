@@ -30,11 +30,10 @@
         <h1>Welcome back</h1>
         <div id="google-btn-login" class="google-signin-wrap" hidden></div>
         <div class="auth-divider" id="auth-divider-login" hidden><span>or</span></div>
+        <label>Full name<input name="name" maxlength="100" autocomplete="name" placeholder="Required for new accounts"></label>
         <label>Email<input name="email" type="email" required autocomplete="username"></label>
         <label>Password<input name="password" type="password" required minlength="8" autocomplete="current-password"></label>
         <button class="btn btn-lg btn-block" type="submit">Log in</button>
-        <div class="or-divider"><span>or</span></div>
-        <div id="g-login-btn" class="g-btn-wrap"></div>
         <button type="button" class="link-btn" data-mode="forgot">Forgot password?</button>
         <p class="form-msg" role="status"></p>
       </form>
@@ -52,8 +51,6 @@
         <input name="company" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
         <p class="fine">By creating an account you agree to the <a href="/terms">Terms</a> and <a href="/privacy-policy">Privacy Policy</a>.</p>
         <button class="btn btn-lg btn-block" type="submit">Create account</button>
-        <div class="or-divider"><span>or</span></div>
-        <div id="g-signup-btn" class="g-btn-wrap"></div>
         <p class="fine">Already booked with us? Use the same email and your appointments show up automatically.</p>
         <p class="form-msg" role="status"></p>
       </form>
