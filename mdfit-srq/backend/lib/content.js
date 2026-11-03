@@ -236,7 +236,7 @@ function defaultContent() {
       { id: "running", title: "Running Performance", category: "Sport Performance", level: "intermediate", location: "home", weeks: 6, seed: 1010, access: "member",
         summary: "Hip strength, calf and foot work, and single-leg stability to run faster with fewer injuries. 3 sessions a week to pair with your runs.",
         notes: "These are the strength and mobility days: do them on your easy-run days or on rest days. Your long run is your long run.",
-        image: "assets/programs/running.webp",
+        image: "assets/programs/running-new.png",
         days: [day("Hip & glute strength", "lower", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Calf, foot & ankle", "lower", 20, { rounds: 2 }), day("Mobility & core", "mobility", 20)] },
       { id: "marathon", title: "Marathon Prep", category: "Sport Performance", level: "advanced", location: "home", weeks: 12, seed: 1011, access: "member",
         summary: "A 12-week strength-and-mobility block to carry you through marathon training without breaking down. 4 sessions a week built around your run calendar.",
