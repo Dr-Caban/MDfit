@@ -37,3 +37,5 @@ Disallow: /cancel
 Disallow: /intake
 Disallow: /data/
 Allow: /
+
+Sitemap: https://www.mymdfit.com/sitemap.xml
