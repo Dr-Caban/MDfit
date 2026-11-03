@@ -1032,3 +1032,25 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .note-txt span { font-size: 13px; color: var(--muted); }
 .note-txt em { font-style: normal; font-size: 12px; color: var(--muted); }
 .note-go { flex: none; border: 0; border-radius: 999px; background: var(--navy); color: #fff; font-weight: 700; font-size: 13px; padding: 7px 13px; cursor: pointer; }
+
+/* Leaderboard */
+.board .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.seg { display: inline-flex; background: var(--card-2); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: none; font: 600 12.5px var(--body, inherit); color: var(--muted); padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-selected="true"] { background: var(--navy); color: #fff; }
+.board-sub { margin: 4px 0 8px; }
+.board-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.board-list li { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 12px; }
+.board-list li.me { background: rgba(59,130,246,.1); outline: 1px solid rgba(59,130,246,.35); }
+.board-list li.empty { display: block; padding: 8px 0; }
+.board-list .rk { width: 28px; text-align: center; font-weight: 800; color: var(--muted); font-size: 15px; flex: none; }
+.board-list .rk-1, .board-list .rk-2, .board-list .rk-3 { font-size: 20px; }
+.board-list .nm { flex: 1; min-width: 0; font-weight: 600; color: var(--navy); display: grid; }
+.board-list .nm small { font-weight: 500; color: var(--muted); font-size: 12px; }
+.board-list b { color: var(--navy); font-variant-numeric: tabular-nums; }
+.board-me { margin: 8px 0 0; color: var(--navy); font-weight: 600; }
+.board-me:empty { display: none; }
+.board-hide { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--muted); }
+.board .card-head { flex-wrap: wrap; min-width: 0; }
+.board, .board .card-head { max-width: 100%; }
+.seg { flex: none; max-width: 100%; }

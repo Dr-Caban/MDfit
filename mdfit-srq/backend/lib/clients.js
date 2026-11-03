@@ -542,6 +542,32 @@ function mountClients(ctx) {
 
   // XP, level, badges and daily goal, recomputed from history every time
   const visitsOf = (c) => appointments().filter((a) => a.email === c.email && a.status === "completed");
+  const rewardsOf = (c, appts = appointments()) => rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: appts.filter((a) => a.email === c.email && a.status === "completed"), vitals: c.vitals || [], actions: c.xpLog || [],
+    bookings: appts.filter((a) => a.email === c.email && a.status !== "cancelled").map((a) => ({ id: a.id, date: String(a.createdAt || a.date || "").slice(0, 10) })) }, today());
+  // Ranking pool: anyone with XP, unless they hid themselves. Shows first name + last initial and XP only. Cached a minute.
+  let board = { at: 0, rows: [] };
+  const boardRows = () => {
+    if (Date.now() - board.at < 60000) return board.rows;
+    const appts = appointments();
+    const rows = clients().filter((c) => !c.hideRank).map((c) => {
+      const r = rewardsOf(c, appts), parts = String(c.name || "Member").trim().split(/\s+/);
+      return { id: c.id, name: parts[0] + (parts.length > 1 ? ` ${parts[parts.length - 1][0]}.` : ""), xp: r.xp, week: r.week.reduce((n, d) => n + d.xp, 0), level: r.level };
+    }).filter((x) => x.xp > 0);
+    board = { at: Date.now(), rows };
+    return rows;
+  };
+  me.get("/leaderboard", (req, res) => {
+    const by = req.query.period === "all" ? "xp" : "week";
+    const rows = boardRows().filter((x) => x[by] > 0).sort((a, b) => b[by] - a[by] || b.xp - a.xp);
+    const top = rows.slice(0, 10).map((x, i) => ({ rank: i + 1, name: x.name, score: x[by], level: x.level, me: x.id === req.client.id }));
+    const i = rows.findIndex((x) => x.id === req.client.id);
+    res.json({ period: by === "xp" ? "all" : "week", total: rows.length, top, me: i < 0 ? null : { rank: i + 1, score: rows[i][by] }, hidden: !!req.client.hideRank });
+  });
+  me.put("/leaderboard/visibility", (req, res) => {
+    const list = clients(), c = list.find((x) => x.id === req.client.id);
+    c.hideRank = !!(req.body && req.body.hidden); save(list); board.at = 0;
+    res.json({ hidden: c.hideRank });
+  });
   me.post("/xp", (req, res) => {
     const kind = String((req.body || {}).kind || ""), ref = String((req.body || {}).ref || "").slice(0, 80);
     if (!ACTIONS[kind] || kind === "booking") return res.status(400).json({ error: "Unknown action." });
@@ -552,8 +578,7 @@ function mountClients(ctx) {
   });
   me.get("/rewards", (req, res) => {
     const c = req.client;
-    res.json(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [], actions: c.xpLog || [],
-      bookings: appointments().filter((a) => a.email === c.email && a.status !== "cancelled").map((a) => ({ id: a.id, date: String(a.createdAt || a.date || "").slice(0, 10) })) }, today()));
+    res.json(rewardsOf(c));
   });
 
   // ---- Library (Spotify-style): favorite videos and saved programs, kept on the server so they follow the client
@@ -638,8 +663,7 @@ function mountClients(ctx) {
     if (!c) return res.status(404).json({ error: "Client not found." });
     res.json({ ...pub(c), lastLoginAt: c.lastLoginAt, painLog: c.painLog || [],
       workouts: (c.workouts || []).slice(-50).reverse(), stats: workoutStats(c.workouts || [], today()),
-      rewards: (({ xp, level, title, badges }) => ({ xp, level, title, badges: badges.filter((b) => b.earned).map((b) => b.title) }))(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [], actions: c.xpLog || [],
-      bookings: appointments().filter((a) => a.email === c.email && a.status !== "cancelled").map((a) => ({ id: a.id, date: String(a.createdAt || a.date || "").slice(0, 10) })) }, today())),
+      rewards: (({ xp, level, title, badges }) => ({ xp, level, title, badges: badges.filter((b) => b.earned).map((b) => b.title) }))(rewardsOf(c)),
       appointments: appointments().filter((a) => a.email === c.email).map(({ cancelToken, ...a }) => a).sort((a, b) => (a.date + a.time < b.date + b.time ? 1 : -1)) });
   });
 
