@@ -95,6 +95,7 @@ Web routes are hash-based (`/account#progress`, `#pain/muscle/<id>`). Mirror the
 - 155 exercises from `/data/catalog.json` (version check: `/data/catalog-version.json`; cache on disk and re-download only on change).
 - Search, category and body-area filters; favorites (`PUT/DELETE /api/me/favorites/:id`).
 - Playback: stream the Drive MP4 URL above with a native player (AVPlayer / ExoPlayer).
+- **Preloading (web, replicate natively):** cards on screen fetch video metadata 3 at a time; touching a card starts buffering the opening seconds; up to 8 warmed videos are kept in memory; skipped in data-saver/2G. The Drive web player is the fallback if the MP4 fails. Natively: prefetch the first few seconds of visible items (AVAssetResourceLoader / ExoPlayer CacheDataSource).
 
 ### 5.5 Pain tool
 - Front/back body map → tap a region → pain patterns → **starts a relief video track immediately** (no intermediate dialog).
@@ -302,4 +303,5 @@ Store requirements: privacy nutrition labels (health & fitness data, contact inf
 | Referral share link opens signup with the code prefilled | §5.1 |
 | Mobility Ladder plays its fixed circuit (no random warm-up); `contentVersion` 5 | §5.3, §5.8 |
 | Lecture "Hormones, anti-cortisol & longevity" is 58 min | §5.8 |
+| Video library preloading (native MP4 playback, warm on view/touch, Drive fallback) | §5.4 |
 | Startup crash fixed (install guide markup placed before scripts) | — |
