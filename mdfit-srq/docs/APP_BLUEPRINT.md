@@ -1,5 +1,7 @@
 # MD Fit: Full-Stack Blueprint for the iOS & Android Apps
 
+**Last updated:** November 3, 2026 · Web app live at `mymdfit.com/account` · Branch `claude/lone-soulja-podcast-site-2ii8fj`
+
 This is the complete picture of the MD Fit app as it runs today on the web (`mymdfit.com/account`), written so a native iOS and Android app can be built on the **same backend** with feature parity. Nothing in the backend needs to be rebuilt; the native apps are new clients of the existing API.
 
 - Detailed request/response shapes: [`ios-api.md`](ios-api.md) and [`openapi.yaml`](openapi.yaml) (import into Postman or generate Swift/Kotlin models).
@@ -282,3 +284,22 @@ Store requirements: privacy nutrition labels (health & fitness data, contact inf
 - Both Vercel (web) and Railway (API) auto-deploy from the working branch.
 - After editing web CSS/JS run `node scripts/version-assets.js` (cache-busts files and bumps the service-worker cache so web users get updates automatically without losing their login).
 - Backend tests: `cd backend && npm test`. Two tests (membership and Stripe checkout) currently fail independently of the app features above and should be fixed before launch.
+
+---
+
+## 16. Recent changes (web app, Nov 2–3, 2026)
+
+| Change | Where |
+|---|---|
+| Milestone celebration (spinning gold coin, +25 XP per badge) and Duolingo-style leaderboard pop-up after level-ups and every 3rd badge | §6 |
+| Pro League / Olympic League (level 5+) with weekly and all-time rankings, hide-me toggle, unlabeled seeded competitors (`LEADERBOARD_PACERS`) | §6 |
+| XP for every action (`POST /api/me/xp`) plus daily check-ins, booking, and the Check-in Habit badge | §6 |
+| Bell notification center and bottom pop-ups for badges, messages and visits | §7 |
+| Emoji reactions in Messenger (member and admin, realtime events) | §5.7 |
+| Casual daily check-in card on Progress (weigh-in stepper, sleep chips) replacing the clinical readings form | §5.6 |
+| Install card on Home and Profile; guided iPhone "Add to Home Screen" overlay | web only |
+| Auto cache clear per deploy (service-worker cache stamped by `scripts/version-assets.js`); logins kept | §15 |
+| Referral share link opens signup with the code prefilled | §5.1 |
+| Mobility Ladder plays its fixed circuit (no random warm-up); `contentVersion` 5 | §5.3, §5.8 |
+| Lecture "Hormones, anti-cortisol & longevity" is 58 min | §5.8 |
+| Startup crash fixed (install guide markup placed before scripts) | — |
