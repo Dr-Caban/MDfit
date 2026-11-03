@@ -246,7 +246,7 @@ function defaultContent() {
     ],
 
     lectures: [
-      { id: "hormones-training", title: "Hormones, anti-cortisol & longevity", topic: "Hormones", minutes: 45, url: "https://drive.google.com/file/d/1Wb8QxpVp16J5w_WdLL9JUODKp8sDwtjn/view", downloadUrl: "", access: "member", summary: "Dr. Jared breaks down how hormones, cortisol and daily habits affect aging, recovery and performance." },
+      { id: "hormones-training", title: "Hormones, anti-cortisol & longevity", topic: "Hormones", minutes: 58, url: "https://drive.google.com/file/d/1Wb8QxpVp16J5w_WdLL9JUODKp8sDwtjn/view", downloadUrl: "", access: "member", summary: "Dr. Jared breaks down how hormones, cortisol and daily habits affect aging, recovery and performance." },
       { id: "cortisol-program", title: "The cortisol program", topic: "Hormones", minutes: 40, url: "https://drive.google.com/file/d/1FOLU6lNofptCTGShb1mNdVNPprkYNZD_/view", downloadUrl: "", access: "member", summary: "A full walkthrough of the anti-cortisol protocol: why it works, what to change, and how to start." },
       { id: "inflammation-101", title: "Inflammation: friend and foe", topic: "Inflammation", minutes: 0, url: "", downloadUrl: "", access: "member", summary: "What inflammation is for, why it lingers, and the daily habits that calm it." },
       { id: "pain-science", title: "Why it still hurts: referred pain explained", topic: "Pain science", minutes: 0, url: "", downloadUrl: "", access: "free", summary: "Why the pain you feel is often far from the muscle causing it." },
