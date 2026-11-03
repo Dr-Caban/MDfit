@@ -368,7 +368,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
   const content = () => {
     const saved = store.read("content", {});
     const d = defaultContent();
-    if (!saved.contentVersion || saved.contentVersion < 4) {
+    if (!saved.contentVersion || saved.contentVersion < 5) {
       saved.programs = d.programs;
     }
     return { ...d, ...saved };
@@ -451,7 +451,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     if (b.live !== undefined) next.live = liveIn(b.live || {}, c.live);
     if (b.tracks !== undefined) next.tracks = list(b.tracks, "Pain tracks", 80, trackIn);
     if (b.events !== undefined) next.events = list(b.events, "Events", 50, eventIn);
-    store.write("content", { ...next, contentVersion: 4 });
+    store.write("content", { ...next, contentVersion: 5 });
     res.json(content());
   });
   admin.get("/members", (req, res) => {
