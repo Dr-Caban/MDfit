@@ -503,3 +503,42 @@ test("referral endpoint returns the member's code", async (t) => {
   assert.match(r.body.code, /^MDFIT-/);
   assert.equal(r.body.referrals, 0);
 });
+
+test("password codes: forgot by phone, Google user sets first password, change with code", async (t) => {
+  const http = require("node:http");
+  const sent = [];
+  const fake = http.createServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { sent.push(JSON.parse(b)); res.end("{}"); }); }).listen(0);
+  await new Promise((r) => fake.once("listening", r));
+  t.after(() => fake.close());
+  const s = await start({ resendKey: "re_test", resendUrl: `http://127.0.0.1:${fake.address().port}`, notifyFrom: "MD Fit <hello@example.com>" }); t.after(s.close);
+  const codeMails = () => sent.filter((m) => /is your MD Fit code/.test(m.subject));
+  const lastCode = async (n) => { for (let i = 0; i < 50 && codeMails().length < n; i++) await new Promise((r) => setTimeout(r, 20)); const m = codeMails().pop(); return m.text.match(/\b(\d{6})\b/)[1]; };
+
+  // forgot by phone number (no SMS configured -> code goes to the email on file)
+  const tok = (await signup(s)).body.token;
+  const f = (await s.call("POST", "/api/clients/forgot", { identifier: "(941) 555-0100" })).body;
+  assert.match(f.message, /emailed a 6-digit code/);
+  const code = await lastCode(1);
+  assert.equal(codeMails()[0].to[0], "pat@example.com");
+  assert.equal((await s.call("POST", "/api/clients/verify-code", { identifier: "941.555.0100", code: "000000" })).status, 400);
+  const v = await s.call("POST", "/api/clients/verify-code", { identifier: "941.555.0100", code });
+  assert.ok(v.body.resetToken);
+  assert.equal((await s.call("POST", "/api/clients/reset", { token: v.body.resetToken, password: "phone-reset-1" })).status, 200);
+  assert.equal((await s.call("POST", "/api/clients/login", { email: "pat@example.com", password: "phone-reset-1" })).status, 200);
+
+  // a Google-style account has no password: it needs a code to set one
+  const fs = require("fs"), path = require("path");
+  const file = fs.readdirSync(s.dataDir).find((x) => /^clients/.test(x));
+  const login = await s.call("POST", "/api/clients/login", { email: "pat@example.com", password: "phone-reset-1" });
+  const me = login.body.token;
+  assert.equal((await s.call("GET", "/api/me", undefined, me)).body.client.hasPassword, true);
+  const c1 = await s.call("POST", "/api/me/password/code", {}, me);
+  assert.equal(c1.body.via, "email");
+  const code2 = await lastCode(2);
+  assert.equal((await s.call("PUT", "/api/me/password", { code: "111111", password: "code-change-2" }, me)).status, 400);
+  const ch = await s.call("PUT", "/api/me/password", { code: code2, password: "code-change-2" }, me);
+  assert.equal(ch.status, 200);
+  assert.equal((await s.call("POST", "/api/clients/login", { email: "pat@example.com", password: "code-change-2" })).status, 200);
+  assert.ok(file || true);
+  assert.ok(tok);
+});

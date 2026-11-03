@@ -57,8 +57,8 @@
 
       <form id="forgot-form" class="form auth-form" data-panel="forgot" novalidate hidden>
         <h1>Reset your password</h1>
-        <p class="muted">Enter your email and we'll send you a 6-digit code.</p>
-        <label>Email<input name="email" type="email" required autocomplete="email"></label>
+        <p class="muted">Enter the email or phone number on your account and we'll send you a 6-digit code. Signed up with Google? Use this to set a password too.</p>
+        <label>Email or phone<input name="identifier" type="text" required autocomplete="username" inputmode="email" placeholder="you@email.com or 941-555-0100"></label>
         <button class="btn btn-lg btn-block" type="submit">Send code</button>
         <button type="button" class="link-btn" data-mode="login">Back to log in</button>
         <p class="form-msg" role="status"></p>
@@ -66,7 +66,7 @@
 
       <form id="code-form" class="form auth-form" data-panel="code" novalidate hidden>
         <h1>Enter your code</h1>
-        <p class="muted">Check your email for a 6-digit code.</p>
+        <p class="muted" id="code-hint">Check your email for a 6-digit code.</p>
         <label>Code<input name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" placeholder="000000" style="text-align:center;font-size:24px;letter-spacing:6px"></label>
         <button class="btn btn-lg btn-block" type="submit">Verify</button>
         <button type="button" class="link-btn" data-mode="forgot">Resend code</button>
@@ -111,13 +111,14 @@
       wire($("#login-form"), async (d) => done(await api("/api/clients/login", d)), { reset: false });
       wire($("#signup-form"), async (d) => done(await api("/api/clients/signup", { ...d, referralCode: ref || undefined })), { reset: false });
       wire($("#forgot-form"), async (d) => {
-        resetEmail = d.email;
-        const r = await api("/api/clients/forgot", d);
+        resetEmail = d.identifier;
+        const r = await api("/api/clients/forgot", { identifier: d.identifier });
+        const h = $("#code-hint"); if (h) h.textContent = r.message || "Check for a 6-digit code.";
         mode("code");
         return r;
       });
       wire($("#code-form"), async (d) => {
-        const r = await api("/api/clients/verify-code", { email: resetEmail, code: d.code });
+        const r = await api("/api/clients/verify-code", { identifier: resetEmail, code: d.code });
         resetToken = r.resetToken;
         mode("reset");
         return { message: "Code verified. Choose a new password." };

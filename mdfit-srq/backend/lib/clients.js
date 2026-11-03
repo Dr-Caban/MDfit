@@ -72,6 +72,7 @@ function mountClients(ctx) {
   const today = () => nowParts(cfg.tz, cfg.now()).date;
   const ready = cfg.sessionSecret.length >= 32;
   const signupLimit = limiter(10, 60 * 60 * 1000);
+  const resetLimit = limiter(6, 60 * 60 * 1000);
   const loginFails = limiter(10, 15 * 60 * 1000);
 
   const activeMembership = (c) => (c.membership && (!c.membership.until || c.membership.until >= today()) ? c.membership : null);
@@ -91,7 +92,7 @@ function mountClients(ctx) {
     const referrerUntil = new Date(referrerBase.getTime() + 30 * 864e5).toISOString().slice(0, 10);
     referrer.membership = { tier: "member", until: referrerUntil, via: referrer.membership?.via || "referral-reward" };
   }
-  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c), referralCode: referralCode(c) });
+  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c), referralCode: referralCode(c), hasPassword: !!c.passwordHash, google: !!c.googleSub });
   const session = (c) => {
     const exp = Date.now() + SESSION_DAYS * 864e5;
     return { token: signToken({ sub: c.id, role: "client", pwv: c.pwv || 0, exp }, cfg.sessionSecret), expiresAt: new Date(exp).toISOString(), client: pub(c) };
@@ -247,35 +248,71 @@ function mountClients(ctx) {
   });
 
   // Always answers the same way so it can't be used to find out who has an account.
-  const resetCodes = new Map(); // email -> { code, exp, tries }
+  // One-time codes for first-time password setup, forgotten passwords and changes. Sent by text when Twilio is
+  // configured and the member has a phone number, otherwise by email. Keyed by account so email or phone both work.
+  const resetCodes = new Map(); // clientId -> { code, exp, tries }
   const RESET_CODE_TTL = 10 * 60e3; // 10 minutes
   const RESET_CODE_MAX_TRIES = 5;
-
-  app.post("/api/clients/forgot", signupLimit.mw, (req, res) => {
-    const email = String((req.body && req.body.email) || "").trim().toLowerCase();
-    const c = clients().find((x) => x.email === email);
-    if (c && notify.enabled) {
-      const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
-      resetCodes.set(email, { code, exp: Date.now() + RESET_CODE_TTL, tries: 0 });
-      notify.client(c.email, `${code} — your MD Fit reset code`,
-        `Hi ${c.name.split(" ")[0]},\n\nYour password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.\n\nMD Fit`);
+  const digits = (p) => String(p || "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+  const findByIdentifier = (list, ident) => {
+    const v = String(ident || "").trim().toLowerCase();
+    if (!v) return null;
+    if (v.includes("@")) return list.find((x) => x.email === v) || null;
+    const d = digits(v);
+    return d.length >= 10 ? list.find((x) => digits(x.phone) === d) || null : null;
+  };
+  const smsReady = () => !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+  async function sendSms(to, body) {
+    const sid = process.env.TWILIO_ACCOUNT_SID, d = digits(to);
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: "POST", headers: { authorization: "Basic " + Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64") },
+      body: new URLSearchParams({ To: "+1" + d, From: process.env.TWILIO_FROM, Body: body })
+    });
+    if (!r.ok) throw new Error("SMS failed " + r.status);
+  }
+  const maskEmail = (e) => e.replace(/^(.)(.*)(@.*)$/, (m, a, b, c) => a + "•".repeat(Math.min(b.length, 6)) + c);
+  const maskPhone = (p) => "•••-•••-" + digits(p).slice(-4);
+  async function sendCode(c, preferSms) {
+    const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
+    resetCodes.set(c.id, { code, exp: Date.now() + RESET_CODE_TTL, tries: 0 });
+    if (preferSms && c.phone && smsReady()) {
+      try { await sendSms(c.phone, `MD Fit code: ${code}. It expires in 10 minutes.`); return { via: "sms", to: maskPhone(c.phone) }; }
+      catch (e) { logger.warn("sms_failed", { error: e.message }); }
     }
-    res.json({ ok: true, emailed: notify.enabled, message: notify.enabled
-      ? "If that email has an account, a 6-digit code is on its way."
-      : "Call or text us and we'll help you reset your password." });
+    if (!notify.enabled) return null;
+    notify.client(c.email, `${code} is your MD Fit code`,
+      `Hi ${c.name.split(" ")[0]},\n\nYour MD Fit code is:\n\n${code}\n\nUse it to set or reset your password. It expires in 10 minutes. If you didn't ask for this, ignore this email.\n\nMD Fit`);
+    return { via: "email", to: maskEmail(c.email) };
+  }
+  function checkCode(c, code) {
+    const entry = resetCodes.get(c.id);
+    if (!entry || Date.now() > entry.exp) { resetCodes.delete(c.id); return "Code expired. Request a new one."; }
+    if (entry.tries >= RESET_CODE_MAX_TRIES) { resetCodes.delete(c.id); return "Too many attempts. Request a new code."; }
+    if (entry.code !== String(code || "").trim()) { entry.tries++; return `Wrong code. ${RESET_CODE_MAX_TRIES - entry.tries} attempts left.`; }
+    resetCodes.delete(c.id);
+    return "";
+  }
+
+  app.post("/api/clients/forgot", signupLimit.mw, async (req, res) => {
+    const b = req.body || {}, ident = b.identifier || b.email || b.phone || "";
+    const isPhone = !String(ident).includes("@");
+    const c = findByIdentifier(clients(), ident);
+    let sent = null;
+    if (c) sent = await sendCode(c, isPhone).catch(() => null);
+    const canSend = notify.enabled || (isPhone && smsReady());
+    res.json({ ok: true, emailed: notify.enabled, via: sent ? sent.via : (isPhone && smsReady() ? "sms" : "email"),
+      message: !canSend ? "Call or text us and we'll help you reset your password."
+        : isPhone ? (smsReady() ? "If that number is on an account, a 6-digit code is on its way by text." : "If that number is on an account, we emailed a 6-digit code to the email on file.")
+        : "If that email has an account, a 6-digit code is on its way." });
   });
 
   app.post("/api/clients/verify-code", (req, res) => {
     if (!ready) return notReady(res);
-    const email = String((req.body && req.body.email) || "").trim().toLowerCase();
-    const code = String((req.body && req.body.code) || "").trim();
-    const entry = resetCodes.get(email);
-    if (!entry || Date.now() > entry.exp) { resetCodes.delete(email); return res.status(400).json({ error: "Code expired. Request a new one." }); }
-    if (entry.tries >= RESET_CODE_MAX_TRIES) { resetCodes.delete(email); return res.status(429).json({ error: "Too many attempts. Request a new code." }); }
-    if (entry.code !== code) { entry.tries++; return res.status(400).json({ error: `Wrong code. ${RESET_CODE_MAX_TRIES - entry.tries} attempts left.` }); }
-    resetCodes.delete(email);
-    const c = clients().find((x) => x.email === email);
+    const b = req.body || {};
+    const c = findByIdentifier(clients(), b.identifier || b.email || b.phone);
     if (!c) return res.status(400).json({ error: "Code expired. Request a new one." });
+    const err = checkCode(c, b.code);
+    if (err) return res.status(/Too many/.test(err) ? 429 : 400).json({ error: err });
     res.json({ resetToken: resetToken(c) });
   });
 
@@ -371,11 +408,19 @@ function mountClients(ctx) {
     res.json({ client: pub(c) });
   });
 
+  // Send a code to the signed-in member (needed to set a first password, or to change it without the current one)
+  me.post("/password/code", resetLimit.mw, async (req, res) => {
+    const sent = await sendCode(req.client, !!(req.body && req.body.via === "sms")).catch(() => null);
+    if (!sent) return res.status(503).json({ error: "We can't send codes right now. Call or text us at 941-313-0562." });
+    res.json({ ok: true, ...sent, sms: smsReady() && !!req.client.phone });
+  });
   me.put("/password", (req, res) => {
     const b = req.body || {};
-    if (!verifyPassword(String(b.current || ""), req.client.passwordHash)) return res.status(400).json({ error: "Current password is wrong." });
     const list = clients();
     const c = list.find((x) => x.id === req.client.id);
+    if (b.code) { const err = checkCode(c, b.code); if (err) return res.status(400).json({ error: err }); }
+    else if (!c.passwordHash) return res.status(400).json({ error: "Enter the code we sent you to set your password." });
+    else if (!verifyPassword(String(b.current || ""), c.passwordHash)) return res.status(400).json({ error: "Current password is wrong." });
     c.passwordHash = hashPassword(passwordOf(b.password, "New password"));
     c.pwv = (c.pwv || 0) + 1; // signs out other devices
     save(list);
@@ -720,16 +765,13 @@ function mountClients(ctx) {
     res.json({ url: resetUrl(c), hours: RESET_HOURS });
   });
 
-  admin.post("/clients/:id/send-reset-code", (req, res) => {
+  admin.post("/clients/:id/send-reset-code", async (req, res) => {
     const c = clients().find((x) => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: "Client not found." });
-    if (!notify.enabled) return res.status(503).json({ error: "Email isn't configured (RESEND_API_KEY)." });
-    const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
-    resetCodes.set(c.email, { code, exp: Date.now() + RESET_CODE_TTL, tries: 0 });
-    notify.client(c.email, `${code} — your MD Fit reset code`,
-      `Hi ${c.name.split(" ")[0]},\n\nYour password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't request this, ignore this email.\n\nMD Fit`);
+    const sent = await sendCode(c, !!c.phone).catch(() => null);
+    if (!sent) return res.status(503).json({ error: "Email isn't configured (RESEND_API_KEY)." });
     activity("admin_sent_reset_code", { email: c.email });
-    res.json({ ok: true, message: `Reset code sent to ${c.email}.` });
+    res.json({ ok: true, message: `Code sent by ${sent.via === "sms" ? "text" : "email"} to ${sent.to}.` });
   });
 
   admin.delete("/clients/:id", (req, res) => {

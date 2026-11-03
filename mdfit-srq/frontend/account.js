@@ -909,6 +909,7 @@
     const first = (client.name || "there").split(" ")[0];
     $("#hello-name").textContent = first;
     $("#avatar").textContent = first[0].toUpperCase();
+    if ($("#pw-summary")) renderPasswordCard();
     $("#p-name").textContent = client.name;
     $("#p-email").textContent = client.email;
     const f = $("#profile-form");
@@ -920,9 +921,32 @@
     client = r.client; auth.set({ ...auth.get(), client }); renderProfile();
     return { message: "Saved." };
   }, { reset: false });
+  // Password: change with the current one, or with a code by email/text. Google sign-ups set their first one with a code.
+  function renderPasswordCard() {
+    const first = client && client.hasPassword === false;
+    $("#pw-summary").textContent = first ? "Set a password" : "Change password";
+    $("#pw-intro").hidden = !first;
+    $("#pw-current").hidden = first;
+    $("#pw-code-row").hidden = !first && !renderPasswordCard.codeSent;
+    $("#pw-submit").textContent = first ? "Set password" : "Change password";
+    $("#pw-send-code").textContent = first ? "Send me a code" : "Forgot it? Send me a code instead";
+  }
+  $("#pw-send-code").addEventListener("click", async () => {
+    const msg = $("#pw-code-msg"); msg.textContent = "Sending…";
+    try {
+      const r = await apiAuth("POST", "/api/me/password/code", { via: client && client.phone ? "sms" : "email" });
+      renderPasswordCard.codeSent = true; renderPasswordCard();
+      msg.textContent = `Code sent by ${r.via === "sms" ? "text" : "email"} to ${r.to}.`;
+      $("#password-form").code.focus();
+    } catch (err) { msg.textContent = err.message; }
+  });
   wire($("#password-form"), async (d) => {
-    auth.set(await apiAuth("PUT", "/api/me/password", d));
-    return { message: "Password changed. Other devices were signed out." };
+    const body = { password: d.password };
+    if (d.code) body.code = d.code; else body.current = d.current;
+    const r = await apiAuth("PUT", "/api/me/password", body);
+    auth.set(r); client = r.client || { ...client, hasPassword: true }; renderPasswordCard.codeSent = false; renderPasswordCard();
+    $("#pw-code-msg").textContent = "";
+    return { message: "Password saved. You can now log in with your email and password. Other devices were signed out." };
   });
   // Referral code
   function renderReferral() {
