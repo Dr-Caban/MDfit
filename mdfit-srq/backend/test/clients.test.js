@@ -494,3 +494,12 @@ test("embedded checkout: service and protocol endpoints return a clientSecret an
   // Bad service id
   assert.equal((await s.call("POST", "/api/me/checkout/service", { service: "nope" }, tok)).status, 400);
 });
+
+test("referral endpoint returns the member's code", async (t) => {
+  const s = await start(); t.after(s.close);
+  const tok = (await signup(s)).body.token;
+  const r = await s.call("GET", "/api/me/referral", undefined, tok);
+  assert.equal(r.status, 200);
+  assert.match(r.body.code, /^MDFIT-/);
+  assert.equal(r.body.referrals, 0);
+});

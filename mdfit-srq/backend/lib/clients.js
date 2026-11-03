@@ -77,6 +77,9 @@ function mountClients(ctx) {
   const activeMembership = (c) => (c.membership && (!c.membership.until || c.membership.until >= today()) ? c.membership : null);
   const genReferralCode = () => "MDFIT-" + crypto.randomBytes(3).toString("hex").toUpperCase();
   const referralCode = (c) => { if (!c.referralCode) c.referralCode = genReferralCode(); return c.referralCode; };
+  const generateReferralCode = () => genReferralCode();
+  const referrals = () => store.read("referrals", []);
+  const saveReferrals = (list) => store.write("referrals", list.slice(-5000));
   function applyReferral(newClient, code, list) {
     if (!code) return;
     const referrer = list.find((x) => x.referralCode === code && x.id !== newClient.id);
@@ -529,7 +532,7 @@ function mountClients(ctx) {
       save(list);
     }
     const refs = referrals().filter((r) => r.referrerId === c.id);
-    res.json({ code: c.referralCode, freeUntil: c.freeUntil || null, referrals: refs.length, freeMonths: FREE_MONTHS });
+    res.json({ code: c.referralCode, freeUntil: c.freeUntil || null, referrals: Math.max(refs.length, c.referrals || 0), freeMonths: FREE_MONTHS });
   });
 
   me.get("/stats", (req, res) => {
