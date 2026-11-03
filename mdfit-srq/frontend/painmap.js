@@ -15,7 +15,7 @@
   const sideWord = (r) => (r.side === "center" ? "" : ` (${r.side} side)`);
 
   const svgMarkup = (filterId) => `<svg class="pm-regions" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Body regions">
-    <defs><filter id="${filterId}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="9" result="b"/><feFlood flood-color="#F2CF7A" flood-opacity=".95"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter><mask id="${filterId}-body" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><image href="assets/pain/body-mask.png" width="${W}" height="${H}"/></mask></defs>
+    <defs><filter id="${filterId}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur in="SourceAlpha" stdDeviation="9" result="b"/><feFlood flood-color="#F2CF7A" flood-opacity=".95"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter><mask id="${filterId}-body" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><image href="/assets/pain/body-mask.png" width="${W}" height="${H}"/></mask></defs>
     <g mask="url(#${filterId}-body)">${REGIONS.map((r, i) => `<path class="pm-region" d="${PATH[r.id]}" data-region="${r.id}" tabindex="0" role="button" aria-pressed="false" aria-label="Region ${i + 1}, ${r.view} of body${sideWord(r)}"/>`).join("")}</g></svg>`;
 
   function initMap(root, ctx) {
