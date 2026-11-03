@@ -1128,3 +1128,8 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .p-fs svg { fill: none !important; }
 .player:fullscreen { max-width: none; width: 100vw; height: 100vh; background: var(--navy); }
 .player:fullscreen .p-frame { max-height: 62vh; }
+
+.sub-tabs { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.sub-tabs.lvl { border-top: 0; padding-top: 0; }
+.chip.sub { font-size: 13px; padding: 6px 12px; }
+.sub-tabs.lvl .chip.sub[aria-selected="true"] { background: var(--gold); border-color: var(--gold); color: var(--navy); }

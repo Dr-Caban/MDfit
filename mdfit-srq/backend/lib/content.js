@@ -288,6 +288,7 @@ function programIn(p, i) {
     seed: int(p.seed ?? 1, `${L} seed`, { min: 1, max: 999999 }), access: oneOf(p.access || "free", ACCESS, `${L} access`),
     summary: str(p.summary, `${L} summary`, { max: 400 }), notes: str(p.notes, `${L} notes`, { max: 1000 }),
     image: str(p.image || "", `${L} image`, { max: 500 }),
+    ...(p.sport ? { sport: str(p.sport, `${L} sport`, { min: 1, max: 30 }) } : {}),
     days: p.days.map((d, j) => ({
       name: str(d.name, `${L} day ${j + 1} name`, { min: 1, max: 40 }), goal: oneOf(d.goal, GOALS, `${L} day ${j + 1} focus`),
       length: oneOf(Number(d.length), [15, 20, 30, 45, 60, 90], `${L} day ${j + 1} length`),

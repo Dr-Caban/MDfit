@@ -1709,10 +1709,25 @@
     return { ...w, title: `${p.title}: ${d.name}`, key: `prog-${p.id}-d${i}`, noRest: REHAB_CATS.has(p.category) };
   };
   const doneCount = (p, i) => allWorkouts.filter((w) => w.key === `prog-${p.id}-d${i}`).length;
+  // Sport Performance: sport sub-tabs (Golf, Pickleball, ...), each with Beginner / Intermediate / Advanced sub-tabs
+  let progSport = "", progLevel = "";
+  const LEVEL_ORDER = ["beginner", "intermediate", "advanced"];
+  const sportOf = (p) => p.sport || (p.category === "Sport Performance" ? p.title.split(/\s+/)[0] : "");
   function renderProgramsView(sub) {
     const cats = ["All", ...C.categories.filter((c) => C.programs.some((p) => p.category === c))];
-    $("#prog-cats").innerHTML = cats.map((c) => `<button type="button" class="chip" data-pcat="${esc(c)}" aria-selected="${c === progCat}">${esc(c)}</button>`).join("");
-    const list = C.programs.filter((p) => progCat === "All" || p.category === progCat);
+    let chips = cats.map((c) => `<button type="button" class="chip" data-pcat="${esc(c)}" aria-selected="${c === progCat}">${esc(c)}</button>`).join("");
+    let list = C.programs.filter((p) => progCat === "All" || p.category === progCat);
+    if (progCat === "Sport Performance") {
+      const sports = [...new Set(list.map(sportOf).filter(Boolean))].sort();
+      if (!sports.includes(progSport)) progSport = sports[0] || "";
+      const inSport = list.filter((p) => sportOf(p) === progSport);
+      const levels = LEVEL_ORDER.filter((l) => inSport.some((p) => p.level === l));
+      if (!levels.includes(progLevel)) progLevel = levels[0] || "";
+      chips += `<div class="sub-tabs" role="tablist" aria-label="Sport">${sports.map((sp) => `<button type="button" class="chip sub" data-psport="${esc(sp)}" aria-selected="${sp === progSport}">${esc(sp)}</button>`).join("")}</div>`;
+      if (levels.length > 1) chips += `<div class="sub-tabs lvl" role="tablist" aria-label="Level">${levels.map((l) => `<button type="button" class="chip sub" data-plevel="${l}" aria-selected="${l === progLevel}">${l[0].toUpperCase() + l.slice(1)}</button>`).join("")}</div>`;
+      list = inSport.filter((p) => !progLevel || p.level === progLevel);
+    }
+    $("#prog-cats").innerHTML = chips;
     $("#prog-grid").innerHTML = list.map((p) => {
       const sessions = p.weeks * p.days.length, done = p.days.reduce((n, _, i) => n + doneCount(p, i), 0);
       return `<button type="button" class="prog-card${p.image ? " prog-card-img" : ""}" data-prog="${p.id}">
@@ -1741,7 +1756,14 @@
       ${p.locked ? `<div class="locked-note">${unlockBtn("this program")}</div>` : ""}`;
     $("#prog-detail").dataset.id = p.id;
   }
-  $("#prog-cats").addEventListener("click", (e) => { const b = e.target.closest("[data-pcat]"); if (!b) return; progCat = b.dataset.pcat; renderProgramsView(); });
+  $("#prog-cats").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pcat]"), sp = e.target.closest("[data-psport]"), lv = e.target.closest("[data-plevel]");
+    if (b) { progCat = b.dataset.pcat; progSport = ""; progLevel = ""; }
+    else if (sp) { progSport = sp.dataset.psport; progLevel = ""; }
+    else if (lv) progLevel = lv.dataset.plevel;
+    else return;
+    renderProgramsView();
+  });
   $("#prog-grid").addEventListener("click", (e) => { const b = e.target.closest("[data-prog]"); if (b) go("programs/" + b.dataset.prog); });
   $("#prog-detail").addEventListener("click", (e) => {
     const b = e.target.closest("[data-prog-start]"); if (!b) return;
