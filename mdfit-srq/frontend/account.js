@@ -1163,7 +1163,7 @@
     if (!$("#perf-card")) return;
     const dev = hasDevice();
     $(".perf-sub").textContent = dev ? "Heart rate · HRV · VO2 max · weights" : "Body weight · workouts";
-    $$(".dev-only", $("#vitals-form")).forEach((el) => { el.hidden = !dev; });
+    $$(".dev-only", $("#perf-card")).forEach((el) => { el.hidden = !dev; });
     $("#vitals").innerHTML = VITALS.filter(([k, , , , devOnly]) => !devOnly || dev || latestOf(k)).map(([k, label, unit, good]) => {
       const last = latestOf(k), first = vitals.find((v) => v[k] !== undefined);
       const diff = last && first && last !== first ? Math.round((last[k] - first[k]) * 10) / 10 : null;
@@ -1216,7 +1216,7 @@
       return;
     }
     if (!f.weight.value && lastW) f.weight.value = lastW.weight;
-    $("#ci-weight-hint").textContent = lastW ? `Last: ${lastW.weight} lb on ${lastW.date.slice(5)}` : "Step on the scale, then enter it here.";
+    $("#ci-weight-hint").textContent = lastW ? `Last: ${lastW.weight} lb on ${lastW.date.slice(5)}` : "Optional. Skip it anytime.";
     $$("#ci-sleep button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.h) === ci.sleep)));
   }
   if ($("#checkin")) {
@@ -1230,11 +1230,11 @@
     $("#ci-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const f = e.target, msg = $(".ci-msg", f), body = {}, w = f.weight.value.trim();
-      if (w) { const n = Number(w); if (!(n >= 50 && n <= 700)) { msg.textContent = "That weight looks off. Double-check it."; return; } body.weight = n; }
+      if (w) { const n = Number(w); if (!(n >= 50 && n <= 700)) { msg.textContent = "Hmm, that number looks off."; return; } body.weight = n; }
       if (ci.sleep !== null) body.sleep = ci.sleep;
-      if (!Object.keys(body).length) { msg.textContent = "Add your weight or tap your sleep hours."; return; }
+      if (!Object.keys(body).length) { msg.textContent = "Add a weigh-in or tap how you slept."; return; }
       const btn = $(".ci-save", f); btn.disabled = true; msg.textContent = "";
-      try { vitals = await apiAuth("POST", "/api/me/vitals", body); ci.editing = false; ci.sleep = null; f.weight.value = ""; renderPerf(); toast("Check-in saved"); }
+      try { vitals = await apiAuth("POST", "/api/me/vitals", body); ci.editing = false; ci.sleep = null; f.weight.value = ""; renderPerf(); toast("Logged 👍"); }
       catch (err) { msg.textContent = err.message; }
       finally { btn.disabled = false; }
     });
@@ -1244,7 +1244,7 @@
   $("#vitals-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.target, body = {};
-    ["restingHr", "hrv", "vo2max", "weight", "sleep"].forEach((k) => { const v = f[k].value.trim(); if (v) body[k] = Number(v); });
+    ["restingHr", "hrv", "vo2max"].forEach((k) => { const v = f[k].value.trim(); if (v) body[k] = Number(v); });
     try { vitals = await apiAuth("POST", "/api/me/vitals", body); f.reset(); $(".nums-msg", f).textContent = "Saved."; renderPerf(); }
     catch (err) { $(".nums-msg", f).textContent = err.message; }
   });
