@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=b4a2a475">
-  <link rel="stylesheet" href="admin.css?v=f89c7247">
+  <link rel="stylesheet" href="admin.css?v=926bd021">
 </head>
 <body class="admin">
   <section id="login" class="login">
@@ -281,7 +281,9 @@
             <div class="table-wrap"><table id="analytics-refs"></table></div>
           </div>
         </div>
-        <p class="muted" style="margin-top:14px">For deeper analytics (devices, geography, speed), open <a href="https://vercel.com" target="_blank" rel="noopener">Vercel Dashboard</a> → mdfit-srq → Analytics.</p>
+        <h3 style="margin-top:22px">Who's visiting <select id="an-range" style="margin-left:8px"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></h3>
+        <div class="an-mix" id="an-mix"></div>
+        <p class="muted" style="margin-top:14px">Device, source and location tracking started on Nov 3, 2026. Earlier days only have page views. Speed and more detail: <a href="https://vercel.com" target="_blank" rel="noopener">Vercel Dashboard</a> → mdfit-srq → Analytics.</p>
       </section>
 
       <section data-panel="settings" hidden>
@@ -341,11 +343,11 @@
   </div>
 
   <script src="config.js?v=73fb174c"></script>
-  <script src="analytics.js?v=7d979520" defer></script>
+  <script src="analytics.js?v=871c86ba" defer></script>
   <script src="realtime.js?v=b6d56265"></script>
   <script src="painmuscles.js?v=74e3b348"></script>
   <script src="paintracks.js?v=2a3ab5b5"></script>
-  <script src="admin.js?v=80e810cb"></script>
+  <script src="admin.js?v=b2cb8200"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

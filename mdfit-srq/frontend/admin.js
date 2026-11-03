@@ -750,7 +750,7 @@
   }));
 
   async function loadAnalytics() {
-    const d = await api("GET", "/api/admin/analytics");
+    const d = await api("GET", `/api/admin/analytics?days=${($("#an-range") || {}).value || 30}`);
     const s = d.summary;
     $("#analytics-stats").innerHTML = `
       <div class="stat"><b>${s.todayViews}</b><small>Views today</small></div>
@@ -766,8 +766,14 @@
     $("#analytics-refs").innerHTML = `<thead><tr><th>Source</th><th>Views</th></tr></thead><tbody>${
       d.referrers.map((r) => `<tr><td>${esc(r.source)}</td><td>${r.views}</td></tr>`).join("") || "<tr><td colspan=2 class='muted'>No referral traffic yet</td></tr>"
     }</tbody>`;
+    const m = d.mix || {};
+    const block = (title, rows, icon) => `<div class="an-card"><h4>${title}</h4>${(rows || []).length ? rows.map((r) => `<div class="an-row"><span class="an-name">${icon ? icon(r.name) + " " : ""}${esc(r.name)}</span><span class="an-bar"><i style="width:${Math.max(2, r.pct)}%"></i></span><b>${r.pct}%</b><small>${r.views}</small></div>`).join("") : `<p class="muted small">No data yet</p>`}</div>`;
+    const devIc = (n) => ({ Mobile: "📱", Desktop: "🖥️", Tablet: "📲" })[n] || "";
+    $("#an-mix").innerHTML = block("Device", m.devices, devIc) + block("Where they came from", m.sources) + block("Location (city, state)", m.places)
+      + block("Operating system", m.os) + block("Browser", m.browsers) + block("Country", m.countries);
   }
 
+  document.addEventListener("change", (e) => { if (e.target.id === "an-range") loadAnalytics(); });
   async function loadSettings() {
     loadMfa();
     const s = await api("GET", "/api/admin/settings");

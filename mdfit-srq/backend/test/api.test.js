@@ -353,3 +353,25 @@ test("reviews: any rating earns a one-time plan review code, admin publishes onl
   const again = await s.call("POST", "/api/appointments", { typeId: "plan-review", date: day.date, time: day.slots[1], name: "Hana Hill", email: "hana@example.com", phone: "941-555-0101", rewardCode: code });
   assert.equal(again.status, 409);
 });
+
+test("analytics: device, source and location mix with percentages", async (t) => {
+  const s = await start(); t.after(s.close);
+  const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1";
+  const mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
+  const geo = { "x-vercel-ip-country": "US", "x-vercel-ip-country-region": "FL", "x-vercel-ip-city": "Sarasota" };
+  await s.call("POST", "/api/hit", { page: "/", referrer: "https://www.google.com/" }, { "user-agent": iphone, ...geo });
+  await s.call("POST", "/api/hit", { page: "/book", referrer: "" }, { "user-agent": iphone, ...geo });
+  await s.call("POST", "/api/hit", { page: "/", referrer: "https://l.instagram.com/" }, { "user-agent": mac, "x-vercel-ip-city": "Bradenton", "x-vercel-ip-country-region": "FL" });
+  await s.call("POST", "/api/hit", { page: "/", utm: "newsletter" }, { "user-agent": mac });
+  await s.login();
+  const m = (await s.call("GET", "/api/admin/analytics?days=7")).body.mix;
+  const pct = (list, name) => (list.find((x) => x.name === name) || {}).pct;
+  assert.equal(pct(m.devices, "Mobile"), 50);
+  assert.equal(pct(m.devices, "Desktop"), 50);
+  assert.equal(pct(m.sources, "Google"), 25);
+  assert.equal(pct(m.sources, "Instagram"), 25);
+  assert.equal(pct(m.sources, "Newsletter"), 25);
+  assert.equal(pct(m.sources, "Direct / typed / bookmark"), 25);
+  assert.equal(m.places[0].name, "Sarasota, FL");
+  assert.equal(pct(m.os, "iOS"), 50);
+});
