@@ -1114,3 +1114,10 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 }
 @keyframes pm-pulse { 0%,100% { fill-opacity: .55; stroke-opacity: .65; } 50% { fill-opacity: 1; stroke-opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .app-painmap .pm-region, .pm-region { animation: none !important; } }
+
+.phone-nudge { display: grid; gap: 10px; border: 1px solid #e8c25e; background: #fffaf0; }
+.phone-nudge b { color: var(--navy); }
+.phone-nudge p { margin: 4px 0 0; }
+.phone-nudge-row { display: flex; gap: 8px; }
+.phone-nudge-row .input { flex: 1; min-width: 0; }
+.phone-nudge .form-msg:empty { display: none; }

@@ -51,7 +51,8 @@
         if (e.target === sheet || e.target.closest(".pm-sheet-close")) return sheet.close();
         const c = e.target.closest("[data-track]");
         if (c) {
-          if (isApp) { sheet.close(); location.hash = "pain/track/" + c.dataset.track; }
+          // iOS Safari can leave a closed dialog's dark backdrop on screen: remove the sheet entirely, then start
+          if (isApp) { const t = c.dataset.track; sheet.close(); sheet.remove(); sheet = null; setTimeout(() => { location.hash = "pain/track/" + t; }, 60); return; }
           else TK.open(c.dataset.track, { startLabel: "Do this track in the free MD Fit app →", onStart: (t) => { location.href = `/account#pain/track/${t.id}`; } });
         }
         if (e.target.closest("a[href^='#']")) sheet.close();

@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=e8deac41">
+  <link rel="stylesheet" href="app/app.css?v=1bedea79">
   <link rel="stylesheet" href="guides.css?v=0d6cdb39">
 </head>
 <body class="mdapp">
@@ -401,6 +401,17 @@
         <ul class="activity" id="p-workouts"></ul>
       </div>
 
+      <div class="card phone-nudge" id="phone-nudge" hidden>
+        <div><b>Add your phone number</b><p class="small">So Dr. Jared's team can reach you about visits and your plan.</p></div>
+        <form id="phone-nudge-form" novalidate>
+          <div class="phone-nudge-row">
+            <input name="phone" class="input" type="tel" inputmode="tel" maxlength="30" autocomplete="tel" placeholder="941-555-0100" aria-label="Mobile phone">
+            <button class="btn-gold sm" type="submit">Save</button>
+          </div>
+          <p class="form-msg small" role="status"></p>
+        </form>
+      </div>
+
       <div class="card">
         <div class="card-head"><span class="label">Profile</span></div>
         <form id="profile-form" class="stack-form" novalidate>
@@ -601,11 +612,11 @@
   <script src="painmuscles.js?v=74e3b348"></script>
   <script src="painpatterns.js?v=eefa906e"></script>
   <script src="paintracks.js?v=a4fc10a4"></script>
-  <script src="painmap.js?v=c4777606"></script>
+  <script src="painmap.js?v=7cde1557"></script>
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=aaa4ac68"></script>
   <script src="stripe-checkout.js?v=0b68bde3"></script>
-  <script src="account.js?v=a6bd58fd"></script>
+  <script src="account.js?v=fa42e5b6"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

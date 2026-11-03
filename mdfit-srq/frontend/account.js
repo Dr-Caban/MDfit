@@ -910,6 +910,7 @@
     $("#hello-name").textContent = first;
     $("#avatar").textContent = first[0].toUpperCase();
     if ($("#pw-summary")) renderPasswordCard();
+    if ($("#phone-nudge")) $("#phone-nudge").hidden = !!(client.phone && String(client.phone).trim());
     $("#p-name").textContent = client.name;
     $("#p-email").textContent = client.email;
     const f = $("#profile-form");
@@ -920,6 +921,15 @@
     const r = await apiAuth("PUT", "/api/me", { name: d.name, phone: d.phone }); earn("profile");
     client = r.client; auth.set({ ...auth.get(), client }); renderProfile();
     return { message: "Saved." };
+  }, { reset: false });
+  wire($("#phone-nudge-form"), async (d) => {
+    const phone = String(d.phone || "").trim();
+    if (phone.replace(/\D/g, "").length < 10) throw new Error("Enter a 10-digit phone number.");
+    const r = await apiAuth("PUT", "/api/me", { name: client.name, phone });
+    client = r.client; auth.set({ ...auth.get(), client }); renderProfile();
+    const pf = $("#profile-form"); if (pf && pf.phone) pf.phone.value = client.phone || "";
+    toast("Phone number saved");
+    return { message: "" };
   }, { reset: false });
   // Password: change with the current one, or with a code sent by email. Google sign-ups set their first one with a code.
   function renderPasswordCard() {
@@ -1193,6 +1203,8 @@
   }
   function goFs(el) { const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen; if (rfs) rfs.call(el).catch(() => {}); }
   function startPlayer(w) {
+    document.querySelectorAll("dialog[open]").forEach((d) => { try { d.close(); } catch {} });
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     P.w = w; P.steps = buildSteps(w); P.i = 0; P.start = Date.now(); P.done = false; P.paused = false; P.log = {};
     const pl = $("#player");
     pl.hidden = false;
