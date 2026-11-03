@@ -4,7 +4,7 @@ const express = require("express");
 const crypto = require("crypto");
 const { hashPassword, verifyPassword, signToken, verifyToken } = require("./auth");
 const { ValidationError, EMAIL_RE, AREAS } = require("./validate");
-const { rewards, ACTIONS } = require("./rewards");
+const { rewards, ACTIONS, levelStart } = require("./rewards");
 
 const SESSION_DAYS = 30;
 const RESET_HOURS = 24;
@@ -548,6 +548,26 @@ function mountClients(ctx) {
   const OLYMPIC_LEVEL = 5;
   const leagueOf = (level) => (level >= OLYMPIC_LEVEL ? "olympic" : "pro");
   let board = { at: 0, rows: [] };
+  // Seeded competitors so leagues feel active during testing. Turn off with LEADERBOARD_PACERS=off.
+  const PACER_NAMES = ["Sarah K.", "Mike R.", "Jess T.", "Carlos M.", "Ashley W.", "Dan P.", "Megan L.", "Chris B.", "Nina S.", "Tyler H.", "Rachel D.", "Marcus J.", "Lauren G.", "Kevin O.", "Brittany F.", "Jason C.", "Amanda V.", "Ryan N.", "Olivia E.", "Derek A."];
+  const seeded = (str) => { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 10000) / 10000; }; };
+  const pacers = (league, realCount) => {
+    if (String(process.env.LEADERBOARD_PACERS || "on").toLowerCase() === "off") return [];
+    const n = Math.max(0, 9 - realCount); if (!n) return [];
+    const d = today(), dow = (new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7, monday = new Date(Date.parse(d + "T12:00:00Z") - dow * 864e5).toISOString().slice(0, 10);
+    const hour = Number(nowParts(cfg.tz, cfg.now()).time?.slice(0, 2)) || 12;
+    const progress = Math.min(1, (dow + hour / 24) / 7);
+    const names = PACER_NAMES.slice(league === "olympic" ? 10 : 0).concat(PACER_NAMES.slice(0, league === "olympic" ? 10 : 0));
+    return names.slice(0, n).map((name, i) => {
+      const r = seeded(`${league}|${monday}|${name}`), base = seeded(`${league}|${name}`);
+      const weekTarget = league === "olympic" ? 150 + r() * 450 : 40 + r() * 220;
+      const curve = Math.pow(progress, 0.8 + r() * 0.6);
+      const week = Math.round(weekTarget * curve);
+      const level = league === "olympic" ? 5 + Math.floor(base() * 4) : 1 + Math.floor(base() * 4);
+      const xp = Math.max(week, levelStart(level) + Math.round(base() * (levelStart(level + 1) - levelStart(level) - 1)));
+      return { id: `pacer-${league}-${i}`, name, xp, week, level, league };
+    });
+  };
   const boardRows = () => {
     if (Date.now() - board.at < 60000) return board.rows;
     const appts = appointments();
@@ -555,6 +575,7 @@ function mountClients(ctx) {
       const r = rewardsOf(c, appts), parts = String(c.name || "Member").trim().split(/\s+/);
       return { id: c.id, name: parts[0] + (parts.length > 1 ? ` ${parts[parts.length - 1][0]}.` : ""), xp: r.xp, week: r.week.reduce((n, d) => n + d.xp, 0), level: r.level, league: leagueOf(r.level) };
     }).filter((x) => x.xp > 0);
+    for (const lg of ["pro", "olympic"]) rows.push(...pacers(lg, rows.filter((x) => x.league === lg).length));
     board = { at: Date.now(), rows };
     return rows;
   };
