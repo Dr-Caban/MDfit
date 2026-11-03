@@ -773,7 +773,24 @@
       + block("Operating system", m.os) + block("Browser", m.browsers) + block("Country", m.countries);
   }
 
-  document.addEventListener("change", (e) => { if (e.target.id === "an-range") loadAnalytics(); });
+  document.addEventListener("change", (e) => { if (e.target.id === "an-range") loadAnalytics(); if (e.target.id === "sa-range") loadSearchAnalytics(); });
+
+  async function loadSearchAnalytics() {
+    const days = ($("#sa-range") || {}).value || 30;
+    let d; try { d = await api("GET", `/api/admin/search-analytics?days=${days}`); } catch { return; }
+    const s = d.totals || {};
+    $("#sa-stats").innerHTML = `<div class="stat"><b>${s.events || 0}</b><small>Search events</small></div><div class="stat"><b>${s.uniqueQueries || 0}</b><small>Unique queries</small></div>`;
+    const row = (r) => `<tr><td>${esc(r.q)}</td><td>${r.impressions}</td><td>${r.clicks}</td><td>${r.ctr}%</td><td>${r.meanPosition != null ? r.meanPosition : "—"}</td></tr>`;
+    const head = `<thead><tr><th>Query</th><th>Shown</th><th>Clicks</th><th>CTR</th><th>Avg. pos.</th></tr></thead>`;
+    const noData = `<tr><td colspan=5 class='muted'>No data yet</td></tr>`;
+    $("#sa-top").innerHTML = head + "<tbody>" + ((d.top || []).map(row).join("") || noData) + "</tbody>";
+    $("#sa-zero").innerHTML = head + "<tbody>" + ((d.zeroResult || []).map(row).join("") || noData) + "</tbody>";
+    $("#sa-best").innerHTML = head + "<tbody>" + ((d.topCtr || []).map(row).join("") || noData) + "</tbody>";
+    $("#sa-worst").innerHTML = head + "<tbody>" + ((d.bottomCtr || []).map(row).join("") || noData) + "</tbody>";
+  }
+  const _origAn = loadAnalytics;
+  async function loadAnalyticsWithSearch() { await _origAn(); loadSearchAnalytics(); }
+  loaders.analytics = loadAnalyticsWithSearch;
   async function loadSettings() {
     loadMfa();
     const s = await api("GET", "/api/admin/settings");

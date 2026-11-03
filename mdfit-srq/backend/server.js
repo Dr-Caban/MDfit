@@ -16,6 +16,7 @@ const { mountIntake, MASSAGE_TYPES } = require("./lib/intake");
 const { mountFeedbackReports } = require("./lib/feedback-reports");
 const { mountAnalytics } = require("./lib/analytics");
 const { mountVideos } = require("./lib/videos");
+const { mountSearch } = require("./lib/search");
 const { createRealtime } = require("./lib/realtime");
 const { mountPayments } = require("./lib/payments");
 const { createSecurity } = require("./lib/security");
@@ -1016,6 +1017,7 @@ function createApp(cfg = loadConfig()) {
   mountFeedbackReports({ app, admin, store, me: cl.me, cfg, notify, activity, limiter });
   mountAnalytics({ app, admin, store, limiter });
   mountVideos({ app, admin, store, cfg, logger: typeof logger !== "undefined" ? logger : null });
+  mountSearch({ app, admin, store, limiter, logger: typeof logger !== "undefined" ? logger : null });
   const pay = mountPayments({ app, admin, store, notify, activity, cfg, settings, logger, ...cl });
 
   app.use("/api/admin", admin);

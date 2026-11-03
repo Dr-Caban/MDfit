@@ -284,6 +284,17 @@
         <h3 style="margin-top:22px">Who's visiting <select id="an-range" style="margin-left:8px"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></h3>
         <div class="an-mix" id="an-mix"></div>
         <p class="muted" style="margin-top:14px">Device, source and location tracking started on Nov 3, 2026. Earlier days only have page views. Speed and more detail: <a href="https://vercel.com" target="_blank" rel="noopener">Vercel Dashboard</a> → mdfit-srq → Analytics.</p>
+
+        <h3 style="margin-top:28px">In-app search <select id="sa-range" style="margin-left:8px"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></h3>
+        <div class="stats" id="sa-stats"></div>
+        <div class="grid2">
+          <div><h4>Top queries</h4><div class="table-wrap"><table id="sa-top"></table></div></div>
+          <div><h4>Zero-result or abandoned</h4><p class="muted small">High impressions, low CTR. Fix: add synonyms, write a page, or re-tag an existing one.</p><div class="table-wrap"><table id="sa-zero"></table></div></div>
+        </div>
+        <div class="grid2">
+          <div><h4>Best CTR</h4><div class="table-wrap"><table id="sa-best"></table></div></div>
+          <div><h4>Worst CTR</h4><div class="table-wrap"><table id="sa-worst"></table></div></div>
+        </div>
       </section>
 
       <section data-panel="settings" hidden>
@@ -347,7 +358,7 @@
   <script src="realtime.js?v=b6d56265"></script>
   <script src="painmuscles.js?v=74e3b348"></script>
   <script src="paintracks.js?v=a4fc10a4"></script>
-  <script src="admin.js?v=b2cb8200"></script>
+  <script src="admin.js?v=406e373c"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

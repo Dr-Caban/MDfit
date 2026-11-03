@@ -330,23 +330,37 @@
     </a>`).join("");
     qsOut.hidden = false;
   }
+  // Personalization: favorites and the user's logged pain regions re-rank for them specifically.
+  const personal = () => ({ favorites: new Set(lib.favorites || []), painRegions: [...new Set((painLog || []).map((p) => String(p.area || "").toLowerCase()))].slice(0, 6) });
+  // Track last query and shown hits so we can log a "noclick" when the user abandons without picking anything.
+  let qsLastQ = "", qsLastHits = [], qsClicked = false;
   qsIn && qsIn.addEventListener("input", () => {
     const q = qsIn.value.trim();
     qsClear.hidden = !q;
     clearTimeout(qsT);
     qsT = setTimeout(async () => {
       if (q.length < 2) { qsOut.hidden = true; return; }
-      const hits = await (window.MDFitSearch ? window.MDFitSearch.search(q, { limit: 12 }) : Promise.resolve([]));
-      qsRender(hits, q);
+      const r = await (window.MDFitSearch ? window.MDFitSearch.search(q, { limit: 12, personal: personal() }) : Promise.resolve({ hits: [] }));
+      qsLastQ = q; qsLastHits = r.hits; qsClicked = false;
+      qsRender(r.hits, q);
     }, 80);
   });
   qsClear && qsClear.addEventListener("click", () => { qsIn.value = ""; qsOut.hidden = true; qsClear.hidden = true; qsIn.focus(); });
-  qsIn && qsIn.addEventListener("blur", () => setTimeout(() => (qsOut.hidden = true), 200));
+  qsIn && qsIn.addEventListener("blur", () => setTimeout(() => {
+    qsOut.hidden = true;
+    // Log the no-click so the server knows this query didn't satisfy the user (zero-result signal).
+    if (qsLastQ && !qsClicked && window.MDFitSearch) window.MDFitSearch.noClick(qsLastQ, qsLastHits.length);
+    qsLastQ = "";
+  }, 200));
   qsIn && qsIn.addEventListener("focus", () => { if (qsIn.value.trim().length > 1) qsOut.hidden = false; });
   qsOut && qsOut.addEventListener("click", (e) => {
     const row = e.target.closest("[data-id]"); if (!row) return;
     e.preventDefault();
     const [kind, id] = row.dataset.id.split(":");
+    // Log the click with position so CTR aggregation can re-rank for future queries.
+    const pos = qsLastHits.findIndex((h) => h.id === row.dataset.id);
+    if (qsLastQ && window.MDFitSearch) window.MDFitSearch.click(qsLastQ, row.dataset.id, Math.max(0, pos));
+    qsClicked = true;
     qsOut.hidden = true; qsIn.value = "";
     // Exercises jump into the Videos tab and play; programs/pain tracks use hash routing; the rest are site URLs.
     if (kind === "ex") { const ex = EX.find((x) => x.id === id); if (ex) { show("videos"); setTimeout(() => playVideo(ex.id, ex.name, exMeta(ex)), 50); return; } }
@@ -600,7 +614,7 @@
       // Rank by relevance only when the query has 2+ characters; otherwise just filter+sort as before.
       vqRank = null;
       if (q.length > 1 && window.MDFitSearch) {
-        const hits = await MDFitSearch.search(q, { kinds: ["exercise"], limit: 200 });
+        const { hits } = await MDFitSearch.search(q, { kinds: ["exercise"], limit: 200, personal: personal() });
         vqRank = new Map(hits.map((h, i) => [h.id.slice(3), i])); // id -> rank order
       }
       renderVideos();
