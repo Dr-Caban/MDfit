@@ -11,6 +11,12 @@ const XP = {
   checkin: 5                                                          // per daily reading (weight, sleep, watch numbers), max 2 a day
 };
 const PAIN_XP_PER_DAY = 3;
+// Everyday actions: XP each, max per day. Repeats of the same item (ref) on one day count once.
+const ACTIONS = {
+  video: { xp: 2, cap: 10 }, lecture: { xp: 10, cap: 3 }, message: { xp: 3, cap: 3 }, reaction: { xp: 1, cap: 3 },
+  favorite: { xp: 2, cap: 5 }, program: { xp: 5, cap: 3 }, generate: { xp: 2, cap: 3 }, share: { xp: 5, cap: 1 },
+  booking: { xp: 15, cap: 2 }, profile: { xp: 5, cap: 1 }
+};
 const DAILY_GOAL = 30;
 
 // Level n starts at 50·n·(n-1) XP: 0, 100, 300, 600, 1000, 1500 ...
@@ -35,7 +41,7 @@ const BADGES = [
 ];
 
 // events: [{ date, type, xp, ... }] in date order; returns totals plus per-badge progress with the day it was earned
-function rewards({ workouts = [], painLog = [], visits = [], vitals = [] }, today) {
+function rewards({ workouts = [], painLog = [], visits = [], vitals = [], actions = [], bookings = [] }, today) {
   const events = [];
   const workoutDays = [...new Set(workouts.map((w) => w.date))].sort();
   const streakOn = new Map(); // date -> streak length ending that day
@@ -53,6 +59,16 @@ function rewards({ workouts = [], painLog = [], visits = [], vitals = [] }, toda
     events.push({ date: p.date, type: "pain", xp: n <= PAIN_XP_PER_DAY ? XP.pain : 0, p });
   }
   for (const v of visits) events.push({ date: v.date, type: "visit", xp: XP.visit });
+  const perDay = new Map(), seen = new Set();
+  const action = (date, kind, ref) => {
+    const a = ACTIONS[kind]; if (!a || !date) return;
+    const k = `${date}|${kind}`, r = `${k}|${ref || ""}`;
+    if (ref && seen.has(r)) return; seen.add(r);
+    const n = (perDay.get(k) || 0) + 1; perDay.set(k, n);
+    if (n <= a.cap) events.push({ date, type: "action", xp: a.xp });
+  };
+  [...actions].sort((a, b) => (a.date < b.date ? -1 : 1)).forEach((x) => action(x.date, x.kind, x.ref));
+  bookings.forEach((b) => action(b.date > today ? today : b.date, "booking", b.id));
   for (const v of vitals) {
     const n = ["weight", "sleep", "restingHr", "hrv", "vo2max"].filter((k) => v[k] !== undefined && v[k] !== null).length;
     if (n) events.push({ date: v.date, type: "checkin", xp: Math.min(n, 2) * XP.checkin });
@@ -79,6 +95,7 @@ function rewards({ workouts = [], painLog = [], visits = [], vitals = [] }, toda
       if (!firstPain.has(e.p.area)) firstPain.set(e.p.area, e.p.level);
       state.painDrop = Math.max(state.painDrop, firstPain.get(e.p.area) - e.p.level);
     } else if (e.type === "checkin") state.checkins++;
+    else if (e.type === "action") {}
     else state.visits++;
     for (const b of BADGES) {
       const v = b.kind === "goals" ? state.goals.size : state[b.kind];
@@ -97,4 +114,4 @@ function rewards({ workouts = [], painLog = [], visits = [], vitals = [] }, toda
   };
 }
 
-module.exports = { rewards, BADGES, XP, levelStart };
+module.exports = { rewards, BADGES, XP, ACTIONS, levelStart };

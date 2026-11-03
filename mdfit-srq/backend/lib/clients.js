@@ -4,7 +4,7 @@ const express = require("express");
 const crypto = require("crypto");
 const { hashPassword, verifyPassword, signToken, verifyToken } = require("./auth");
 const { ValidationError, EMAIL_RE, AREAS } = require("./validate");
-const { rewards } = require("./rewards");
+const { rewards, ACTIONS } = require("./rewards");
 
 const SESSION_DAYS = 30;
 const RESET_HOURS = 24;
@@ -542,9 +542,18 @@ function mountClients(ctx) {
 
   // XP, level, badges and daily goal, recomputed from history every time
   const visitsOf = (c) => appointments().filter((a) => a.email === c.email && a.status === "completed");
+  me.post("/xp", (req, res) => {
+    const kind = String((req.body || {}).kind || ""), ref = String((req.body || {}).ref || "").slice(0, 80);
+    if (!ACTIONS[kind] || kind === "booking") return res.status(400).json({ error: "Unknown action." });
+    const list = clients(), c = list.find((x) => x.id === req.client.id), d = today();
+    const log = c.xpLog || [];
+    if (log.filter((x) => x.date === d && x.kind === kind).length < ACTIONS[kind].cap * 3) { log.push({ date: d, kind, ref }); c.xpLog = log.slice(-3000); save(list); }
+    res.json({ ok: true });
+  });
   me.get("/rewards", (req, res) => {
     const c = req.client;
-    res.json(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [] }, today()));
+    res.json(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [], actions: c.xpLog || [],
+      bookings: appointments().filter((a) => a.email === c.email && a.status !== "cancelled").map((a) => ({ id: a.id, date: String(a.createdAt || a.date || "").slice(0, 10) })) }, today()));
   });
 
   // ---- Library (Spotify-style): favorite videos and saved programs, kept on the server so they follow the client
@@ -629,7 +638,8 @@ function mountClients(ctx) {
     if (!c) return res.status(404).json({ error: "Client not found." });
     res.json({ ...pub(c), lastLoginAt: c.lastLoginAt, painLog: c.painLog || [],
       workouts: (c.workouts || []).slice(-50).reverse(), stats: workoutStats(c.workouts || [], today()),
-      rewards: (({ xp, level, title, badges }) => ({ xp, level, title, badges: badges.filter((b) => b.earned).map((b) => b.title) }))(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [] }, today())),
+      rewards: (({ xp, level, title, badges }) => ({ xp, level, title, badges: badges.filter((b) => b.earned).map((b) => b.title) }))(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [], actions: c.xpLog || [],
+      bookings: appointments().filter((a) => a.email === c.email && a.status !== "cancelled").map((a) => ({ id: a.id, date: String(a.createdAt || a.date || "").slice(0, 10) })) }, today())),
       appointments: appointments().filter((a) => a.email === c.email).map(({ cancelToken, ...a }) => a).sort((a, b) => (a.date + a.time < b.date + b.time ? 1 : -1)) });
   });
 

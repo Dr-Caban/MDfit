@@ -102,7 +102,9 @@
   $$("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
   $$("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
   vd.addEventListener("close", () => ($("#vd-frame").src = "about:blank"));
+  const earn = (kind, ref = "") => apiAuth("POST", "/api/me/xp", { kind, ref: String(ref) }).then(() => loadRewards(true)).catch(() => {});
   function playVideo(id, title, meta = "") {
+    earn("video", id);
     $("#vd-title").textContent = title;
     $("#vd-meta").textContent = meta;
     $("#vd-frame").src = `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
@@ -345,7 +347,8 @@
       + group(`Circuit × ${w.rounds} round${w.rounds === 1 ? "" : "s"}`, w.circuit, "Circuit", [w.restEx && `${w.restEx}s between exercises`, w.restRound && w.rounds > 1 && `${w.restRound}s between rounds`].filter(Boolean).join(" · "))
       + group("Cool-down · starts automatically", w.cooldown, "Cool-down");
   }
-  function generateNow(seed = Date.now()) {
+  function generateNow(seed = Date.now(), manual = true) {
+    if (manual) earn("generate");
     current = Gen.generate({ ...choice, seed });
     Object.assign(prefs, choice, { addons: { ...choice.addons } });
     store.set(PREFS_KEY, prefs);
@@ -413,7 +416,7 @@
     if (!name || !name.trim()) return;
     const w = current;
     try {
-      lib = await apiAuth("POST", "/api/me/programs", { name: name.trim().slice(0, 60), workout: {
+      earn("program"); lib = await apiAuth("POST", "/api/me/programs", { name: name.trim().slice(0, 60), workout: {
         title: w.title, goal: w.goal, goalId: w.goalId, location: w.location, level: w.level, levelLabel: w.levelLabel,
         rounds: w.rounds, restEx: w.restEx, restRound: w.restRound, minutes: w.minutes,
         warmup: compact(w.warmup), circuit: compact(w.circuit), cooldown: compact(w.cooldown) } });
@@ -473,7 +476,7 @@
     lib.favorites = on ? [id, ...lib.favorites] : lib.favorites.filter((x) => x !== id);
     $$(`[data-fav="${id}"]`).forEach((x) => { x.setAttribute("aria-pressed", on); x.setAttribute("aria-label", `${on ? "Remove from" : "Add to"} favorites`); });
     if (vf.cat === "♥ Favorites") renderVideos();
-    try { lib = await apiAuth(on ? "PUT" : "DELETE", `/api/me/favorites/${encodeURIComponent(id)}`); if (on) toast("Saved to your favorites."); }
+    try { lib = await apiAuth(on ? "PUT" : "DELETE", `/api/me/favorites/${encodeURIComponent(id)}`); if (on) { toast("Saved to your favorites."); earn("favorite", id); } }
     catch (err) { toast(err.message); }
   });
   function renderVideos() {
@@ -795,7 +798,7 @@
       const w = protocolWorkout(["calm", "restore", "strengthen"]);
       if (!w.circuit.length) return toast("No video steps to save for this protocol.");
       try {
-        lib = await apiAuth("POST", "/api/me/programs", { name: w.title.slice(0, 60), workout: { ...w, warmup: [], cooldown: [], circuit: w.circuit.slice(0, 20).map((x) => ({ id: x.id, sets: String(x.sets).slice(0, 30) })) } });
+        earn("program"); lib = await apiAuth("POST", "/api/me/programs", { name: w.title.slice(0, 60), workout: { ...w, warmup: [], cooldown: [], circuit: w.circuit.slice(0, 20).map((x) => ({ id: x.id, sets: String(x.sets).slice(0, 30) })) } });
         renderPrograms(); toast(`Saved "${w.title}" to My Programs.`);
       } catch (err) { toast(err.message); }
       return;
@@ -825,7 +828,7 @@
     renderReferral();
   }
   wire($("#profile-form"), async (d) => {
-    const r = await apiAuth("PUT", "/api/me", { name: d.name, phone: d.phone });
+    const r = await apiAuth("PUT", "/api/me", { name: d.name, phone: d.phone }); earn("profile");
     client = r.client; auth.set({ ...auth.get(), client }); renderProfile();
     return { message: "Saved." };
   }, { reset: false });
@@ -868,6 +871,7 @@
     navigator.clipboard.writeText(code).then(() => { toast("Referral code copied!"); $("#copy-ref").textContent = "Copied"; setTimeout(() => ($("#copy-ref").textContent = "Copy"), 2000); }).catch(() => toast("Couldn't copy — long-press the code to select it."));
   });
   $("#share-ref").addEventListener("click", () => {
+    earn("share");
     const code = $("#ref-code").textContent;
     if (!code || code === "—") return;
     const url = `${location.origin}/login?ref=${code}&signup`;
@@ -1429,7 +1433,7 @@
       const p = b.querySelector(".react-pick"); p.hidden = !p.hidden; return;
     }
     const pick = e.target.closest("[data-emoji]"); if (!pick) return;
-    try { await apiAuth("POST", `/api/me/messages/${encodeURIComponent(b.dataset.mid)}/react`, { emoji: pick.dataset.emoji }); loadMessages(false); }
+    try { await apiAuth("POST", `/api/me/messages/${encodeURIComponent(b.dataset.mid)}/react`, { emoji: pick.dataset.emoji }); loadMessages(false); earn("reaction", b.dataset.mid); }
     catch { toast("Couldn't add that reaction."); }
   });
   if (window.MDFitRT) MDFitRT.on("message_reaction", () => { if (inThread) loadMessages(false); });
@@ -1472,7 +1476,7 @@
   $("#chat-form").addEventListener("submit", async (e) => {
     e.preventDefault(); const f = e.target, body = f.body.value.trim(); if (!body) return;
     const btn = $("button", f); btn.disabled = true;
-    try { await apiAuth("POST", "/api/me/messages", { body }); f.reset(); growTA(f.body); loadMessages(true); }
+    try { await apiAuth("POST", "/api/me/messages", { body }); f.reset(); growTA(f.body); loadMessages(true); earn("message"); }
     catch (err) { if (/membership/i.test(err.message)) showPaywall("Messaging Dr. Jared is part of membership."); else toast(err.message); }
     finally { btn.disabled = false; }
   });
@@ -1622,6 +1626,7 @@
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-lec-url]"); if (!b) return;
     const u = b.dataset.lecUrl, em = embedUrl(u);
+    earn("lecture", b.dataset.lecTitle);
     if (!em) return window.open(u, "_blank", "noopener");
     $("#lec-title").textContent = b.dataset.lecTitle; $("#lec-frame").src = em;
     $("#lec-meta").innerHTML = `<a href="${esc(u)}" target="_blank" rel="noopener">Open in a new tab</a>`;
