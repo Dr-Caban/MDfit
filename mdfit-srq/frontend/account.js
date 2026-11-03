@@ -1180,9 +1180,9 @@
   // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
   // Drive serves the raw MP4 (CORS + range requests), so a real <video> can autoplay, loop through the set and move on by itself.
   const driveMp4 = (id) => MDFitVideo.mp4(id);
-  const PLAY_KEY = "mdfit.player";
+  const PLAY_KEY = "mdfit.player.v2"; // v2: breaks default off so videos run back to back
   const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false, left: 0, paused: false,
-    opt: { breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}) } };
+    opt: { breaks: false, sound: false, ...(store.get(PLAY_KEY) || {}) } };
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   function buildSteps(w) {
     const out = [];
@@ -1257,6 +1257,9 @@
     } else if (st.e) {
       P.left++;
       const c = $("#p-count"); if (c) c.textContent = fmtClock(P.left);
+      // No "ended" signal for follow-along steps or Drive's fallback player: move on after the set time
+      const blind = !st.e.id || $("#p-vwrap .p-fallback-iframe");
+      if (blind && P.left >= Math.max(P.total || 0, 20)) advance();
     }
   }
   function advance() { P.i++; skipRests(); renderStep(); }
@@ -1300,7 +1303,11 @@
         ${upNext}
       </div>`;
     if (noVid) return;
+    v.loop = false;
     v.src = driveMp4(e.id);
+    // Seamless sequence: buffer the next exercise video while this one plays
+    const nx = P.steps.slice(P.i + 1).find((x) => x.e && x.e.id);
+    if (nx && typeof warmVideo === "function") try { warmVideo(nx.e.id, "auto"); } catch {}
     const pr = v.play(); if (pr) pr.catch(() => { v.muted = true; v.play().catch(() => {}); });
     const wt = $("#p-weight");
     if (wt) wt.addEventListener("input", () => { P.log[e.id] = { name: e.name, weight: wt.value.trim().slice(0, 12) }; });
