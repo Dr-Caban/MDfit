@@ -1159,6 +1159,7 @@
     return `<svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>`;
   }
   function renderPerf() {
+    renderCheckin();
     if (!$("#perf-card")) return;
     const dev = hasDevice();
     $(".perf-sub").textContent = dev ? "Heart rate · HRV · VO2 max · weights" : "Body weight · workouts";
@@ -1197,6 +1198,46 @@
       </tbody></table>${a === b ? `<p class="muted small">Only one session so far. Do this workout again (or save it to My Programs) to compare.</p>` : ""}`;
     $("#cmp-edit-wrap").hidden = false;
     numbersForm($("#cmp-edit"), a, `${a.title} on ${a.date}`);
+  }
+  // Home daily check-in: weight pre-filled from last reading, one-tap sleep, single save
+  const ci = { sleep: null, editing: false };
+  const todayKey = () => todayInTz();
+  function renderCheckin() {
+    const card = $("#checkin"); if (!card) return;
+    const f = $("#ci-form"), lastW = latestOf("weight"), today = vitals.filter((v) => v.date === todayKey());
+    const tw = [...today].reverse().find((v) => v.weight !== undefined), ts = [...today].reverse().find((v) => v.sleep !== undefined);
+    const done = !!(tw || ts) && !ci.editing;
+    f.hidden = done; $(".ci-done", card).hidden = !done;
+    $("#ci-when").textContent = new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    if (done) {
+      const prevW = [...vitals].reverse().find((v) => v.weight !== undefined && v.date !== todayKey());
+      const d = tw && prevW ? Math.round((tw.weight - prevW.weight) * 10) / 10 : null;
+      $("#ci-summary").innerHTML = [tw ? `<b>${tw.weight} lb</b>${d !== null ? ` <span class="muted">(${d > 0 ? "+" : ""}${d} since ${prevW.date.slice(5)})</span>` : ""}` : "", ts ? `<b>${ts.sleep} h</b> sleep` : ""].filter(Boolean).join(" · ");
+      return;
+    }
+    if (!f.weight.value && lastW) f.weight.value = lastW.weight;
+    $("#ci-weight-hint").textContent = lastW ? `Last: ${lastW.weight} lb on ${lastW.date.slice(5)}` : "Step on the scale, then enter it here.";
+    $$("#ci-sleep button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.h) === ci.sleep)));
+  }
+  if ($("#checkin")) {
+    $("#ci-form").addEventListener("click", (e) => {
+      const st = e.target.closest("[data-step]");
+      if (st) { const i = $("#ci-form").weight, base = Number(i.value) || Number((latestOf("weight") || {}).weight) || 150; i.value = Math.round((base + Number(st.dataset.step)) * 10) / 10; return; }
+      const sb = e.target.closest("[data-h]");
+      if (sb) { const h = Number(sb.dataset.h); ci.sleep = ci.sleep === h ? null : h; renderCheckin(); }
+    });
+    $(".ci-edit").addEventListener("click", () => { ci.editing = true; renderCheckin(); });
+    $("#ci-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = e.target, msg = $(".ci-msg", f), body = {}, w = f.weight.value.trim();
+      if (w) { const n = Number(w); if (!(n >= 50 && n <= 700)) { msg.textContent = "That weight looks off. Double-check it."; return; } body.weight = n; }
+      if (ci.sleep !== null) body.sleep = ci.sleep;
+      if (!Object.keys(body).length) { msg.textContent = "Add your weight or tap your sleep hours."; return; }
+      const btn = $(".ci-save", f); btn.disabled = true; msg.textContent = "";
+      try { vitals = await apiAuth("POST", "/api/me/vitals", body); ci.editing = false; ci.sleep = null; f.weight.value = ""; renderPerf(); toast("Check-in saved"); }
+      catch (err) { msg.textContent = err.message; }
+      finally { btn.disabled = false; }
+    });
   }
   $("#cmp-a").addEventListener("change", () => { $("#cmp-b").value = ""; renderPerf(); });
   $("#cmp-b").addEventListener("change", renderPerf);

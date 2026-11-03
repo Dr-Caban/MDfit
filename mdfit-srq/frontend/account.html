@@ -60,6 +60,35 @@
         <button type="button" class="link" data-goto="generate">Change workout</button>
       </div>
 
+      <div class="card checkin" id="checkin">
+        <div class="card-head"><span class="label accent">Daily check-in</span><span class="muted small" id="ci-when"></span></div>
+        <form id="ci-form" novalidate>
+          <div class="ci-row">
+            <span class="ci-label">Body weight</span>
+            <div class="stepper">
+              <button type="button" data-step="-0.5" aria-label="Decrease weight">−</button>
+              <input name="weight" type="number" step="0.1" inputmode="decimal" placeholder="—" aria-label="Body weight in pounds">
+              <button type="button" data-step="0.5" aria-label="Increase weight">+</button>
+              <span class="ci-unit">lb</span>
+            </div>
+            <span class="ci-hint small muted" id="ci-weight-hint"></span>
+          </div>
+          <div class="ci-row">
+            <span class="ci-label">Sleep last night</span>
+            <div class="chips" id="ci-sleep" role="radiogroup" aria-label="Hours of sleep">
+              <button type="button" data-h="5">≤5h</button><button type="button" data-h="6">6h</button><button type="button" data-h="7">7h</button><button type="button" data-h="8">8h</button><button type="button" data-h="9">9h+</button>
+            </div>
+          </div>
+          <button class="btn-blue ci-save" type="submit">Save check-in</button>
+          <p class="ci-msg small" aria-live="polite"></p>
+        </form>
+        <div class="ci-done" hidden>
+          <p class="ci-done-title">✓ Checked in today</p>
+          <p class="small" id="ci-summary"></p>
+          <button type="button" class="link ci-edit">Edit</button>
+        </div>
+      </div>
+
       <h2 class="section-title">Quick actions</h2>
       <div class="quick">
         <button type="button" class="card q" data-goto="generate"><svg viewBox="0 0 24 24" class="ic blue"><path d="M3 17v2h6v-2zM3 5v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></svg><b>Generate Workout</b><span>Custom routine</span></button>

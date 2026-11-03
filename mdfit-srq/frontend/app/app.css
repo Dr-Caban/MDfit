@@ -959,3 +959,20 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .react-pick[hidden] { display: none; }
 .react-pick button { background: none; border: 0; font-size: 22px; padding: 4px 6px; border-radius: 50%; cursor: pointer; line-height: 1; }
 .react-pick button.on, .react-pick button:hover { background: rgba(255,255,255,.18); }
+
+/* Home daily check-in */
+.checkin .card-head { display: flex; justify-content: space-between; align-items: baseline; }
+.ci-row { display: grid; gap: 8px; margin: 14px 0; }
+.ci-label { font-weight: 600; font-size: 14px; }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper button { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line, #ddd); background: var(--card-2); color: var(--navy); font-size: 24px; line-height: 1; cursor: pointer; flex: none; }
+.stepper button:active { transform: scale(.94); }
+.stepper input { flex: 1; min-width: 0; height: 48px; text-align: center; font-size: 22px; font-weight: 700; border-radius: 12px; }
+.ci-unit { font-weight: 600; color: var(--muted); }
+.chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.chips button { height: 44px; border-radius: 12px; border: 1px solid var(--line, #ddd); background: var(--card-2); font: 600 15px var(--body, inherit); color: var(--navy); cursor: pointer; }
+.chips button[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+.ci-save { width: 100%; height: 50px; font-size: 16px; }
+.ci-msg { min-height: 1em; margin: 6px 0 0; color: var(--danger, #b42318); }
+.ci-done-title { font-weight: 700; color: var(--navy); margin: 6px 0 4px; }
+.ci-done .ci-edit { padding: 0; margin-top: 4px; }
