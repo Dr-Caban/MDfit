@@ -31,6 +31,8 @@
     }
 
     const stage = $(".pm-stage", root);
+    // Touch feedback (iOS doesn't apply :active to SVG paths reliably)
+    stage.addEventListener("pointerdown", (e) => { const r = e.target.closest(".pm-region"); if (r) { r.classList.add("touching"); setTimeout(() => r.classList.remove("touching"), 450); } });
     function setView(v) {
       stage.dataset.pmside = v;
       $$(".pm-toggle [data-pmview]", root).forEach((b) => b.setAttribute("aria-pressed", b.dataset.pmview === v));

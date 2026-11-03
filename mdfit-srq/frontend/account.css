@@ -142,3 +142,11 @@
 .pain-secondary > summary { font: 600 14px var(--body); color: var(--muted); cursor: pointer; padding: 10px 0; }
 .pain-secondary > summary:hover { color: var(--fg); }
 .pain-disclaimer { margin-top: 16px; font-size: 12px; }
+
+/* Touch screens have no hover: always outline the tappable regions, light up fully on touch */
+@media (hover: none), (pointer: coarse) {
+  .app-painmap .pm-region { fill: rgba(232,192,98,.16); stroke: rgba(255,231,168,.95); stroke-width: 1.6; animation: pm-pulse 2.4s ease-in-out infinite; }
+  .app-painmap .pm-region:active, .app-painmap .pm-region.touching { fill: rgba(232,192,98,.88); stroke: #FFE7A8; stroke-width: 2.4; filter: url(#pm-glow-app); animation: none; }
+}
+@keyframes pm-pulse { 0%,100% { fill-opacity: .55; stroke-opacity: .65; } 50% { fill-opacity: 1; stroke-opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .app-painmap .pm-region, .pm-region { animation: none !important; } }
