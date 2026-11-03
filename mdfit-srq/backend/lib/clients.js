@@ -545,23 +545,27 @@ function mountClients(ctx) {
   const rewardsOf = (c, appts = appointments()) => rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: appts.filter((a) => a.email === c.email && a.status === "completed"), vitals: c.vitals || [], actions: c.xpLog || [],
     bookings: appts.filter((a) => a.email === c.email && a.status !== "cancelled").map((a) => ({ id: a.id, date: String(a.createdAt || a.date || "").slice(0, 10) })) }, today());
   // Ranking pool: anyone with XP, unless they hid themselves. Shows first name + last initial and XP only. Cached a minute.
+  const OLYMPIC_LEVEL = 5;
+  const leagueOf = (level) => (level >= OLYMPIC_LEVEL ? "olympic" : "pro");
   let board = { at: 0, rows: [] };
   const boardRows = () => {
     if (Date.now() - board.at < 60000) return board.rows;
     const appts = appointments();
     const rows = clients().filter((c) => !c.hideRank).map((c) => {
       const r = rewardsOf(c, appts), parts = String(c.name || "Member").trim().split(/\s+/);
-      return { id: c.id, name: parts[0] + (parts.length > 1 ? ` ${parts[parts.length - 1][0]}.` : ""), xp: r.xp, week: r.week.reduce((n, d) => n + d.xp, 0), level: r.level };
+      return { id: c.id, name: parts[0] + (parts.length > 1 ? ` ${parts[parts.length - 1][0]}.` : ""), xp: r.xp, week: r.week.reduce((n, d) => n + d.xp, 0), level: r.level, league: leagueOf(r.level) };
     }).filter((x) => x.xp > 0);
     board = { at: Date.now(), rows };
     return rows;
   };
   me.get("/leaderboard", (req, res) => {
     const by = req.query.period === "all" ? "xp" : "week";
-    const rows = boardRows().filter((x) => x[by] > 0).sort((a, b) => b[by] - a[by] || b.xp - a.xp);
+    const mine = leagueOf(rewardsOf(req.client).level);
+    const league = ["pro", "olympic"].includes(req.query.league) ? req.query.league : mine;
+    const rows = boardRows().filter((x) => x.league === league && x[by] > 0).sort((a, b) => b[by] - a[by] || b.xp - a.xp);
     const top = rows.slice(0, 10).map((x, i) => ({ rank: i + 1, name: x.name, score: x[by], level: x.level, me: x.id === req.client.id }));
     const i = rows.findIndex((x) => x.id === req.client.id);
-    res.json({ period: by === "xp" ? "all" : "week", total: rows.length, top, me: i < 0 ? null : { rank: i + 1, score: rows[i][by] }, hidden: !!req.client.hideRank });
+    res.json({ league, myLeague: mine, olympicLevel: OLYMPIC_LEVEL, period: by === "xp" ? "all" : "week", total: rows.length, top, me: i < 0 ? null : { rank: i + 1, score: rows[i][by] }, hidden: !!req.client.hideRank });
   });
   me.put("/leaderboard/visibility", (req, res) => {
     const list = clients(), c = list.find((x) => x.id === req.client.id);

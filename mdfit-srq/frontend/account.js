@@ -1745,19 +1745,28 @@
     heart: '<path d="M12 21 10.6 19.7C5.4 15 2 11.9 2 8.1 2 5 4.4 2.6 7.5 2.6c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1C19.6 2.6 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z"/>',
     star: '<path d="m12 17.3 6.2 3.7-1.6-7 5.4-4.7-7.2-.6L12 2 9.2 8.7 2 9.3l5.4 4.7-1.6 7z"/>'
   };
-  let boardPeriod = "week";
+  let boardPeriod = "week", boardLeague = "";
   async function loadBoard() {
     if (!$("#board")) return;
-    let d; try { d = await apiAuth("GET", `/api/me/leaderboard?period=${boardPeriod}`); } catch { return; }
+    let d; try { d = await apiAuth("GET", `/api/me/leaderboard?period=${boardPeriod}${boardLeague ? `&league=${boardLeague}` : ""}`); } catch { return; }
     $$("#board [data-period]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.period === d.period)));
     const unit = d.period === "week" ? "XP this week" : "XP";
+    boardLeague = d.league;
+    $$("#board [data-league]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.league === d.league)));
+    const lname = d.league === "olympic" ? "Olympic League" : "Pro League";
+    $("#board-sub").textContent = d.myLeague === d.league
+      ? (d.league === "olympic" ? "You're in the Olympic League, the top tier. Defend your spot." : `You're in the Pro League. Reach level ${d.olympicLevel} to move up to the Olympic League.`)
+      : (d.league === "olympic" ? `Reach level ${d.olympicLevel} to compete here.` : "Where everyone starts.");
     $("#board-list").innerHTML = d.top.length ? d.top.map((r) => `<li class="${r.me ? "me" : ""}"><span class="rk rk-${r.rank}">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</span><span class="nm">${esc(r.name)}${r.me ? " (you)" : ""}<small>Lv ${r.level}</small></span><b>${r.score.toLocaleString()}</b></li>`).join("")
-      : `<li class="empty muted small">No one has XP ${d.period === "week" ? "this week" : "yet"}. Log a workout, check-in or pain entry to take #1.</li>`;
+      : `<li class="empty muted small">No one in the ${lname} has XP ${d.period === "week" ? "this week" : "yet"}.${d.myLeague === d.league ? " Log a workout, check-in or pain entry to take #1." : ""}</li>`;
     $("#board-me").textContent = d.hidden ? "You're hidden from the leaderboard." : d.me ? (d.me.rank > 10 ? `You're #${d.me.rank} of ${d.total} with ${d.me.score.toLocaleString()} ${unit}.` : "") : "Log anything to join the rankings.";
     $("#board-hide").checked = d.hidden;
   }
   if ($("#board")) {
-    $("#board").addEventListener("click", (e) => { const b = e.target.closest("[data-period]"); if (b) { boardPeriod = b.dataset.period; loadBoard(); } });
+    $("#board").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-period]"); if (b) { boardPeriod = b.dataset.period; loadBoard(); }
+      const l = e.target.closest("[data-league]"); if (l) { boardLeague = l.dataset.league; loadBoard(); }
+    });
     $("#board-hide").addEventListener("change", async (e) => { try { await apiAuth("PUT", "/api/me/leaderboard/visibility", { hidden: e.target.checked }); } catch {} loadBoard(); });
   }
   function renderRewards() {

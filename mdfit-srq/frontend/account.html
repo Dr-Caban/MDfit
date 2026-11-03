@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=508bd6a5">
+  <link rel="stylesheet" href="app/app.css?v=1fb2bd88">
   <link rel="stylesheet" href="guides.css?v=0d6cdb39">
 </head>
 <body class="mdapp">
@@ -362,7 +362,11 @@
             <div class="card-head"><span class="label accent">Leaderboard</span>
               <div class="seg" role="tablist"><button type="button" data-period="week" aria-selected="true">This week</button><button type="button" data-period="all" aria-selected="false">All time</button></div>
             </div>
-            <p class="small muted board-sub">Log anything to earn XP and climb the ranks.</p>
+            <div class="leagues" role="tablist">
+              <button type="button" data-league="pro" aria-selected="true"><span>🏅</span>Pro League</button>
+              <button type="button" data-league="olympic" aria-selected="false"><span>🏆</span>Olympic League</button>
+            </div>
+            <p class="small muted board-sub" id="board-sub">Log anything to earn XP and climb the ranks.</p>
             <ol class="board-list" id="board-list"></ol>
             <p class="board-me small" id="board-me"></p>
             <label class="board-hide small"><input type="checkbox" id="board-hide"> Hide me from the leaderboard</label>
@@ -575,7 +579,7 @@
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
   <script src="stripe-checkout.js?v=0b68bde3"></script>
-  <script src="account.js?v=83a36efe"></script>
+  <script src="account.js?v=33faffca"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

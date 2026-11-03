@@ -1054,3 +1054,9 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .board .card-head { flex-wrap: wrap; min-width: 0; }
 .board, .board .card-head { max-width: 100%; }
 .seg { flex: none; max-width: 100%; }
+
+.leagues { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 4px; }
+.leagues button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--card-2); font: 700 14px var(--body, inherit); color: var(--navy); cursor: pointer; }
+.leagues button span { font-size: 18px; }
+.leagues button[data-league="pro"][aria-selected="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+.leagues button[data-league="olympic"][aria-selected="true"] { background: linear-gradient(135deg, #b8862f, #e2bc5c); color: #1b1404; border-color: #b8862f; }
