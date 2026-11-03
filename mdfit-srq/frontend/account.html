@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=1bedea79">
+  <link rel="stylesheet" href="app/app.css?v=cee9e27d">
   <link rel="stylesheet" href="guides.css?v=0d6cdb39">
 </head>
 <body class="mdapp">
@@ -550,7 +550,7 @@
       <button type="button" data-opt="sound" aria-pressed="false">Sound</button>
       <button type="button" id="p-hr" class="p-hr" hidden>♥ Connect heart rate</button>
     </div>
-    <div class="frame p-frame" id="p-vwrap" hidden><video id="p-video" playsinline muted autoplay preload="auto"></video></div>
+    <div class="frame p-frame" id="p-vwrap" hidden><video id="p-video" playsinline webkit-playsinline muted autoplay preload="auto"></video><button type="button" class="p-fs" id="p-fs" aria-label="Full screen video"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
     <div class="player-body" id="p-body"></div>
     <footer class="player-foot">
       <button type="button" class="btn-ghost" id="p-prev">Back</button>
@@ -616,7 +616,7 @@
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=aaa4ac68"></script>
   <script src="stripe-checkout.js?v=0b68bde3"></script>
-  <script src="account.js?v=fa42e5b6"></script>
+  <script src="account.js?v=f1bc3177"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

@@ -1202,8 +1202,20 @@
     $$("#p-opts [data-opt]").forEach((b) => { const on = !!P.opt[b.dataset.opt]; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
   }
   function goFs(el) { const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen; if (rfs) rfs.call(el).catch(() => {}); }
+  // Full screen: whole player on Android/desktop when a workout starts; the video button uses the native
+  // full-screen player (on iPhone that's the only true full screen, and it never shows the dark Drive overlay)
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  function enterPlayerFs() { const pl = $("#player"); const fn = pl.requestFullscreen || pl.webkitRequestFullscreen; if (fn && !fsEl()) try { const r = fn.call(pl, { navigationUI: "hide" }); if (r && r.catch) r.catch(() => {}); } catch {} }
+  function exitPlayerFs() { if (fsEl()) try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {} }
+  $("#p-fs").addEventListener("click", () => {
+    const v = $("#p-video"), ifr = $("#p-vwrap .p-fallback-iframe");
+    if (ifr && ifr.requestFullscreen) { ifr.requestFullscreen().catch(() => {}); return; }
+    if (v.webkitEnterFullscreen && !v.hidden) { try { v.webkitEnterFullscreen(); } catch {} return; }
+    const t = v.hidden && ifr ? ifr : v; (t.requestFullscreen || t.webkitRequestFullscreen || (() => {})).call(t);
+  });
   function startPlayer(w) {
     document.querySelectorAll("dialog[open]").forEach((d) => { try { d.close(); } catch {} });
+    enterPlayerFs();
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     P.w = w; P.steps = buildSteps(w); P.i = 0; P.start = Date.now(); P.done = false; P.paused = false; P.log = {};
     const pl = $("#player");
@@ -1221,6 +1233,7 @@
   }
   function exitFs() { const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen || d.msExitFullscreen || (() => {})).call(d); }
   function closePlayer() {
+    exitPlayerFs();
     clearInterval(P.tick);
     const v = $("#p-video"); if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.onended = null; v.onerror = null; }
     $("#p-vwrap").hidden = true;
