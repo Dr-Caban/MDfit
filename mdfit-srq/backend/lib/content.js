@@ -36,21 +36,67 @@ function defaultContent() {
         notes: "Add weight when every round feels like 2 reps left in the tank. Protein with every meal, 7-9 hours of sleep.",
         image: "assets/programs/hypertrophy.webp",
         days: [day("Upper A", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower A", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Upper B", "upper", 45, { rounds: 4, restEx: 30, restRound: 90 }), day("Lower B", "lower", 45, { rounds: 4, restEx: 30, restRound: 90 })] },
-      { id: "dream-lean-12", title: "12-Week Dream Lean", category: "Weight loss", level: "intermediate", location: "home", weeks: 12, seed: 1002, access: "member",
-        summary: "Full-body circuits with short rests to drop body fat and keep every ounce of muscle. 3 strength circuits plus mobility, every week for 12 weeks.",
-        notes: "Pair with a daily step goal and protein at every meal. Rest days are walking days (20-30 min).",
+      { id: "dream-lean-12", title: "12-Week Dream Lean", category: "Weight loss", level: "intermediate", location: "gym", weeks: 12, seed: 1002, access: "member",
+        summary: "STRONG · FUNCTIONAL · CONFIDENT. The complete system for a lean, toned and powerful you. 7-day training split with strength training 4-6 days per week, daily movement reset, health shots, ice bath protocol and acupressure mat recovery.",
+        notes: "Daily Movement Reset (10-15 min): 90/90 Breathing, Couch Stretch, Thoracic Open Books, Glute Bridge Hold, Dead Bugs, Split Squat Hold, Wall Posture, Deep Squat Hold, Child's Pose with Reach. Take the MD Fit Health Shot daily on an empty stomach. Ice bath 2-4x/week (50-58°F, 2-5 min). Acupressure mat 10-20 min nightly. Nutrition: protein first (30-40g per meal), eat whole real foods, prioritize quality carbs around workouts, stay hydrated. Supplements: Magnesium Glycinate, Omega-3 Fish Oil, Vitamin D3 + K2, Creatine Monohydrate, Curcumin + Black Pepper Extract, Ashwagandha, Probiotic, Glycine. Sleep 7-9 hours. Focus on good form, progressive overload.",
         image: "assets/programs/dream-lean.webp",
-        days: [day("Full-body circuit A", "full", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Lower circuit", "lower", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Upper circuit", "upper", 30, { rounds: 4, restEx: 15, restRound: 45 }), day("Mobility & core", "mobility", 20)] },
+        days: [
+          day("Lower Body — Glutes & Hamstrings", "lower", 45, { rounds: 4, restEx: 30, restRound: 90, circuit: [
+            { ex: "Hip Thrusts", sets: "4 x 8-12" },
+            { ex: "RDLs", sets: "4 x 8-12" },
+            { ex: "Bulgarian Split Squats", sets: "3 x 10-12 each leg" },
+            { ex: "Walking Lunges", sets: "3 x 12-16 steps" }
+          ] }),
+          day("Upper Body — Push & Pull", "upper", 45, { rounds: 4, restEx: 30, restRound: 90, circuit: [
+            { ex: "Dumbbell Rows", sets: "4 x 10-12" },
+            { ex: "Incline DB Press", sets: "4 x 10-12" },
+            { ex: "Lat Pulldowns", sets: "4 x 10-12" },
+            { ex: "Face Pulls", sets: "3 x 15-20" }
+          ] }),
+          day("Active Recovery & Mobility", "mobility", 60, { circuit: [
+            { ex: "Zone 2 Cardio (Walk, Bike, Row)", sets: "30-45 minutes" },
+            { ex: "Mobility Flow", sets: "10-15 minutes" },
+            { ex: "Breath Work", sets: "5 minutes" },
+            { ex: "Acupressure Mat", sets: "10-20 minutes" }
+          ] }),
+          day("Lower Body — Power & Glutes", "lower", 45, { rounds: 4, restEx: 30, restRound: 90, circuit: [
+            { ex: "Sumo Deadlifts", sets: "4 x 8-10" },
+            { ex: "Step-Ups", sets: "3 x 10-12 each leg" },
+            { ex: "Cable Pull-Throughs", sets: "3 x 12-15" },
+            { ex: "Glute Kickbacks", sets: "3 x 15-20 each leg" }
+          ] }),
+          day("Upper Body + Core", "upper", 45, { rounds: 4, restEx: 30, restRound: 90, circuit: [
+            { ex: "Landmine Press", sets: "4 x 8-12" },
+            { ex: "Seated Cable Row", sets: "4 x 10-12" },
+            { ex: "Lateral Raises", sets: "3 x 12-15" },
+            { ex: "Plank Variation", sets: "3 x 30-60 sec" }
+          ] }),
+          day("Full Body Conditioning", "full", 45, { rounds: 4, restEx: 30, restRound: 60, circuit: [
+            { ex: "Sled Push", sets: "4 x 20-30 yards" },
+            { ex: "Kettlebell Swings", sets: "3 x 15-20" },
+            { ex: "Farmer Carries", sets: "4 x 30-45 sec" },
+            { ex: "Med Ball Slams", sets: "3 x 12-15" }
+          ] }),
+          day("Rest & Recover", "mobility", 30, { circuit: [
+            { ex: "Walk Outdoors", sets: "20-30 minutes" },
+            { ex: "Stretch & Mobility", sets: "10-15 minutes" },
+            { ex: "Sauna or Hot Bath", sets: "15-20 minutes" }
+          ] })
+        ] },
       { id: "shoulder-6", title: "6-Week Shoulder Program", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1003, access: "member",
         summary: "A protocol for cranky shoulders: rotator-cuff control, scapular mobility and graded loading. 3 sessions a week for 6 weeks.",
         notes: "Pair with your shoulder pain track. Stop and book a visit if you get numbness or tingling down the arm.",
         image: "assets/programs/shoulder.webp",
         days: [day("Cuff & posture", "upper", 20, { rounds: 2, restEx: 20, restRound: 60 }), day("Scapular control", "upper", 20, { rounds: 2, restEx: 20, restRound: 60 }), day("Mobility flow", "mobility", 15)] },
-      { id: "hip-6", title: "6-Week Hip Program", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1004, access: "member",
-        summary: "Hip range, glute activation and core control. 3 sessions a week for 6 weeks to clear up stiff hips, lateral hip pain and low-back aches that start at the hip.",
-        notes: "Walk 20-30 min a day. Stop and book a visit if pain shoots down the leg past the knee.",
+      { id: "hip-6", title: "6-Week Hip Protocol", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1004, access: "member",
+        summary: "Build tolerance, improve control, reduce irritation. Build strong, stable, pain-free hips through controlled movement, glute engagement and core stability. Daily exercises for all 6 weeks with weekly progressions.",
+        notes: "Key principles: No Pain Rule (stay within pain-free range), Slow & Controlled (quality over quantity), Consistency (daily work builds lasting results), Glute Engagement (glutes on, shoulders down, engage core). Daily Basics — do every day all 6 weeks: Posture (shoulders down, chest tall, core lightly braced), Glute Engagement (keep glutes lightly engaged at all times), Core Bracing (brace before every rep), Breathing (exhale during effort, inhale through nose). Weekly progression: Wk 1 learn movement/control, Wk 2 improve control/stability, Wk 3 increase reps/hold time, Wk 4 increase range/endurance, Wk 5 build strength/stability, Wk 6 max control/full range/confidence. Pain is a signal, not a goal. Stop if symptoms travel farther down the leg.",
         image: "assets/programs/hip.webp",
-        days: [day("Hip mobility & glutes", "lower", 25, { rounds: 2, restEx: 20, restRound: 60 }), day("Core & spine", "core", 20, { rounds: 2 }), day("Lower-body strength", "lower", 25, { rounds: 3, restEx: 30, restRound: 60 })] },
+        days: [day("Hip Protocol — Daily Routine", "lower", 20, { rounds: 2, restEx: 20, circuit: [
+          { ex: "Hip Dip (Eccentric Control)", sets: "2-3 x 6-10 each side" },
+          { ex: "Side Plank (Modified)", sets: "1-2 x 3-5 each side, hold 3-5 sec" },
+          { ex: "Knee Drive (Radiating Pain Only)", sets: "1-2 x 5-10 reps" }
+        ] })] },
       { id: "low-back-6", title: "6-Week Low Back Mobility", category: "Mobility", level: "beginner", location: "home", weeks: 6, seed: 1005, access: "member",
         summary: "Core control, hip mobility and graded loading for a cranky low back. Three short sessions a week; keep every effort at 5/10 or less.",
         notes: "Pair with the low back pain track. Walk after meals. Stop and call us if pain spreads down the leg.",
