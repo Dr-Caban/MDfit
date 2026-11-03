@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=e5c6a06f">
+  <link rel="stylesheet" href="app/app.css?v=45ebd446">
   <link rel="stylesheet" href="guides.css?v=0d6cdb39">
 </head>
 <body class="mdapp">
@@ -37,6 +37,13 @@
       <div class="notes-panel" id="notes" hidden></div>
       <div class="hello-row"><p class="hello">Welcome back</p><button type="button" class="xp-chip" data-goto="progress" id="xp-chip"><b id="chip-lv">Lv 1</b><span id="chip-xp">0 XP</span></button></div>
       <h1 class="name" id="hello-name">&nbsp;</h1>
+
+      <div class="qsearch">
+        <svg class="qsearch-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 1 1-5.3 14l-3.6 3.6-1.4-1.4L3.3 14.7A8 8 0 0 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/></svg>
+        <input type="search" id="qsearch" placeholder="What hurts? Search exercises, pain, programs, articles" aria-label="Search MD Fit" autocomplete="off">
+        <button type="button" class="qsearch-x" id="qsearch-x" aria-label="Clear" hidden>&times;</button>
+      </div>
+      <div class="qsearch-results" id="qsearch-results" hidden></div>
 
       <div class="home-grid"><div class="col-main">
       <div class="streak card gold-edge">
@@ -606,6 +613,7 @@
   <script src="analytics.js?v=871c86ba" defer></script>
   <script src="realtime.js?v=b6d56265"></script>
   <script src="common.js?v=33a373b2"></script>
+  <script src="search.js?v=44b31294" defer></script>
   <script src="app/exercises.js?v=13bcd350"></script>
   <script src="app/library.js?v=4e053a85"></script>
   <script src="app/generator.js?v=3009bd34"></script>
@@ -616,7 +624,7 @@
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=aaa4ac68"></script>
   <script src="stripe-checkout.js?v=0b68bde3"></script>
-  <script src="account.js?v=dadc8ef6"></script>
+  <script src="account.js?v=626ffa9b"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

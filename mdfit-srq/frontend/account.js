@@ -316,6 +316,45 @@
       || `<li class="muted small">No workouts logged yet.</li>`;
   }
 
+  // Global Home search: ranks across every exercise, pain track, program, condition, treatment, guide and blog
+  // post via the pre-built BM25 index. Opens the right destination on tap (video, program, pain track or page).
+  const KIND_LABEL = { exercise: "Exercise", "pain-track": "Pain track", program: "Program", condition: "Condition", treatment: "Treatment", area: "Area", guide: "Guide", blog: "Article" };
+  const KIND_ICON = { exercise: "▶", "pain-track": "⚡", program: "📋", condition: "🩺", treatment: "✚", area: "📍", guide: "📖", blog: "📰" };
+  const qsIn = $("#qsearch"), qsOut = $("#qsearch-results"), qsClear = $("#qsearch-x");
+  let qsT = 0;
+  function qsRender(hits, q) {
+    if (!hits.length) { qsOut.innerHTML = `<p class="qsearch-empty muted">Nothing matches "${esc(q)}". Try "knee pain", "golf" or "shoulder".</p>`; qsOut.hidden = false; return; }
+    qsOut.innerHTML = hits.map((h) => `<a class="qsearch-row" data-url="${esc(h.url)}" data-id="${esc(h.id)}" href="${esc(h.url)}">
+      <span class="qsearch-ic">${KIND_ICON[h.kind] || "•"}</span>
+      <span class="qsearch-txt"><b>${window.MDFitSearch.highlight(esc(h.title), q)}</b><span>${esc(KIND_LABEL[h.kind] || h.kind)}${h.snippet ? " · " + window.MDFitSearch.highlight(esc(h.snippet), q) : ""}</span></span>
+    </a>`).join("");
+    qsOut.hidden = false;
+  }
+  qsIn && qsIn.addEventListener("input", () => {
+    const q = qsIn.value.trim();
+    qsClear.hidden = !q;
+    clearTimeout(qsT);
+    qsT = setTimeout(async () => {
+      if (q.length < 2) { qsOut.hidden = true; return; }
+      const hits = await (window.MDFitSearch ? window.MDFitSearch.search(q, { limit: 12 }) : Promise.resolve([]));
+      qsRender(hits, q);
+    }, 80);
+  });
+  qsClear && qsClear.addEventListener("click", () => { qsIn.value = ""; qsOut.hidden = true; qsClear.hidden = true; qsIn.focus(); });
+  qsIn && qsIn.addEventListener("blur", () => setTimeout(() => (qsOut.hidden = true), 200));
+  qsIn && qsIn.addEventListener("focus", () => { if (qsIn.value.trim().length > 1) qsOut.hidden = false; });
+  qsOut && qsOut.addEventListener("click", (e) => {
+    const row = e.target.closest("[data-id]"); if (!row) return;
+    e.preventDefault();
+    const [kind, id] = row.dataset.id.split(":");
+    qsOut.hidden = true; qsIn.value = "";
+    // Exercises jump into the Videos tab and play; programs/pain tracks use hash routing; the rest are site URLs.
+    if (kind === "ex") { const ex = EX.find((x) => x.id === id); if (ex) { show("videos"); setTimeout(() => playVideo(ex.id, ex.name, exMeta(ex)), 50); return; } }
+    if (kind === "track") { location.hash = `pain/track/${id}`; return; }
+    if (kind === "prog") { location.hash = `programs/${id}`; return; }
+    if (row.dataset.url) location.href = row.dataset.url;
+  });
+
   const agoMs = (ms) => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
   function renderNotes() {
     const t = todayInTz(), live = [];
@@ -551,7 +590,22 @@
     renderVideos();
   });
   $("#vid-region").addEventListener("change", (e) => { vf.region = e.target.value; renderVideos(); });
-  $("#vid-search").addEventListener("input", (e) => { vf.q = e.target.value.trim().toLowerCase(); renderVideos(); });
+  // Debounce the keystrokes: 60 ms is below the human notice threshold but spares us re-rendering on every tap.
+  let vqT = 0, vqRank = null;
+  $("#vid-search").addEventListener("input", (e) => {
+    const q = e.target.value.trim();
+    vf.q = q.toLowerCase();
+    clearTimeout(vqT);
+    vqT = setTimeout(async () => {
+      // Rank by relevance only when the query has 2+ characters; otherwise just filter+sort as before.
+      vqRank = null;
+      if (q.length > 1 && window.MDFitSearch) {
+        const hits = await MDFitSearch.search(q, { kinds: ["exercise"], limit: 200 });
+        vqRank = new Map(hits.map((h, i) => [h.id.slice(3), i])); // id -> rank order
+      }
+      renderVideos();
+    }, 60);
+  });
   const isFav = (id) => lib.favorites.includes(id);
   const heart = (id) => `<button type="button" class="heart" data-fav="${id}" aria-pressed="${isFav(id)}" aria-label="${isFav(id) ? "Remove from" : "Add to"} favorites"><svg viewBox="0 0 24 24"><path d="M12 21 10.6 19.7C5.4 15 2 11.9 2 8.1 2 5 4.4 2.6 7.5 2.6c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1C19.6 2.6 22 5 22 8.1c0 3.8-3.4 6.9-8.6 11.6z"/></svg></button>`;
   const vcard = (e) => `<div class="vwrap"><button type="button" class="vcard" data-video="${e.id}">${thumbImg(e.id)}<div><b>${esc(e.name)}</b><span>${esc(e.libCat)} · L${e.level}${TRACK_IDS.has(e.id) ? ` · <i class="in-track">Pain track</i>` : ""}</span></div></button>${heart(e.id)}</div>`;
@@ -568,10 +622,11 @@
   });
   function renderVideos() {
     const key = vf.by;
-    const list = EX.filter((e) => (vf.kind === "All" || e.kind === vf.kind) && (vf.cat === "All" || (vf.cat === "♥ Favorites" ? isFav(e.id) : e.libCat === vf.cat)) && (!vf.region || e[key] === vf.region)
+    let list = EX.filter((e) => (vf.kind === "All" || e.kind === vf.kind) && (vf.cat === "All" || (vf.cat === "♥ Favorites" ? isFav(e.id) : e.libCat === vf.cat)) && (!vf.region || e[key] === vf.region)
       && (!vf.loc || locIds[vf.loc].has(e.id))
-      && (!vf.q || [e.name, e.region, e.cat, e.libCat, e.joint, e.muscle].join(" ").toLowerCase().includes(vf.q)))
-      .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+      && (!vf.q || (vqRank ? vqRank.has(e.id) : [e.name, e.region, e.cat, e.libCat, e.joint, e.muscle].join(" ").toLowerCase().includes(vf.q))));
+    // Ranked results come back ordered by relevance; otherwise sort by level then name as before.
+    list.sort(vqRank ? (a, b) => (vqRank.get(a.id) ?? 999) - (vqRank.get(b.id) ?? 999) : (a, b) => a.level - b.level || a.name.localeCompare(b.name));
     $("#vgrid").innerHTML = groupsFor().map((g) => {
       const xs = list.filter((e) => e[key] === g);
       return xs.length ? `<section class="vgroup"><h3>${esc(g)} <span>${xs.length}</span></h3><div class="vgrid-in">${xs.map(vcard).join("")}</div></section>` : "";
