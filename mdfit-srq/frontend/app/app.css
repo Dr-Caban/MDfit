@@ -1150,3 +1150,20 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .qsearch-txt span { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .qsearch-txt mark { background: rgba(232,194,94,.4); color: inherit; padding: 0 1px; border-radius: 3px; }
 .qsearch-empty { padding: 14px 16px; margin: 0; font-size: 14px; }
+/* Book-a-visit sheet on Profile */
+.book-flow { display: grid; gap: 12px; padding: 4px 2px 10px; }
+.book-flow textarea { width: 100%; min-height: 70px; margin-top: 4px; font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card-2); }
+.book-types { display: grid; gap: 8px; }
+.book-type { text-align: left; background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+.book-type b { color: var(--navy); font-size: 15px; display: block; }
+.book-type:hover, .book-type:focus-visible { border-color: var(--accent); outline: none; }
+.book-type p { margin: 6px 0 0; }
+.book-dates { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.book-day { flex: none; background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; min-width: 80px; cursor: pointer; font-size: 13px; color: var(--navy); display: grid; }
+.book-day span { font-size: 11px; color: var(--muted); }
+.book-day.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+.book-day.on span { color: var(--on-navy, #c8d6e5); }
+.book-times { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; margin-top: 4px; }
+.book-time { background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 6px; cursor: pointer; font-size: 14px; color: var(--navy); font-variant-numeric: tabular-nums; }
+.book-time.on, .book-time:hover { background: var(--accent); border-color: var(--accent); color: var(--navy); }
+#book-confirm { width: 100%; height: 48px; margin-top: 6px; }

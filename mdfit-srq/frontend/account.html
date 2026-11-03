@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=45ebd446">
+  <link rel="stylesheet" href="app/app.css?v=c25214ab">
   <link rel="stylesheet" href="guides.css?v=0d6cdb39">
 </head>
 <body class="mdapp">
@@ -398,7 +398,7 @@
 
       <div class="profile-grid">
       <div class="card list-card">
-        <div class="card-head"><span class="label">My appointments</span><a class="link-sm" href="/book">Book</a></div>
+        <div class="card-head"><span class="label">My appointments</span><button type="button" class="btn-blue sm" id="p-book-open">Book an evaluation</button></div>
         <ul class="events" id="p-appts"></ul>
         <details class="sub"><summary>Visit history</summary><ul class="events" id="p-history"></ul></details>
       </div>
@@ -566,6 +566,32 @@
     </footer>
   </div>
 
+  <dialog class="sheet" id="book-dialog">
+    <div class="sheet-head"><b>Book a visit</b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
+    <div class="book-flow" id="book-flow">
+      <div class="book-step" data-step="type">
+        <p class="small muted">Pick what you need. Dr. Jared will confirm by email.</p>
+        <div class="book-types" id="book-types"></div>
+      </div>
+      <div class="book-step" data-step="when" hidden>
+        <p class="small"><b id="book-type-label"></b> <button type="button" class="link" id="book-back">Change</button></p>
+        <div class="book-dates" id="book-dates"></div>
+        <div class="book-times" id="book-times"></div>
+      </div>
+      <div class="book-step" data-step="confirm" hidden>
+        <p class="small"><b id="book-summary"></b></p>
+        <label class="small">Anything Dr. Jared should know? (optional)<textarea id="book-note" rows="3" maxlength="400" placeholder="Where it hurts, how long, goals…"></textarea></label>
+        <button type="button" class="btn-blue" id="book-confirm">Confirm booking</button>
+        <p class="form-msg small" id="book-msg" role="status"></p>
+      </div>
+      <div class="book-step" data-step="done" hidden>
+        <p class="ci-done-title">✓ You're booked</p>
+        <p class="small" id="book-done-info"></p>
+        <button type="button" class="btn-blue" id="book-close-done">Done</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="sheet" id="video-dialog">
     <div class="sheet-head"><b id="vd-title"></b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
     <div class="frame" id="vd-box"><iframe id="vd-frame" title="Exercise video" allow="autoplay; fullscreen" allowfullscreen hidden></iframe></div>
@@ -624,7 +650,7 @@
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=aaa4ac68"></script>
   <script src="stripe-checkout.js?v=0b68bde3"></script>
-  <script src="account.js?v=626ffa9b"></script>
+  <script src="account.js?v=c667937a"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

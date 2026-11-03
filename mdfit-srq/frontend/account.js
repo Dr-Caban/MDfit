@@ -1059,16 +1059,81 @@
   async function loadAppointments() {
     appts = await apiAuth("GET", "/api/me/appointments");
     $("#p-appts").innerHTML = appts.upcoming.map((a) => apptLi(a, { cancel: true, cal: true })).join("") ||
-      `<li class="muted small">No visits booked. <a class="link-sm" href="/book">Book one</a></li>`;
+      `<li class="muted small">No visits booked. <button type="button" class="link" id="p-book-empty">Book one</button></li>`;
     $("#p-history").innerHTML = appts.past.slice(0, 20).map((a) => apptLi(a)).join("") || `<li class="muted small">Past visits show up here.</li>`;
   }
   $("#p-appts").addEventListener("click", async (e) => {
+    if (e.target.closest("#p-book-empty")) { openBook(); return; }
     const b = e.target.closest("[data-cancel]");
     if (!b || !confirm("Cancel this appointment? The time opens up for someone else.")) return;
     b.disabled = true;
     try { await apiAuth("POST", `/api/me/appointments/${b.closest("[data-appt]").dataset.appt}/cancel`, {}); await loadAppointments(); renderEvents(); renderNotes(); toast("Appointment cancelled."); }
     catch (err) { toast(err.message); b.disabled = false; }
   });
+
+  // In-app booking: pick type → pick day → pick time → confirm. Hits the same APIs as /book, so nothing new on the server.
+  const bookDlg = $("#book-dialog");
+  const bookState = { type: null, date: "", time: "", availability: null, types: null };
+  const fmtDay = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const fmtMoney = ($$$) => $$$ ? "$" + $$$ : "";
+  async function openBook() {
+    bookState.type = null; bookState.date = ""; bookState.time = "";
+    $("#book-msg").textContent = ""; $("#book-note").value = "";
+    $$("#book-flow .book-step").forEach((s) => { s.hidden = s.dataset.step !== "type"; });
+    if (!bookState.types) {
+      const site = await window.MDFit.loadSite().catch(() => null);
+      bookState.types = (site && site.services ? site.services : []).filter((s) => s.id && s.name);
+    }
+    $("#book-types").innerHTML = bookState.types.map((t) => `<button type="button" class="book-type" data-type="${esc(t.id)}">
+      <b>${esc(t.name)}</b><span class="muted small">${esc(t.unit || "")}${t.rate ? " · " + fmtMoney(t.rate) : ""}</span>
+      <p class="small">${esc(t.description || "")}</p></button>`).join("") || `<p class="muted small">Booking is unavailable right now. Call 941-313-0562.</p>`;
+    bookDlg.showModal();
+  }
+  $("#p-book-open").addEventListener("click", openBook);
+  bookDlg.addEventListener("click", (e) => { if (e.target === bookDlg) bookDlg.close(); });
+  async function loadSlots() {
+    const r = await apiAuth("GET", `/api/availability?type=${encodeURIComponent(bookState.type.id)}&days=21`);
+    bookState.availability = r;
+    const openDays = r.days.filter((d) => d.slots.length);
+    if (!openDays.length) { $("#book-dates").innerHTML = `<p class="muted small">No open times in the next 3 weeks. Call 941-313-0562 and we'll fit you in.</p>`; $("#book-times").innerHTML = ""; return; }
+    $("#book-dates").innerHTML = openDays.slice(0, 14).map((d) => `<button type="button" class="book-day${d.date === bookState.date ? " on" : ""}" data-date="${d.date}">${fmtDay(d.date)}<span>${d.slots.length} open</span></button>`).join("");
+    if (!bookState.date) bookState.date = openDays[0].date;
+    renderTimes();
+  }
+  function renderTimes() {
+    const day = bookState.availability.days.find((d) => d.date === bookState.date);
+    $("#book-times").innerHTML = day ? day.slots.map((t) => `<button type="button" class="book-time${t === bookState.time ? " on" : ""}" data-time="${t}">${fmtTime(t)}</button>`).join("") : "";
+    $$("#book-dates .book-day").forEach((b) => b.classList.toggle("on", b.dataset.date === bookState.date));
+  }
+  $("#book-types").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-type]"); if (!b) return;
+    bookState.type = bookState.types.find((t) => t.id === b.dataset.type);
+    $("#book-type-label").textContent = `${bookState.type.name}${bookState.type.unit ? " · " + bookState.type.unit : ""}`;
+    $$("#book-flow .book-step").forEach((s) => { s.hidden = s.dataset.step !== "when"; });
+    $("#book-dates").innerHTML = `<p class="muted small">Loading times…</p>`;
+    try { await loadSlots(); } catch (err) { $("#book-dates").innerHTML = `<p class="muted small">Couldn't load times: ${esc(err.message)}</p>`; }
+  });
+  $("#book-back").addEventListener("click", () => { $$("#book-flow .book-step").forEach((s) => { s.hidden = s.dataset.step !== "type"; }); });
+  $("#book-dates").addEventListener("click", (e) => { const b = e.target.closest("[data-date]"); if (!b) return; bookState.date = b.dataset.date; bookState.time = ""; renderTimes(); });
+  $("#book-times").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-time]"); if (!b) return;
+    bookState.time = b.dataset.time;
+    $("#book-summary").textContent = `${bookState.type.name} · ${fmtDay(bookState.date)} at ${fmtTime(bookState.time)}`;
+    $$("#book-flow .book-step").forEach((s) => { s.hidden = s.dataset.step !== "confirm"; });
+  });
+  $("#book-confirm").addEventListener("click", async () => {
+    const btn = $("#book-confirm"), msg = $("#book-msg"); msg.textContent = ""; btn.disabled = true;
+    try {
+      const payload = { typeId: bookState.type.id, date: bookState.date, time: bookState.time, name: client.name, email: client.email, phone: client.phone || "", note: $("#book-note").value.trim().slice(0, 400) };
+      const r = await apiAuth("POST", "/api/appointments", payload);
+      $("#book-done-info").textContent = `${bookState.type.name} on ${fmtDay(bookState.date)} at ${fmtTime(bookState.time)}. We'll email you a reminder.`;
+      $$("#book-flow .book-step").forEach((s) => { s.hidden = s.dataset.step !== "done"; });
+      earn("booking");
+      await loadAppointments(); renderEvents(); renderNotes();
+      if (bookState.type.id === "massage" || bookState.type.id === "massage90") toast("Check your email for the intake form link.");
+    } catch (err) { msg.textContent = err.message; btn.disabled = false; }
+  });
+  $("#book-close-done").addEventListener("click", () => bookDlg.close());
 
   // Pain tracker
   const pf = $("#pain-form"), pout = $("output", pf);
