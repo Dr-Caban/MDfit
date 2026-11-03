@@ -1041,7 +1041,15 @@
   }));
   window.addEventListener("appinstalled", hideCards);
   $("#a2hs").addEventListener("click", (e) => { if (e.target.id === "a2hs" || e.target.closest(".a2hs-x")) $("#a2hs").hidden = true; });
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  // New deploy => new service worker => old file cache cleared and the page reloads once. Logins are kept.
+  if ("serviceWorker" in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((reg) => {
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch(() => {});
+  }
 
   // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
   // Drive serves the raw MP4 (CORS + range requests), so a real <video> can autoplay, loop through the set and move on by itself.
