@@ -584,9 +584,9 @@ function mountClients(ctx) {
     const mine = leagueOf(rewardsOf(req.client).level);
     const league = ["pro", "olympic"].includes(req.query.league) ? req.query.league : mine;
     const rows = boardRows().filter((x) => x.league === league && x[by] > 0).sort((a, b) => b[by] - a[by] || b.xp - a.xp);
-    const top = rows.slice(0, 10).map((x, i) => ({ rank: i + 1, name: x.name, score: x[by], level: x.level, me: x.id === req.client.id, pacer: !!x.pacer }));
+    const top = rows.slice(0, 10).map((x, i) => ({ rank: i + 1, name: x.name, score: x[by], level: x.level, me: x.id === req.client.id }));
     const i = rows.findIndex((x) => x.id === req.client.id);
-    res.json({ league, myLeague: mine, olympicLevel: OLYMPIC_LEVEL, period: by === "xp" ? "all" : "week", total: rows.length, pacers: rows.some((x) => x.pacer), top, me: i < 0 ? null : { rank: i + 1, score: rows[i][by] }, hidden: !!req.client.hideRank });
+    res.json({ league, myLeague: mine, olympicLevel: OLYMPIC_LEVEL, period: by === "xp" ? "all" : "week", total: rows.length, top, me: i < 0 ? null : { rank: i + 1, score: rows[i][by] }, hidden: !!req.client.hideRank });
   });
   me.put("/leaderboard/visibility", (req, res) => {
     const list = clients(), c = list.find((x) => x.id === req.client.id);
