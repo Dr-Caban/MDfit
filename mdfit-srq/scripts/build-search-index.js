@@ -31,7 +31,7 @@ const SYNONYMS = {
   posture: ["postural", "alignment"],
   stretch: ["stretches", "stretching"],
   core: ["abs", "abdominal", "trunk"],
-  sciatica: ["sciatic", "nerve"],
+  sciatica: ["sciatic"],
   arthritis: ["arthritic", "osteoarthritis"],
   surgery: ["postoperative", "post-surgical", "post-op", "surgical"],
   golf: ["golfing", "golfer"],
@@ -97,8 +97,14 @@ for (const a of seo.SERVICE_AREAS) add({ id: "area:" + a.slug, kind: "area", tit
   keywords: ["Sarasota", "rehab", "pain"], snippet: (a.intro || "").slice(0, 160) });
 for (const b of seo.BLOG) add({ id: "blog:" + b.slug, kind: "blog", title: b.title, url: `/blog/${b.slug}`, boost: 0.9,
   keywords: (b.sections || []).slice(0, 3).map((s) => s.h2), snippet: b.excerpt || "" });
-for (const l of seo.LANDING || []) add({ id: "landing:" + l.slug, kind: "landing", title: l.name, url: `/${l.slug}`, boost: 1.4,
-  keywords: (l.sections || []).slice(0, 3).map((s) => s.h2), snippet: (l.intro || "").slice(0, 160) });
+for (const l of seo.LANDING || []) {
+  // Boost landing pages whose slug signals a "best/near me" query — they are the whole point of these pages.
+  const boost = /^best-/.test(l.slug) ? 1.9 : /sarasota/.test(l.slug) ? 1.5 : 1.4;
+  // Extra keywords from the slug make high-intent searches hit the right page even when the body lexicon differs.
+  const kwExtra = l.slug.split("-").filter((w) => w.length > 2);
+  add({ id: "landing:" + l.slug, kind: "landing", title: l.name, url: `/${l.slug}`, boost,
+    keywords: [...kwExtra, ...(l.sections || []).slice(0, 3).map((s) => s.h2)], snippet: (l.intro || "").slice(0, 160) });
+}
 
 // 5. Programs
 const content = require(path.join(ROOT, "backend/lib/content.js")).defaultContent();
