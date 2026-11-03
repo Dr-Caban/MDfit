@@ -976,3 +976,23 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .ci-msg { min-height: 1em; margin: 6px 0 0; color: var(--danger, #b42318); }
 .ci-done-title { font-weight: 700; color: var(--navy); margin: 6px 0 4px; }
 .ci-done .ci-edit { padding: 0; margin-top: 4px; }
+
+/* iOS Add-to-Home-Screen guide */
+.a2hs { position: fixed; inset: 0; z-index: 90; background: rgba(5,12,26,.72); display: flex; align-items: flex-end; justify-content: center; padding: 16px 16px calc(96px + env(safe-area-inset-bottom)); animation: a2hs-fade .2s ease; }
+.a2hs[hidden] { display: none; }
+.a2hs-sheet { position: relative; width: 100%; max-width: 420px; background: #fff; color: var(--navy); border-radius: 22px; padding: 22px 20px 18px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.35); animation: a2hs-up .28s ease; }
+.a2hs-x { position: absolute; top: 8px; right: 10px; width: 36px; height: 36px; border: 0; background: none; font-size: 26px; color: var(--muted); cursor: pointer; }
+.a2hs-icon { border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.a2hs h3 { margin: 10px 0 14px; font-size: 18px; }
+.a2hs-steps { list-style: none; padding: 0; margin: 0; text-align: left; display: grid; gap: 12px; }
+.a2hs-steps li { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 1.45; }
+.a2hs-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 700; font-size: 13px; display: grid; place-items: center; margin-top: 1px; }
+.a2hs-key { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 8px; background: var(--card-2); border: 1px solid var(--line, #ddd); white-space: nowrap; }
+.a2hs-tip { margin: 14px 0 0; color: var(--muted); }
+.a2hs-arrow { position: fixed; right: 44px; bottom: calc(40px + env(safe-area-inset-bottom)); color: #fff; font-size: 40px; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,.5); animation: a2hs-bounce 1s ease-in-out infinite; pointer-events: none; }
+@keyframes a2hs-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
+@keyframes a2hs-up { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes a2hs-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .a2hs, .a2hs-sheet, .a2hs-arrow { animation: none; } }
+.a2hs-key svg, .install-btn svg { fill: none !important; stroke: currentColor; }
+.a2hs-icon { display: block; margin: 0 auto; }

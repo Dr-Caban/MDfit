@@ -961,7 +961,7 @@
   const each = (sel, fn) => cards.forEach((c) => { const el = c.querySelector(sel); if (el) fn(el); });
   const hideCards = () => cards.forEach((c) => { c.hidden = true; });
   const [text, steps] = isIOS
-    ? ["Add MD Fit to your Home Screen:", `<li>Tap the <b>Share</b> button (square with arrow) in Safari</li><li>Scroll and tap <b>"Add to Home Screen"</b></li><li>Tap <b>"Add"</b></li>`]
+    ? ["Get MD Fit on your Home Screen. One tap to open, full-screen, no App Store needed.", `<li>Tap the <b>Share</b> button (square with arrow) in Safari</li><li>Scroll and tap <b>"Add to Home Screen"</b></li><li>Tap <b>"Add"</b></li>`]
     : isAndroid
     ? ["Install MD Fit as an app on your phone:", `<li>Tap the <b>⋮ menu</b> in Chrome (top right)</li><li>Tap <b>"Add to Home screen"</b> or <b>"Install app"</b></li><li>Tap <b>"Install"</b></li>`]
     : ["Install MD Fit as a desktop app:", isEdge
@@ -977,6 +977,7 @@
   });
   each(".install-btn", (btn) => btn.addEventListener("click", async () => {
     if (!installEvt) {
+      if (isIOS) { $("#a2hs").hidden = false; return; }
       each(".install-steps-wrap", (el) => { el.hidden = false; });
       return;
     }
@@ -986,6 +987,7 @@
     installEvt = null;
   }));
   window.addEventListener("appinstalled", hideCards);
+  $("#a2hs").addEventListener("click", (e) => { if (e.target.id === "a2hs" || e.target.closest(".a2hs-x")) $("#a2hs").hidden = true; });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
   // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
