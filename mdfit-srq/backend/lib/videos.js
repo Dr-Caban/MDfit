@@ -51,6 +51,10 @@ function mountVideos({ app, admin, store, cfg, logger }) {
     job.current = ""; job.finishedAt = new Date().toISOString();
   }
 
+  // Keep Cloudinary in sync on its own: shortly after start-up, then every 6 hours (only copies what's missing)
+  const autoSync = () => { if (!ready() || (job && !job.finishedAt) || cfg.noVideoSync) return; idsFromSite().then((ids) => run(ids, false)).catch((e) => { job = { error: e.message, finishedAt: new Date().toISOString() }; }); };
+  if (ready() && !cfg.noVideoSync) { setTimeout(autoSync, 30000).unref(); setInterval(autoSync, 6 * 3600 * 1000).unref(); }
+
   admin.post("/videos/migrate", async (req, res) => {
     if (!ready()) return res.status(400).json({ error: "Cloudinary isn't configured on the API (CLOUDINARY_CLOUD_NAME / _API_KEY / _API_SECRET)." });
     if (job && !job.finishedAt) return res.json({ running: true, job });
