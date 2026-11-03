@@ -33,6 +33,18 @@ function protocolQuote(svc, n, plans, plan, evalRate = 0) {
   }
 }
 
+// Count unique calendar days with logged activity (workouts or pain entries) in a date range [from, to] (inclusive, YYYY-MM-DD).
+function activityDays(client, from, to) {
+  const days = new Set();
+  for (const w of client.workouts || []) { if (w.date >= from && w.date <= to) days.add(w.date); }
+  for (const p of client.painLog || []) { if (p.date >= from && p.date <= to) days.add(p.date); }
+  return days.size;
+}
+
+// Accountability discount: $1 off per activity day, free at 20 days.
+const ACCOUNTABILITY_THRESHOLD = 20;
+const ACCOUNTABILITY_CREDIT_PER_DAY = 100; // cents
+
 function mountPayments({ app, admin, store, me, clients, save, today, notify, cfg, settings, activity, logger }) {
   const key = cfg.stripeSecretKey || process.env.STRIPE_SECRET_KEY || "";
   const whsec = cfg.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET || "";
@@ -187,6 +199,17 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
   });
   me.get("/payments", (req, res) => res.json({ enabled: enabled(), protocols: req.client.protocols || [], membership: req.client.membership || null, hasBilling: !!req.client.stripeCustomerId }));
 
+  me.get("/accountability", (req, res) => {
+    const c = req.client;
+    const d = today();
+    const monthStart = d.slice(0, 8) + "01";
+    const days = activityDays(c, monthStart, d);
+    const price = 19.95;
+    const credit = Math.min(days, ACCOUNTABILITY_THRESHOLD);
+    const owed = Math.max(0, price - credit);
+    res.json({ activeDays: days, threshold: ACCOUNTABILITY_THRESHOLD, price, credit: Math.min(days, ACCOUNTABILITY_THRESHOLD), owed: Math.round(owed * 100) / 100, free: days >= ACCOUNTABILITY_THRESHOLD, month: d.slice(0, 7) });
+  });
+
   // ---------------- Webhook ----------------
   async function scheduleEnd(subId, payments) {
     // End the installment plan on its own after N monthly payments
@@ -245,6 +268,26 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
         }
         save(list); return;
       }
+      case "invoice.created": {
+        // Accountability discount: credit $1 per activity day (max = invoice total) on membership invoices.
+        if (!stripe) return;
+        const c = who(); if (!c) return;
+        if (!c.membership || c.membership.tier !== "member") return;
+        const subId = (o.parent && o.parent.subscription_details && o.parent.subscription_details.subscription) || o.subscription;
+        if (!subId || subId !== c.membership.stripeSubscriptionId) return;
+        // Billing period: from the start of the period to today
+        const periodStart = o.period_start ? isoDate(o.period_start) : today().slice(0, 8) + "01";
+        const periodEnd = o.period_end ? isoDate(o.period_end) : today();
+        const days = activityDays(c, periodStart, periodEnd);
+        if (days <= 0) return;
+        const creditCents = Math.min(days * ACCOUNTABILITY_CREDIT_PER_DAY, o.amount_due || cents(19.95));
+        try {
+          await stripe.invoiceItems.create({ customer: typeof o.customer === "string" ? o.customer : o.customer.id, invoice: o.id,
+            amount: -creditCents, currency: "usd", description: `Accountability credit: ${days} active day${days === 1 ? "" : "s"} (−$${(creditCents / 100).toFixed(2)})` });
+          logger.info("accountability_credit", { email: c.email, days, creditCents });
+        } catch (e) { logger.warn("accountability_credit_failed", { error: e.message }); }
+        return;
+      }
       case "invoice.paid": {
         const c = who(); if (!c) return;
         const subId = (o.parent && o.parent.subscription_details && o.parent.subscription_details.subscription) || o.subscription;
@@ -290,4 +333,4 @@ function mountPayments({ app, admin, store, me, clients, save, today, notify, cf
   return { enabled, protocolQuote };
 }
 
-module.exports = { mountPayments, protocolQuote, API_VERSION };
+module.exports = { mountPayments, protocolQuote, activityDays, API_VERSION };

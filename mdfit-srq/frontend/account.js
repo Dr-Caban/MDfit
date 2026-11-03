@@ -1481,9 +1481,19 @@
     const m = C.membership, cur = m && C.tiers.find((t) => t.id === m.tier);
     const req = client && client.membershipRequest;
     $("#my-membership").innerHTML = cur && C.access !== "free"
-      ? `<div class="card mem-on"><span class="label accent">Your membership</span><h2>${esc(cur.name)}</h2><p class="muted small">Member since ${esc(m.since)}${m.until ? ` · paid through ${esc(m.until)}` : ""}</p></div>`
+      ? `<div class="card mem-on"><span class="label accent">Your membership</span><h2>${esc(cur.name)}</h2><p class="muted small">Member since ${esc(m.since)}${m.until ? ` · paid through ${esc(m.until)}` : ""}</p></div><div id="accountability-tracker"></div>`
       : payOn ? `<p class="muted mem-pitch">Pick a membership below. Secure checkout by Stripe; cancel any time from Manage billing.</p>`
       : `<p class="muted mem-pitch">Pick a membership below and tap <b>Request</b>. Dr. Jared confirms it and sends payment details.</p>`;
+    if (cur && cur.id === "member" && C.access !== "free") {
+      apiAuth("GET", "/api/me/accountability").then((a) => {
+        const el = $("#accountability-tracker"); if (!el) return;
+        const pct = Math.min(100, Math.round((a.activeDays / a.threshold) * 100));
+        el.innerHTML = `<div class="card acct-card"><span class="label accent">Accountability tracker · ${esc(a.month)}</span>
+          <div class="acct-progress"><div class="acct-bar"><i style="width:${pct}%"></i></div><span>${a.activeDays} of ${a.threshold} days</span></div>
+          ${a.free ? `<p class="acct-free">You hit ${a.threshold} days! This month is <b>free</b>.</p>` : `<p class="acct-owed">$${a.credit.toFixed(2)} off so far · $${a.owed.toFixed(2)} remaining · ${a.threshold - a.activeDays} more day${a.threshold - a.activeDays === 1 ? "" : "s"} to go free</p>`}
+        </div>`;
+      }).catch(() => {});
+    }
     const rc = access.reviewCode || store.get("mdfit_review_code", null);
     if (rc && C.access === "free") $("#my-membership").insertAdjacentHTML("beforeend", `<div class="pw-applied">Your review code <b>${esc(rc)}</b> takes <b>30% off your first month</b>. It's applied automatically when you request a membership.</div>`);
     $("#tier-grid").innerHTML = C.tiers.map((t, i) => `<article class="tier${i === 1 ? " featured" : ""}${cur && cur.id === t.id ? " current" : ""}">
