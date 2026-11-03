@@ -921,7 +921,7 @@
     client = r.client; auth.set({ ...auth.get(), client }); renderProfile();
     return { message: "Saved." };
   }, { reset: false });
-  // Password: change with the current one, or with a code by email/text. Google sign-ups set their first one with a code.
+  // Password: change with the current one, or with a code sent by email. Google sign-ups set their first one with a code.
   function renderPasswordCard() {
     const first = client && client.hasPassword === false;
     $("#pw-summary").textContent = first ? "Set a password" : "Change password";
@@ -929,14 +929,14 @@
     $("#pw-current").hidden = first;
     $("#pw-code-row").hidden = !first && !renderPasswordCard.codeSent;
     $("#pw-submit").textContent = first ? "Set password" : "Change password";
-    $("#pw-send-code").textContent = first ? "Send me a code" : "Forgot it? Send me a code instead";
+    $("#pw-send-code").textContent = first ? "Email me a code" : "Forgot it? Email me a code instead";
   }
   $("#pw-send-code").addEventListener("click", async () => {
     const msg = $("#pw-code-msg"); msg.textContent = "Sending…";
     try {
-      const r = await apiAuth("POST", "/api/me/password/code", { via: client && client.phone ? "sms" : "email" });
+      const r = await apiAuth("POST", "/api/me/password/code", {});
       renderPasswordCard.codeSent = true; renderPasswordCard();
-      msg.textContent = `Code sent by ${r.via === "sms" ? "text" : "email"} to ${r.to}.`;
+      msg.textContent = `Code emailed to ${r.to}. Check your inbox (and spam).`;
       $("#password-form").code.focus();
     } catch (err) { msg.textContent = err.message; }
   });

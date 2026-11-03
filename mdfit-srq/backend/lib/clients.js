@@ -248,8 +248,8 @@ function mountClients(ctx) {
   });
 
   // Always answers the same way so it can't be used to find out who has an account.
-  // One-time codes for first-time password setup, forgotten passwords and changes. Sent by text when Twilio is
-  // configured and the member has a phone number, otherwise by email. Keyed by account so email or phone both work.
+  // One-time codes for first-time password setup, forgotten passwords and changes, always sent by email (Resend).
+  // Members can look their account up by email or phone; the code goes to the email on file.
   const resetCodes = new Map(); // clientId -> { code, exp, tries }
   const RESET_CODE_TTL = 10 * 60e3; // 10 minutes
   const RESET_CODE_MAX_TRIES = 5;
@@ -261,24 +261,10 @@ function mountClients(ctx) {
     const d = digits(v);
     return d.length >= 10 ? list.find((x) => digits(x.phone) === d) || null : null;
   };
-  const smsReady = () => !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
-  async function sendSms(to, body) {
-    const sid = process.env.TWILIO_ACCOUNT_SID, d = digits(to);
-    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-      method: "POST", headers: { authorization: "Basic " + Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64") },
-      body: new URLSearchParams({ To: "+1" + d, From: process.env.TWILIO_FROM, Body: body })
-    });
-    if (!r.ok) throw new Error("SMS failed " + r.status);
-  }
   const maskEmail = (e) => e.replace(/^(.)(.*)(@.*)$/, (m, a, b, c) => a + "•".repeat(Math.min(b.length, 6)) + c);
-  const maskPhone = (p) => "•••-•••-" + digits(p).slice(-4);
-  async function sendCode(c, preferSms) {
+  async function sendCode(c) {
     const code = String(crypto.randomInt(0, 1e6)).padStart(6, "0");
     resetCodes.set(c.id, { code, exp: Date.now() + RESET_CODE_TTL, tries: 0 });
-    if (preferSms && c.phone && smsReady()) {
-      try { await sendSms(c.phone, `MD Fit code: ${code}. It expires in 10 minutes.`); return { via: "sms", to: maskPhone(c.phone) }; }
-      catch (e) { logger.warn("sms_failed", { error: e.message }); }
-    }
     if (!notify.enabled) return null;
     notify.client(c.email, `${code} is your MD Fit code`,
       `Hi ${c.name.split(" ")[0]},\n\nYour MD Fit code is:\n\n${code}\n\nUse it to set or reset your password. It expires in 10 minutes. If you didn't ask for this, ignore this email.\n\nMD Fit`);
@@ -297,12 +283,10 @@ function mountClients(ctx) {
     const b = req.body || {}, ident = b.identifier || b.email || b.phone || "";
     const isPhone = !String(ident).includes("@");
     const c = findByIdentifier(clients(), ident);
-    let sent = null;
-    if (c) sent = await sendCode(c, isPhone).catch(() => null);
-    const canSend = notify.enabled || (isPhone && smsReady());
-    res.json({ ok: true, emailed: notify.enabled, via: sent ? sent.via : (isPhone && smsReady() ? "sms" : "email"),
-      message: !canSend ? "Call or text us and we'll help you reset your password."
-        : isPhone ? (smsReady() ? "If that number is on an account, a 6-digit code is on its way by text." : "If that number is on an account, we emailed a 6-digit code to the email on file.")
+    if (c) await sendCode(c).catch(() => null);
+    res.json({ ok: true, emailed: notify.enabled, via: "email",
+      message: !notify.enabled ? "Call or text us and we'll help you reset your password."
+        : isPhone ? "If that number is on an account, we emailed a 6-digit code to the email on file."
         : "If that email has an account, a 6-digit code is on its way." });
   });
 
@@ -410,9 +394,9 @@ function mountClients(ctx) {
 
   // Send a code to the signed-in member (needed to set a first password, or to change it without the current one)
   me.post("/password/code", resetLimit.mw, async (req, res) => {
-    const sent = await sendCode(req.client, !!(req.body && req.body.via === "sms")).catch(() => null);
+    const sent = await sendCode(req.client).catch(() => null);
     if (!sent) return res.status(503).json({ error: "We can't send codes right now. Call or text us at 941-313-0562." });
-    res.json({ ok: true, ...sent, sms: smsReady() && !!req.client.phone });
+    res.json({ ok: true, ...sent });
   });
   me.put("/password", (req, res) => {
     const b = req.body || {};
@@ -768,10 +752,10 @@ function mountClients(ctx) {
   admin.post("/clients/:id/send-reset-code", async (req, res) => {
     const c = clients().find((x) => x.id === req.params.id);
     if (!c) return res.status(404).json({ error: "Client not found." });
-    const sent = await sendCode(c, !!c.phone).catch(() => null);
+    const sent = await sendCode(c).catch(() => null);
     if (!sent) return res.status(503).json({ error: "Email isn't configured (RESEND_API_KEY)." });
     activity("admin_sent_reset_code", { email: c.email });
-    res.json({ ok: true, message: `Code sent by ${sent.via === "sms" ? "text" : "email"} to ${sent.to}.` });
+    res.json({ ok: true, message: `Code emailed to ${sent.to}.` });
   });
 
   admin.delete("/clients/:id", (req, res) => {

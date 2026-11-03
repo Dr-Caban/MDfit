@@ -72,7 +72,8 @@ Web routes are hash-based (`/account#progress`, `#pain/muscle/<id>`). Mirror the
 ## 5. Features, screen by screen
 
 ### 5.1 Sign-in & accounts
-- Email + password (8+ chars, scrypt-hashed server-side), Google sign-in (`POST /api/clients/google`), forgot/reset by email link or 6-digit code (`/forgot`, `/verify-code`, `/reset`).
+- Email + password (8+ chars, scrypt-hashed server-side), Google sign-in (`POST /api/clients/google`).
+- **Passwords via emailed 6-digit codes (Resend only):** `POST /api/clients/forgot` `{ identifier }` (email or phone looks up the account; the code always goes to the email on file) → `POST /api/clients/verify-code` `{ identifier, code }` → `POST /api/clients/reset` `{ token, password }`. Signed in: `POST /api/me/password/code` emails a code; `PUT /api/me/password` accepts `{ current, password }` or `{ code, password }`. Google sign-ups (`client.hasPassword === false`) set their first password with a code. Codes: 10 min, 5 tries, 6 requests/hour.
 - **Referral:** signup accepts `referralCode`. Share link is `https://mymdfit.com/login?ref=CODE&signup`, which opens the signup tab prefilled. The referrer gets 1 free month of credit.
 - Changing the password signs out all other devices.
 - **Required for iOS:** Apple requires **Sign in with Apple** when any other social login is offered. Add `POST /api/clients/apple` (verify Apple identity token, return the same `{ token, expiresAt, client }`).
