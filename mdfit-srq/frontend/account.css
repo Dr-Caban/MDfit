@@ -130,7 +130,7 @@
 .app-painmap .pm-stage { position: relative; }
 .app-painmap .pm-stage img.pm-figures { width: 100%; display: block; }
 .app-painmap .pm-regions { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.app-painmap .pm-region { fill: rgba(0,0,0,0); pointer-events: all; stroke: rgba(255,255,255,.6); stroke-width: 1.6; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .15s, stroke .15s; outline: none; }
+.app-painmap .pm-region { fill: rgba(0,0,0,0); pointer-events: all; stroke: transparent; stroke-width: 0; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .15s, stroke .15s; outline: none; }
 .app-painmap .pm-region:hover, .app-painmap .pm-region:focus-visible, .app-painmap .pm-region[aria-pressed="true"] { fill: rgba(232,192,98,.88); stroke: #FFE7A8; stroke-width: 2.4; filter: url(#pm-glow-app); }
 @media (max-width: 600px) {
   .app-painmap .pm-stage { width: 227.3%; }

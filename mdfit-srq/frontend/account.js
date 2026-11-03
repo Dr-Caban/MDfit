@@ -968,7 +968,7 @@
   const driveMp4 = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`;
   const PLAY_KEY = "mdfit.player";
   const P = { w: null, steps: [], i: 0, start: 0, tick: null, rest: null, done: false, left: 0, paused: false,
-    opt: { auto: true, breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}), auto: true } };
+    opt: { breaks: true, sound: false, ...(store.get(PLAY_KEY) || {}) } };
   const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   function buildSteps(w) {
     const out = [];
@@ -1015,11 +1015,14 @@
     $("#p-timer").textContent = fmtClock(Math.floor((Date.now() - P.start) / 1000));
     if (P.paused) return;
     const st = P.steps[P.i]; if (!st) return;
-    if (st.rest || P.opt.auto) {
+    if (st.rest) {
       P.left = Math.max(0, P.left - 1);
-      const c = $("#p-count"); if (c) c.textContent = st.rest ? P.left : fmtClock(P.left);
+      const c = $("#p-count"); if (c) c.textContent = P.left;
       const ring = $("#p-ring"); if (ring) ring.style.setProperty("--pct", `${100 - (P.left / P.total) * 100}%`);
       if (P.left <= 0) advance();
+    } else if (st.e) {
+      P.left++;
+      const c = $("#p-count"); if (c) c.textContent = fmtClock(P.left);
     }
   }
   function advance() { P.i++; skipRests(); renderStep(); }
@@ -1041,7 +1044,7 @@
       return;
     }
     const e = st.e;
-    P.left = P.total = Gen.stepSecs(e.sets);
+    P.left = 0; P.total = Gen.stepSecs(e.sets);
     $("#p-body").innerHTML = `
       <div class="frame p-frame">
         <video id="p-video" playsinline ${P.opt.sound ? "" : "muted"} autoplay preload="auto" poster="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800"></video>
@@ -1050,7 +1053,7 @@
         <p class="p-block">${esc(st.label)}</p>
         <h2 class="p-name">${esc(e.name)}</h2>
         <div class="p-setrow">
-          <div class="p-ring" id="p-ring" style="--pct:0%"><span id="p-count">${fmtClock(P.left)}</span></div>
+          <div class="p-ring" id="p-ring" style="--pct:0%"><span id="p-count">0:00</span></div>
           <div><p class="p-sets">${esc(e.sets)}</p><p class="p-meta">${esc(exMeta(e))}</p></div>
         </div>
         ${st.label.startsWith("Round") || st.label === "Circuit" ? `<label class="p-load">Weight used <input id="p-weight" inputmode="decimal" placeholder="lb" value="${esc((P.log[e.id] || {}).weight || "")}"></label>` : ""}
