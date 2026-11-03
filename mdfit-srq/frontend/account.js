@@ -197,7 +197,7 @@
     vd.showModal();
     v.play().catch(() => {});
   }
-  const exMeta = (e) => `${e.region} · ${e.cat} · Level ${e.level}${e.loc !== "any" ? " · " + e.loc[0].toUpperCase() + e.loc.slice(1) : ""}`;
+  const exMeta = (e) => [e.region, e.cat, e.level && `Level ${e.level}`, e.loc && e.loc !== "any" && e.loc[0].toUpperCase() + e.loc.slice(1)].filter(Boolean).join(" · ");
   const byId = new Map(EX.map((e) => [e.id, e]));
   document.addEventListener("click", (e) => {
     const v = e.target.closest("[data-video]");
