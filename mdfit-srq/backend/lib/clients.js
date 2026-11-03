@@ -92,7 +92,7 @@ function mountClients(ctx) {
     const referrerUntil = new Date(referrerBase.getTime() + 30 * 864e5).toISOString().slice(0, 10);
     referrer.membership = { tier: "member", until: referrerUntil, via: referrer.membership?.via || "referral-reward" };
   }
-  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c), referralCode: referralCode(c), hasPassword: !!c.passwordHash, google: !!c.googleSub });
+  const pub = (c) => ({ id: c.id, email: c.email, name: c.name, firstName: c.firstName || String(c.name || "").split(" ")[0], lastName: c.lastName || String(c.name || "").split(" ").slice(1).join(" "), phone: c.phone, createdAt: c.createdAt, plan: c.plan || emptyPlan(), membership: activeMembership(c), referralCode: referralCode(c), hasPassword: !!c.passwordHash, google: !!c.googleSub });
   const session = (c) => {
     const exp = Date.now() + SESSION_DAYS * 864e5;
     return { token: signToken({ sub: c.id, role: "client", pwv: c.pwv || 0, exp }, cfg.sessionSecret), expiresAt: new Date(exp).toISOString(), client: pub(c) };
@@ -223,18 +223,25 @@ function mountClients(ctx) {
     }
     const email = (payload.email || "").trim().toLowerCase();
     if (!email || !payload.email_verified) return res.status(400).json({ error: "Google account has no verified email." });
+    // First and last name come from the Google profile; fill in only what the account is missing
+    const clean = (v) => String(v || "").replace(/\s+/g, " ").trim().slice(0, 60);
+    const firstName = clean(payload.given_name), lastName = clean(payload.family_name);
+    const fullName = clean([firstName, lastName].filter(Boolean).join(" ")) || clean(payload.name) || email.split("@")[0];
     const list = clients();
     let c = list.find((x) => x.email === email);
     if (c) {
       c.lastLoginAt = new Date().toISOString();
       if (!c.googleSub) c.googleSub = payload.sub;
+      if (!c.firstName && firstName) c.firstName = firstName;
+      if (!c.lastName && lastName) c.lastName = lastName;
+      if ((!c.name || c.name === email.split("@")[0]) && fullName) c.name = fullName;
       save(list);
       return res.json(session(c));
     }
     const refCode = String((req.body && req.body.referralCode) || "");
     c = {
-      id: id(), email, name: text(payload.name || email.split("@")[0], "Name", { min: 1, max: 100 }), phone: "",
-      passwordHash: hashPassword(crypto.randomBytes(32).toString("hex")),
+      id: id(), email, name: text(fullName, "Name", { min: 1, max: 100 }), firstName, lastName, phone: "",
+      passwordHash: null,
       pwv: 0, plan: emptyPlan(), painLog: [], googleSub: payload.sub,
       referralCode: genReferralCode(),
       createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
@@ -308,67 +315,6 @@ function mountClients(ctx) {
   });
 
   // Google sign-in
-  app.post("/api/clients/google", signupLimit.mw, async (req, res) => {
-    if (!ready) return notReady(res);
-    const googleClientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
-    if (!googleClientId) return res.status(503).json({ error: "Google sign-in isn't configured on the server." });
-    const credential = String((req.body && req.body.credential) || "");
-    if (!credential) return res.status(400).json({ error: "Missing Google credential." });
-
-    let gUser;
-    try {
-      const r = await fetch(`${GOOGLE_TOKEN_URL}?id_token=${encodeURIComponent(credential)}`);
-      gUser = await r.json();
-      if (!r.ok || gUser.aud !== googleClientId) throw new Error("Invalid token");
-    } catch (err) {
-      logger.warn("google_signin_failed", { error: err.message });
-      return res.status(401).json({ error: "Google sign-in failed. Try again." });
-    }
-
-    const email = (gUser.email || "").toLowerCase();
-    if (!email || !gUser.email_verified) return res.status(400).json({ error: "Google account has no verified email." });
-
-    const list = clients();
-    let c = list.find((x) => x.email === email);
-
-    if (c) {
-      c.lastLoginAt = new Date().toISOString();
-      if (!c.googleSub) c.googleSub = gUser.sub;
-      save(list);
-      return res.json(session(c));
-    }
-
-    const name = gUser.name || email.split("@")[0];
-    let code = generateReferralCode(name);
-    while (list.some((x) => x.referralCode === code)) code = generateReferralCode(name);
-
-    c = {
-      id: id(), email, name, phone: "",
-      passwordHash: null, googleSub: gUser.sub, pwv: 0, plan: emptyPlan(), painLog: [],
-      referralCode: code, referredBy: null, freeUntil: null,
-      createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString()
-    };
-
-    const refCode = text(req.body.referralCode, "Referral code", { max: 20 });
-    if (refCode) {
-      const referrer = list.find((x) => x.referralCode === refCode);
-      if (referrer) {
-        c.referredBy = referrer.id;
-        c.freeUntil = addDay(today(), FREE_MONTHS * 30);
-        const refs = referrals();
-        refs.push({ id: id(), referrerId: referrer.id, referredId: c.id, referredEmail: email, freeUntil: c.freeUntil, createdAt: new Date().toISOString() });
-        saveReferrals(refs);
-        activity("referral_used", { referrer: referrer.email, referred: email });
-      }
-    }
-
-    list.push(c);
-    save(list);
-    activity("client_signup", { email, via: "google" });
-    notify.owner(`New client account (Google): ${c.name}`, `${c.name}\n${c.email}`);
-    res.status(201).json(session(c));
-  });
-
   // ================= Client dashboard =================
   const me = express.Router();
   me.use(requireClient);
