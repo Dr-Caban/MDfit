@@ -15,8 +15,10 @@ const LIMIT = 100 * 1024 * 1024;
 function mountVideos({ app, admin, store, cfg, logger }) {
   const CLOUD = process.env.CLOUDINARY_CLOUD_NAME || "", KEY = process.env.CLOUDINARY_API_KEY || "", SECRET = process.env.CLOUDINARY_API_SECRET || "";
   const ready = () => !!(CLOUD && KEY && SECRET);
-  const read = () => store.read("videos", { done: {}, failed: {} });
-  const write = (d) => store.write("videos", d);
+  // Upload records are kept per Cloudinary account, so switching accounts starts a fresh copy
+  const KEY_NAME = () => "videos-" + (CLOUD || "none").replace(/[^\w-]/g, "");
+  const read = () => store.read(KEY_NAME(), { done: {}, failed: {} });
+  const write = (d) => store.write(KEY_NAME(), d);
   let job = null;
 
   const driveUrl = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&confirm=t`;
