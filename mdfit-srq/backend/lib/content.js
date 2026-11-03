@@ -107,9 +107,9 @@ function defaultContent() {
     live: { title: "Monthly live Q&A with Dr. Jared", date: "", time: "18:00", minutes: 60, joinUrl: "", access: "member",
       notes: "Bring your questions: pain, programs, what to do next. Camera on or off, your choice. Please don't share private medical details in the group session.", recordings: [] },
     tiers: [
-      { id: "member", name: "MD Fit Member", price: 29, meetings: 0, meetingMinutes: 0, perks: ["Every premade program", "Full lecture library", "Monthly live Q&A with Dr. Jared", "Progress tracking and workout comparisons"] },
-      { id: "premium", name: "Premium 1-on-1", price: 349, meetings: 2, meetingMinutes: 45, perks: ["Everything in Member", "2 remote 1-on-1 sessions with Dr. Jared every month", "Programming built for you", "Help with your specific issues"] },
-      { id: "premium-plus", name: "Premium Plus", price: 699, meetings: 4, meetingMinutes: 45, perks: ["Everything in Premium", "4 remote 1-on-1 sessions every month", "Priority scheduling", "Direct access between sessions"] }
+      { id: "member", name: "MD Fit Member", price: 30, meetings: 0, meetingMinutes: 0, perks: ["Every premade program", "Full lecture library", "Monthly live Q&A with Dr. Jared", "Progress tracking and workout comparisons", "Save $1/day by logging activity (down to $0)"] },
+      { id: "premium", name: "Premium 1-on-1", price: 200, meetings: 2, meetingMinutes: 30, perks: ["Everything in Member", "2 scheduled 30-minute remote sessions with Dr. Jared every month", "Text Dr. Jared directly with questions", "Custom program built for you", "Guided website and app walkthrough"] },
+      { id: "premium-plus", name: "Premium Plus", price: 349, meetings: 4, meetingMinutes: 30, perks: ["Everything in Premium", "4 scheduled 30-minute remote sessions every month", "Priority scheduling"] }
     ],
     // Pain tracks: empty = use the built-in tracks transcribed from Dr. Jared's Drive (frontend/paintracks.js)
     tracks: [],
