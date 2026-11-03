@@ -1562,16 +1562,28 @@
     catch (err) { $(".nums-msg", f).textContent = err.message; }
   });
 
-  // ---- Health tips
+  // ---- Health tips (image protocol cards from Google Drive)
   let tipArea = "All";
+  const driveImg = (id, w) => `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w${w || 600}`;
   function renderTips() {
     const areas = ["All", ...new Set(C.recommendations.map((r) => r.area))];
     $("#tip-areas").innerHTML = areas.map((a) => `<button type="button" class="chip" data-tarea="${esc(a)}" aria-selected="${a === tipArea}">${esc(a)}</button>`).join("");
     const list = C.recommendations.filter((r) => tipArea === "All" || r.area === tipArea);
-    $("#tips").innerHTML = [...new Set(list.map((r) => r.area))].map((a) => `<section class="tip-group"><h3>${esc(a)}</h3>
-      ${list.filter((r) => r.area === a).map((r) => `<details class="tip"><summary>${esc(r.title)}</summary><p>${esc(r.body)}</p>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">Learn more</a>` : ""}</details>`).join("")}</section>`).join("");
+    $("#tips").innerHTML = list.map((r) => r.image
+      ? `<button type="button" class="tip-card" data-tipimg="${esc(r.image)}" data-tipcap="${esc(r.title)}"><img src="${driveImg(r.image, 600)}" alt="${esc(r.title)}" loading="lazy"><span class="tip-card-label">${esc(r.title)}</span></button>`
+      : `<div class="tip-card tip-text"><h3>${esc(r.title)}</h3><p>${esc(r.body)}</p></div>`
+    ).join("");
   }
   $("#tip-areas").addEventListener("click", (e) => { const b = e.target.closest("[data-tarea]"); if (!b) return; tipArea = b.dataset.tarea; renderTips(); });
+  $("#tips").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-tipimg]"); if (!c) return;
+    const lb = $("#tip-lightbox"), img = $("#tip-lb-img");
+    img.src = driveImg(c.dataset.tipimg, 1200);
+    img.alt = c.dataset.tipcap;
+    $("#tip-lb-cap").textContent = c.dataset.tipcap;
+    lb.showModal();
+  });
+  $("#tip-lightbox").addEventListener("click", (e) => { if (e.target === e.currentTarget || e.target.classList.contains("tip-lb-close")) e.currentTarget.close(); });
 
   // ================= Progress: rewards (XP, levels, badges), calendar, pain tracker
   const BADGE_IC = {

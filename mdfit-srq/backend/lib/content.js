@@ -115,13 +115,12 @@ function defaultContent() {
     // Pain tracks: empty = use the built-in tracks transcribed from Dr. Jared's Drive (frontend/paintracks.js)
     tracks: [],
     recommendations: [
-      { id: "zero-drop", area: "Feet", title: "Switch to zero-drop shoes, gradually", body: "Zero-drop shoes keep your heel and forefoot level, so your calves, arches and toes do their job again. Start with 1 to 2 hours a day and add time each week. If your calves or arches get sore, hold at that amount for a few days.", link: "" },
-      { id: "toes", area: "Feet", title: "Let your toes spread", body: "Choose shoes with a wide toe box. Spend some time barefoot at home on safe surfaces to rebuild foot strength.", link: "" },
-      { id: "pillow-progression", area: "Low back", title: "Reduce the pillows under you, a little at a time", body: "If lying flat on your back hurts, start by rolling onto your back with pillows under your hips and knees. Every few nights remove one pillow. Over a few weeks your hip flexors slowly unfold and relax, and lying flat stops hurting.", link: "" },
-      { id: "walk-after-meals", area: "Low back", title: "Walk after meals", body: "A 10-minute easy walk after meals keeps your hips and spine moving and is one of the simplest things you can do for your back.", link: "" },
-      { id: "desk-breaks", area: "Desk & posture", title: "Move every 30 to 45 minutes", body: "Set a timer. Stand, walk, or do one desk reset from the Desk Worker Reset program. The best posture is the next one.", link: "" },
-      { id: "sleep-position", area: "Neck & shoulders", title: "Pick a pillow that keeps your neck level", body: "On your side, your pillow should fill the gap between ear and shoulder so your neck stays straight. On your back, use a thinner pillow.", link: "" },
-      { id: "sleep-hours", area: "Recovery", title: "Protect 7 to 9 hours of sleep", body: "Tissue repairs while you sleep. Keep the same bed and wake time, and keep screens out of the last 30 minutes.", link: "" }
+      { id: "diet-health-shots", area: "Nutrition", title: "Diet & health shot protocol", body: "Dr. Jared's anti-inflammatory diet guide with daily health shot recipes for recovery and longevity.", image: "1P-5bng8Pg3Yatz5jE-KOWDfTDBWgh5Hu", link: "" },
+      { id: "bath-accu-mat", area: "Recovery", title: "Ice bath, acupressure mat & phototherapy protocol", body: "Cold exposure, acupressure and red-light therapy — how to use each tool and when to rotate them.", image: "1B0oS274__c5NPLssp7G_L3ZRoZzvwnnS", link: "" },
+      { id: "fitness-erg", area: "Fitness", title: "MD Fit fitness ErG protocol", body: "The energy-return-to-ground protocol: a structured approach to building functional strength from the ground up.", image: "1sXFDNW1EMGcgW7SolVisACsZymIvj4hB", link: "" },
+      { id: "mobility-diet-ratios", area: "Nutrition", title: "Mobility & diet ratios", body: "How your macronutrient ratios affect joint mobility, inflammation and tissue repair.", image: "1vdRtw2VUrov0HLopkZAtgVuKs_QOtwU9", link: "" },
+      { id: "psg-protocol", area: "Recovery", title: "PSG protocol", body: "Dr. Jared's proprietary PSG recovery protocol for post-session recovery and inflammation management.", image: "1Nigi9UOTm14KAzHS6hOb9KQKEOXVH-Xs", link: "" },
+      { id: "weekly-tracking", area: "Wellness", title: "Weekly tracking sheet", body: "Track your movement, sleep, nutrition and recovery scores each week to stay accountable.", image: "1v7JgO21TdrdsSOCba0Y9vvuO1mdpOgfL", link: "" }
     ],
     events: [
       { id: "simc-nov-2026", title: "Sarasota Integrative Medicine Consortium", date: "2026-11-05", time: "6:00 PM", location: "Sarasota, FL", description: "Dr. Jared Caban attends the Sarasota Integrative Medicine Consortium meeting — networking with local integrative health practitioners.", link: "", free: true },
@@ -170,6 +169,7 @@ const tierIn = (t, i) => ({
 const recIn = (r, i) => ({
   id: slug(r.id, `Recommendation ${i + 1} id`), area: str(r.area, `Recommendation ${i + 1} area`, { min: 1, max: 40 }),
   title: str(r.title, `Recommendation ${i + 1} title`, { min: 1, max: 120 }), body: str(r.body, `Recommendation ${i + 1} text`, { min: 1, max: 2000 }),
+  image: str(r.image || "", `Recommendation ${i + 1} image`, { max: 500 }),
   link: url(r.link, `Recommendation ${i + 1} link`)
 });
 const eventIn = (e, i) => ({
