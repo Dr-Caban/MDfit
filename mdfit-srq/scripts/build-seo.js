@@ -26,75 +26,8 @@ const BUSINESS = {
   aggregateRating: { "@type": "AggregateRating", ratingValue: RATING.value, reviewCount: RATING.count, bestRating: "5" }
 };
 
-// Condition pages. Plain-language, educational; Dr. Jared should review before relying on any wording.
-const CONDITIONS = [
-  { slug: "low-back-pain", name: "Low Back Pain", kw: "low back pain treatment", guides: ["iliopsoas", "lateral-hip"],
-    intro: "Low back pain is one of the most common reasons people walk into MD Fit. Very often the spine itself is not the source: tight or weak muscles around the hips, glutes and core pull on the low back and refer pain into it.",
-    causes: ["Hip flexors (iliopsoas) that stay short from sitting", "Weak or inhibited glutes that make the back do their job", "Muscle strains from lifting, twisting or sports", "Old injuries that changed how you move", "Posture and desk habits"],
-    faqs: [["Do I need imaging before my first visit?", "Usually not. Dr. Jared starts with a hands-on evaluation of how you move and which muscles reproduce your pain. If anything suggests a problem that needs imaging or a specialist, he will tell you."],
-      ["How many visits does low back pain take?", "It depends on how long it has been going on and what is driving it. Many people feel a difference in the first few sessions, then build strength so it stays gone. You leave every visit with homework videos in the MD Fit app."],
-      ["Can I keep working out?", "In most cases, yes, with changes. Your plan tells you what to keep, what to modify and what to pause while the source muscle recovers."]] },
-  { slug: "sciatica", name: "Sciatica-Type Pain", kw: "sciatica treatment", guides: ["lateral-hip", "iliopsoas"],
-    intro: "Pain that shoots down the buttock or leg is often called sciatica. Muscles in the hip and pelvis, especially the deep rotators and glutes, can refer pain down the leg in a very similar pattern.",
-    causes: ["Tight deep hip rotators (including piriformis)", "Glute muscles referring pain down the leg", "Long hours sitting", "Lifting and twisting injuries", "Hip stiffness changing how you walk"],
-    faqs: [["Is all leg pain sciatica?", "No. True nerve irritation and muscle-referred pain can feel alike. The evaluation separates them, and anything that needs a medical referral is flagged."],
-      ["When should I see a doctor urgently?", "Numbness in the groin, loss of bladder or bowel control, or rapidly worsening leg weakness need emergency care right away. Call 911."],
-      ["What does treatment involve?", "Release of the muscles that reproduce your pain, mobility work for the hips and spine, and progressive strengthening so the pain does not return."]] },
-  { slug: "neck-pain", name: "Neck Pain & Tension Headaches", kw: "neck pain treatment", guides: ["posterior-neck", "scalenes"],
-    intro: "Neck pain, stiffness and tension headaches commonly come from the muscles at the back and sides of the neck and upper shoulders, often from desk work, phones and stress.",
-    causes: ["Tight upper trapezius and levator scapulae", "Scalene muscles referring pain into the shoulder and arm", "Forward-head posture at a desk or phone", "Whiplash and past accidents", "Poor sleep position"],
-    faqs: [["Can neck muscles cause headaches?", "Yes. Muscles at the base of the skull and along the neck commonly refer pain into the head and behind the eyes."],
-      ["Will you crack my neck?", "No. Treatment uses hands-on soft-tissue work, gentle mobility and strengthening."],
-      ["What can I do at home?", "You get a short daily routine in the MD Fit app, including posture resets and stretches you can do at your desk."]] },
-  { slug: "shoulder-pain", name: "Shoulder Pain & Rotator Cuff", kw: "shoulder pain treatment", guides: ["rotator-cuff", "scalenes"],
-    intro: "Shoulder pain, clicking and pain lifting the arm often involve the rotator cuff and the muscles that control the shoulder blade. MD Fit runs a structured 6-week shoulder and rotator cuff protocol.",
-    causes: ["Rotator cuff strain or overuse", "Shoulder blade muscles that are weak or out of sync", "Neck muscles referring pain to the shoulder", "Recovery after shoulder surgery", "Sports and overhead work"],
-    faqs: [["Do you treat shoulders after surgery?", "Yes. Post-surgical shoulder rehab follows your surgeon's precautions and progresses you back to full strength."],
-      ["How long is the shoulder protocol?", "The core program runs 6 weeks with daily home exercises and in-clinic sessions, adjusted to how you respond."],
-      ["Is a frozen shoulder treatable?", "Many stiff, painful shoulders improve with consistent mobility and soft-tissue work. Your evaluation sets realistic expectations."]] },
-  { slug: "knee-pain", name: "Knee Pain & Knee Surgery Recovery", kw: "knee pain treatment", guides: ["quads", "calf"],
-    intro: "Knee pain is frequently driven by the muscles above and below the knee: the quadriceps, hip muscles and calves. MD Fit treats everyday knee pain and recovery after knee surgery and replacement.",
-    causes: ["Tight or weak quadriceps", "Hip weakness letting the knee cave in", "Calf tightness changing how you load the knee", "Recovery after ACL, meniscus or knee replacement surgery", "Running and sports overuse"],
-    faqs: [["Do you help after knee replacement?", "Yes. Rehab rebuilds range of motion, strength and confidence walking, stairs and daily activities."],
-      ["Can I avoid surgery?", "Some knee pain improves fully with the right strengthening. Your evaluation tells you what to expect; surgical questions stay with your surgeon."],
-      ["What should I bring?", "Comfortable clothes and any surgical notes or imaging reports you have."]] },
-  { slug: "hip-pain", name: "Hip Pain", kw: "hip pain treatment", guides: ["lateral-hip", "iliopsoas"],
-    intro: "Pain on the outside of the hip, in the groin or deep in the buttock usually involves the glutes, hip flexors and the muscles that stabilize the pelvis. MD Fit runs a 6-week hip protocol.",
-    causes: ["Glute medius weakness (outer hip pain)", "Tight hip flexors from sitting", "Hip stiffness and lost rotation", "Recovery after hip replacement", "Running, golf and pickleball strain"],
-    faqs: [["Is outer hip pain bursitis?", "Often the muscles and tendons on the outside of the hip are involved. The evaluation finds which tissue reproduces your pain."],
-      ["Can you help after hip replacement?", "Yes, within your surgeon's precautions, rebuilding walking, stairs and strength."],
-      ["How quickly will I improve?", "Many people notice changes within a few weeks of consistent home exercise plus in-clinic sessions."]] },
-  { slug: "post-surgical-rehab", name: "Post-Surgical Rehabilitation", kw: "post-surgical rehab", guides: ["rotator-cuff", "quads"],
-    intro: "After knee, shoulder, spine or joint replacement surgery, structured rehab rebuilds range of motion and strength safely. MD Fit follows your surgeon's precautions and progresses you step by step.",
-    causes: ["Knee surgery (ACL, meniscus, replacement)", "Shoulder surgery (rotator cuff, labrum)", "Back and spine procedures", "Hip replacement", "Fracture recovery"],
-    faqs: [["When can I start after surgery?", "As soon as your surgeon clears you. Bring your post-op instructions to the first visit."],
-      ["Do you coordinate with my surgeon?", "Your plan follows your surgeon's precautions and timelines."],
-      ["What happens after rehab ends?", "Many patients continue with strength and performance training so the joint keeps getting stronger."]] },
-  { slug: "sports-injury-rehab", name: "Sports Injury Rehabilitation", kw: "sports injury rehab", guides: ["calf", "quads"],
-    intro: "Muscle strains, tears and overuse injuries from running, lifting, golf, pickleball and team sports. MD Fit takes you from injured back to full performance.",
-    causes: ["Muscle strains and tears", "Tendon overuse (shoulder, knee, Achilles)", "Ankle sprains", "Return-to-sport after time off", "Golf and pickleball injuries"],
-    faqs: [["Do you work with athletes?", "Yes, from weekend players to competitive athletes, with sport-specific programs including golf and pickleball."],
-      ["When can I return to sport?", "When strength and movement tests show you are ready, not just when pain fades."],
-      ["Can I train while injured?", "Usually yes. Your plan keeps you training around the injury."]] },
-  { slug: "chronic-pain", name: "Chronic Pain", kw: "chronic pain treatment", guides: ["iliopsoas", "posterior-neck"],
-    intro: "Pain that has lasted months or years, especially after old injuries or accidents, often comes from muscles that never fully recovered. MD Fit looks for the muscle at the source.",
-    causes: ["Old injuries that never fully healed", "Post-accident muscle pain", "Compensation patterns from years of guarding", "Stress, poor sleep and inflammation", "Posture and work habits"],
-    faqs: [["I've tried everything. Why would this be different?", "Treatment starts by finding the muscles that reproduce your exact pain, then combines hands-on release with progressive strengthening and daily home work."],
-      ["Is this a replacement for my doctor?", "No. MD Fit works alongside your medical care and refers out when something needs a specialist."],
-      ["What about stress and sleep?", "Your plan can include breathing, sleep and recovery habits, which play a big role in chronic pain."]] },
-  { slug: "medical-massage", name: "Medical Massage", kw: "medical massage", guides: ["posterior-neck", "lateral-hip"],
-    intro: "Targeted soft-tissue treatment on the exact muscles driving your pain, delivered by Dr. Jared Caban, LMT. Sessions are 60 or 90 minutes; no evaluation is needed, just a short intake form.",
-    causes: ["Neck and shoulder tension", "Low back and hip tightness", "Sports recovery", "Post-injury muscle guarding", "Stress-related muscle pain"],
-    faqs: [["How is medical massage different from a spa massage?", "It targets the specific muscles reproducing your pain, guided by a clinical intake, rather than general relaxation."],
-      ["How long are sessions?", "60 or 90 minutes."],
-      ["Do I need an evaluation first?", "No. Book directly and complete the short intake form."]] },
-  { slug: "balance-fall-prevention", name: "Balance & Fall Prevention", kw: "balance training", guides: ["calf", "quads"],
-    intro: "Better balance comes from stronger legs and hips, better ankle mobility and practice. MD Fit builds programs for older adults and anyone who feels unsteady.",
-    causes: ["Leg and hip weakness", "Stiff ankles", "Gait changes after injury or surgery", "Inactivity", "Fear of falling"],
-    faqs: [["Is it safe if I've already fallen?", "Yes. Programs start where you are, in a supervised setting, and progress gradually."],
-      ["Can I do this at home?", "You get simple daily balance and strength exercises in the MD Fit app."],
-      ["How often should I train?", "Most people do short sessions most days plus regular in-clinic visits."]] }
-];
+// Condition pages, treatment pages, service areas and blog articles are in scripts/seo-data.js
+const { CONDITIONS, TREATMENTS, SERVICE_AREAS, BLOG } = require("./seo-data");
 
 function page({ url, title, desc, body, ld }) {
   return `<!doctype html>
@@ -120,7 +53,7 @@ function page({ url, title, desc, body, ld }) {
   <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
 <body class="gd-page cd-page">
-  <nav class="gd-nav"><a href="/"><img src="/assets/logo.webp" alt="MD Fit" width="44" height="44"> MD Fit</a><a href="/conditions/">Conditions</a><a href="/book">Book</a></nav>
+  <nav class="gd-nav"><a href="/"><img src="/assets/logo.webp" alt="MD Fit" width="44" height="44"> MD Fit</a><a href="/conditions/">Conditions</a><a href="/treatments/">Treatments</a><a href="/areas/">Areas</a><a href="/blog/">Blog</a><a href="/book">Book</a></nav>
 ${body}
   <footer class="cd-foot"><p><b>MD Fit</b> · 3214 Clark Road, Sarasota, FL 34231 · <a href="tel:+19413130562">941-313-0562</a> · Mon–Fri 8 AM–4 PM</p>
   <p><a href="${MAPS}" rel="noopener">★ ${RATING.value} on Google (${RATING.count} reviews)</a> · <a href="/privacy-policy">Privacy</a> · <a href="/terms">Terms</a></p>
@@ -209,11 +142,128 @@ fs.writeFileSync(path.join(FE, "conditions", "index.html"), page({
   </main>`
 }));
 
-// ---- sitemap
-const urls = [["/", "1.0"], ["/book", "0.9"], ["/conditions/", "0.9"], ...CONDITIONS.map((c) => [`/conditions/${c.slug}`, "0.8"]), ...guideIds.map((g) => [`/guides/${g}`, "0.6"]), ["/events", "0.5"], ["/privacy-policy", "0.2"], ["/terms", "0.2"]];
+
+
+// ---- treatment pages
+fs.mkdirSync(path.join(FE, "treatments"), { recursive: true });
+for (const t of TREATMENTS) {
+  const url = `/treatments/${t.slug}`;
+  const title = `${t.name} in Sarasota, FL | MD Fit`;
+  const desc = `${t.name} with Dr. Jared Caban, MD, MSc, CEP in Sarasota. ★ ${RATING.value} from ${RATING.count} Google reviews. Book an evaluation online.`;
+  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS,
+    { "@type": "MedicalWebPage", url: SITE + url, name: title, description: desc, lastReviewed: today, provider: { "@id": SITE + "/#clinic" } },
+    (t.faqs && t.faqs.length ? { "@type": "FAQPage", mainEntity: t.faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) } : null),
+    { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: SITE + "/" }, { "@type": "ListItem", position: 2, name: "Treatments", item: SITE + "/treatments/" }, { "@type": "ListItem", position: 3, name: t.name, item: SITE + url }] }
+  ].filter(Boolean) };
+  const body = `  <main class="cd-main">
+    <p class="cd-crumbs"><a href="/">Home</a> › <a href="/treatments/">Treatments</a> › ${esc(t.name)}</p>
+    <h1>${esc(t.name)} in Sarasota, FL</h1>
+    <p class="cd-rating"><a href="${MAPS}" rel="noopener">★★★★★ ${RATING.value} · ${RATING.count} Google reviews</a></p>
+    <p class="cd-lead">${esc(t.intro)}</p>
+    <p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="tel:+19413130562">Call 941-313-0562</a></p>
+    ${(t.sections || []).map((sec) => `<h2>${esc(sec.h2)}</h2><p>${esc(sec.body)}</p>`).join("\n    ")}
+    ${(t.faqs || []).length ? `<h2>Frequently asked questions</h2>${t.faqs.map(([q, a]) => `<details class="cd-faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}` : ""}
+    <div class="cd-cta"><h2>Ready to feel like you again?</h2><p>Serving Sarasota, Bradenton, Lakewood Ranch, Venice, Siesta Key and Osprey.</p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="/book?type=call">Free phone consult</a></div>
+    <h2>Related conditions</h2>
+    <ul class="cd-links">${CONDITIONS.slice(0, 10).map((c) => `<li><a href="/conditions/${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
+  </main>`;
+  fs.writeFileSync(path.join(FE, "treatments", t.slug + ".html"), page({ url, title, desc, body, ld }));
+}
+fs.writeFileSync(path.join(FE, "treatments", "index.html"), page({
+  url: "/treatments/", title: "Treatments at MD Fit: Rehab, Medical Massage & Strength in Sarasota, FL",
+  desc: `What MD Fit treats: medical massage, functional mobility, rehabilitation, clinical exercise physiology and strength training in Sarasota. ★ ${RATING.value} from ${RATING.count} Google reviews.`,
+  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, { "@type": "CollectionPage", url: SITE + "/treatments/", name: "Treatments" }] },
+  body: `  <main class="cd-main">
+    <h1>Treatments at MD Fit</h1>
+    <p class="cd-rating"><a href="${MAPS}" rel="noopener">★★★★★ ${RATING.value} · ${RATING.count} Google reviews</a></p>
+    <p class="cd-lead">Every plan is built by Dr. Jared Caban, MD, MSc, CEP, around finding the muscle at the source of your pain.</p>
+    <ul class="cd-grid">${TREATMENTS.map((t) => `<li><a href="/treatments/${t.slug}"><b>${esc(t.name)}</b><span>${esc((t.intro || "").split(". ")[0])}.</span></a></li>`).join("")}</ul>
+  </main>`
+}));
+
+// ---- city / service-area pages
+fs.mkdirSync(path.join(FE, "areas"), { recursive: true });
+for (const a of SERVICE_AREAS) {
+  const url = `/areas/${a.slug}`;
+  const title = `Physical Rehabilitation & Pain Treatment for ${a.name} | MD Fit Sarasota`;
+  const desc = `MD Fit serves ${a.name} with pain treatment and rehabilitation by Dr. Jared Caban, MD, MSc, CEP. ★ ${RATING.value} from ${RATING.count} Google reviews. Book online.`;
+  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS,
+    { "@type": "MedicalWebPage", url: SITE + url, name: title, description: desc, lastReviewed: today, areaServed: { "@type": "City", name: a.name }, provider: { "@id": SITE + "/#clinic" } },
+    (a.faqs && a.faqs.length ? { "@type": "FAQPage", mainEntity: a.faqs.map(([q, aa]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: aa } })) } : null),
+    { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: SITE + "/" }, { "@type": "ListItem", position: 2, name: "Service areas", item: SITE + "/areas/" }, { "@type": "ListItem", position: 3, name: a.name, item: SITE + url }] }
+  ].filter(Boolean) };
+  const body = `  <main class="cd-main">
+    <p class="cd-crumbs"><a href="/">Home</a> › <a href="/areas/">Service areas</a> › ${esc(a.name)}</p>
+    <h1>Pain Treatment & Rehabilitation for ${esc(a.name)}</h1>
+    <p class="cd-rating"><a href="${MAPS}" rel="noopener">★★★★★ ${RATING.value} · ${RATING.count} Google reviews</a></p>
+    <p class="cd-lead">${esc(a.intro)}</p>
+    <p><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="tel:+19413130562">Call 941-313-0562</a></p>
+    ${(a.sections || []).map((sec) => `<h2>${esc(sec.h2)}</h2><p>${esc(sec.body)}</p>`).join("\n    ")}
+    ${(a.faqs || []).length ? `<h2>Frequently asked questions</h2>${a.faqs.map(([q, aa]) => `<details class="cd-faq"><summary>${esc(q)}</summary><p>${esc(aa)}</p></details>`).join("")}` : ""}
+    <h2>What we treat for ${esc(a.name)} patients</h2>
+    <ul class="cd-links">${CONDITIONS.slice(0, 16).map((c) => `<li><a href="/conditions/${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
+    <div class="cd-cta"><h2>Book from ${esc(a.name)}</h2><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="/book?type=call">Free phone consult</a></div>
+  </main>`;
+  fs.writeFileSync(path.join(FE, "areas", a.slug + ".html"), page({ url, title, desc, body, ld }));
+}
+fs.writeFileSync(path.join(FE, "areas", "index.html"), page({
+  url: "/areas/", title: "Service Areas: Sarasota, Bradenton, Lakewood Ranch, Venice, Osprey | MD Fit",
+  desc: `MD Fit serves Sarasota and the surrounding Suncoast: Bradenton, Lakewood Ranch, Venice, Siesta Key and Osprey. Book pain treatment with Dr. Jared Caban online.`,
+  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, { "@type": "CollectionPage", url: SITE + "/areas/", name: "Service areas" }] },
+  body: `  <main class="cd-main">
+    <h1>Where We Serve</h1>
+    <p class="cd-lead">MD Fit is on Clark Road in Sarasota, serving the whole Suncoast.</p>
+    <ul class="cd-grid">${SERVICE_AREAS.map((a) => `<li><a href="/areas/${a.slug}"><b>${esc(a.name)}</b><span>${esc((a.intro || "").split(". ")[0])}.</span></a></li>`).join("")}</ul>
+  </main>`
+}));
+
+// ---- blog
+fs.mkdirSync(path.join(FE, "blog"), { recursive: true });
+for (const b of BLOG) {
+  const url = `/blog/${b.slug}`;
+  const title = `${b.title} | MD Fit Sarasota`;
+  const desc = b.excerpt;
+  const ld = { "@context": "https://schema.org", "@graph": [BUSINESS,
+    { "@type": "Article", headline: b.title, author: { "@type": "Person", name: "Dr. Jared Caban", honorificSuffix: "MD, MSc, CEP, CCEP, LMT" },
+      publisher: { "@id": SITE + "/#clinic" }, datePublished: b.published, dateModified: b.published, mainEntityOfPage: SITE + url,
+      image: SITE + "/assets/logo.webp", description: desc },
+    (b.faqs && b.faqs.length ? { "@type": "FAQPage", mainEntity: b.faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) } : null),
+    { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: SITE + "/" }, { "@type": "ListItem", position: 2, name: "Blog", item: SITE + "/blog/" }, { "@type": "ListItem", position: 3, name: b.title, item: SITE + url }] }
+  ].filter(Boolean) };
+  const body = `  <main class="cd-main">
+    <p class="cd-crumbs"><a href="/">Home</a> › <a href="/blog/">Blog</a> › ${esc(b.title)}</p>
+    <h1>${esc(b.h1 || b.title)}</h1>
+    <p class="muted small">By Dr. Jared Caban, MD, MSc, CEP · Published ${esc(b.published)}</p>
+    ${(b.sections || []).map((sec) => `<h2>${esc(sec.h2)}</h2><p>${esc(sec.body)}</p>`).join("\n    ")}
+    ${(b.faqs || []).length ? `<h2>Common questions</h2>${b.faqs.map(([q, a]) => `<details class="cd-faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}` : ""}
+    <div class="cd-cta"><h2>Want this handled in person?</h2><a class="cd-btn" href="/book?type=eval">Book an evaluation</a> <a class="cd-btn ghost" href="/book?type=call">Free phone consult</a></div>
+    <h2>More from the blog</h2>
+    <ul class="cd-links">${BLOG.filter((x) => x.slug !== b.slug).slice(0, 8).map((x) => `<li><a href="/blog/${x.slug}">${esc(x.title)}</a></li>`).join("")}</ul>
+  </main>`;
+  fs.writeFileSync(path.join(FE, "blog", b.slug + ".html"), page({ url, title, desc, body, ld }));
+}
+fs.writeFileSync(path.join(FE, "blog", "index.html"), page({
+  url: "/blog/", title: "MD Fit Blog: Pain, Rehab & Movement by Dr. Jared Caban",
+  desc: `Articles from Dr. Jared Caban at MD Fit Sarasota: pain explained, recovery, and getting back to what you love.`,
+  ld: { "@context": "https://schema.org", "@graph": [BUSINESS, { "@type": "Blog", url: SITE + "/blog/", name: "MD Fit Blog", publisher: { "@id": SITE + "/#clinic" } }] },
+  body: `  <main class="cd-main">
+    <h1>MD Fit Blog</h1>
+    <p class="cd-lead">Plain-language articles from Dr. Jared on where your pain really comes from and how to fix it.</p>
+    <ul class="cd-grid">${BLOG.map((b) => `<li><a href="/blog/${b.slug}"><b>${esc(b.title)}</b><span>${esc(b.excerpt)}</span></a></li>`).join("")}</ul>
+  </main>`
+}));
+
+// ---- expanded sitemap
+const allUrls = [["/", "1.0"], ["/book", "0.9"], ["/conditions/", "0.9"], ["/treatments/", "0.9"], ["/areas/", "0.9"], ["/blog/", "0.8"],
+  ...CONDITIONS.map((c) => [`/conditions/${c.slug}`, "0.8"]),
+  ...TREATMENTS.map((t) => [`/treatments/${t.slug}`, "0.8"]),
+  ...SERVICE_AREAS.map((a) => [`/areas/${a.slug}`, "0.8"]),
+  ...BLOG.map((b) => [`/blog/${b.slug}`, "0.7"]),
+  ...guideIds.map((g) => [`/guides/${g}`, "0.6"]),
+  ["/events", "0.5"], ["/privacy-policy", "0.2"], ["/terms", "0.2"]];
 fs.writeFileSync(path.join(FE, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(([u, p]) => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod><priority>${p}</priority></url>`).join("\n")}
+${allUrls.map(([u, p]) => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod><priority>${p}</priority></url>`).join("\n")}
 </urlset>
 `);
-console.log(`conditions: ${CONDITIONS.length + 1} pages, guides pre-rendered: ${guideIds.length}, sitemap: ${urls.length} urls`);
+console.log(`SEO: ${CONDITIONS.length} conditions, ${TREATMENTS.length} treatments, ${SERVICE_AREAS.length} areas, ${BLOG.length} blog, ${guideIds.length} guides, sitemap ${allUrls.length} urls`);
