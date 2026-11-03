@@ -11,8 +11,17 @@
     "iliopsoas": "The Iliopsoas Complex", "lateral-hip": "Lateral Hip Powerhouse", "quads": "Tight Quads: Referred Pain", "calf": "The Calf Complex"
   };
   const shortDate = (d) => fmtDate(d, { month: "short", day: "numeric" });
-  const thumb = (id) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w320`;
-  const thumbImg = (id) => `<span class="thumb"><img src="${thumb(id)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>`;
+  const thumb = (id) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w480`;
+  const thumbImg = (id) => `<span class="thumb" data-thumb="${esc(id)}"><img src="${thumb(id)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="window.MDFitThumbFail&&window.MDFitThumbFail(this)" onload="this.naturalWidth<40&&window.MDFitThumbFail&&window.MDFitThumbFail(this)"></span>`;
+  // If Drive has no thumbnail, show a still frame from the video itself (#t= makes Safari paint that frame)
+  window.MDFitThumbFail = (img) => {
+    const box = img.closest(".thumb"); img.remove(); if (!box || box.querySelector("video")) return;
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.preload = "metadata"; v.setAttribute("playsinline", ""); v.setAttribute("aria-hidden", "true"); v.tabIndex = -1;
+    v.src = `https://drive.usercontent.google.com/download?id=${encodeURIComponent(box.dataset.thumb)}&export=download&authuser=jaredcaban0nopills@gmail.com#t=0.8`;
+    v.addEventListener("loadeddata", () => box.classList.add("has-frame"), { once: true });
+    box.prepend(v);
+  };
   const store = {
     get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
