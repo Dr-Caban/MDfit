@@ -324,9 +324,10 @@
   // ---- My programs: saved workouts, kept on the account
   const compact = (arr) => arr.map((e) => ({ id: e.id, sets: e.sets }));
   const expand = (arr, block) => arr.map((x) => byId.get(x.id) && { ...byId.get(x.id), sets: x.sets, block }).filter(Boolean);
+  const REHAB_CATS = new Set(["Rehabilitation", "Mobility"]);
   function programWorkout(p) {
     const w = p.workout, warmup = expand(w.warmup, "Warm-up"), circuit = expand(w.circuit, "Circuit"), cooldown = expand(w.cooldown, "Cool-down");
-    return { ...w, key: "program-" + p.id, title: p.name, warmup, circuit, cooldown, exercises: [...warmup, ...circuit, ...cooldown], perRound: circuit.length };
+    return { ...w, key: "program-" + p.id, title: p.name, warmup, circuit, cooldown, exercises: [...warmup, ...circuit, ...cooldown], perRound: circuit.length, noRest: REHAB_CATS.has(p.category) };
   }
   const programLi = (p, del) => {
     const w = p.workout;
@@ -575,7 +576,7 @@
   const trackWorkout = (t) => {
     const ex = TK.steps(t).filter((v) => v.id).map((v) => ({ ...(byId.get(v.id) || { id: v.id, region: t.region, cat: "Rehab", level: 1, loc: "any" }), name: v.name, sets: "Follow the video", block: v.level.split(" · ")[0] }));
     return { title: `${t.title.split(" →")[0]} pain track`.slice(0, 80), goal: "Mobility & Recovery", goalId: "mobility", location: "home", level: "beginner", levelLabel: "Pain track",
-      rounds: 1, restEx: 15, restRound: 0, minutes: Math.max(5, ex.length * 3), warmup: [], circuit: ex, cooldown: [], exercises: ex, perRound: ex.length };
+      rounds: 1, restEx: 0, restRound: 0, minutes: Math.max(5, ex.length * 3), warmup: [], circuit: ex, cooldown: [], exercises: ex, perRound: ex.length, noRest: true };
   };
   function openTrack(id) { TK.ready.then(() => TK.open(id, { startLabel: "Start this track", onStart: (t) => startPlayer(trackWorkout(t)) })); }
   document.addEventListener("click", (e) => { const c = e.target.closest("[data-track]"); if (c) openTrack(c.dataset.track); });
@@ -976,9 +977,9 @@
     for (let r = 1; r <= w.rounds; r++) {
       w.circuit.forEach((e, i) => {
         out.push({ e, label: w.rounds === 1 && e.block !== "Circuit" ? e.block : `Round ${r} of ${w.rounds}` });
-        if (w.restEx && i < w.circuit.length - 1) out.push({ rest: w.restEx, label: "Rest" });
+        if (!w.noRest && w.restEx && i < w.circuit.length - 1) out.push({ rest: w.restEx, label: "Rest" });
       });
-      if (r < w.rounds && w.restRound) out.push({ rest: w.restRound, label: `Rest before round ${r + 1}` });
+      if (!w.noRest && r < w.rounds && w.restRound) out.push({ rest: w.restRound, label: `Rest before round ${r + 1}` });
     }
     w.cooldown.forEach((e) => out.push({ e, label: "Cool-down" }));
     return out;
@@ -996,6 +997,9 @@
     clearInterval(P.tick);
     P.tick = setInterval(onTick, 1000);
     $("#p-timer").textContent = "0:00";
+    const v = $("#p-video");
+    v.onended = () => { if (!P.paused && !P.done) advance(); };
+    v.onerror = () => { const e = P.steps[P.i] && P.steps[P.i].e; if (e) { v.hidden = true; const ifr = document.createElement("iframe"); ifr.src = `https://drive.google.com/file/d/${encodeURIComponent(e.id)}/preview`; ifr.title = e.name; ifr.allow = "autoplay; fullscreen"; ifr.allowFullscreen = true; ifr.className = "p-fallback-iframe"; $("#p-vwrap").appendChild(ifr); } };
     renderOpts();
     renderStep();
     goFs(pl);
@@ -1003,7 +1007,9 @@
   function exitFs() { const d = document; if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen || d.msExitFullscreen || (() => {})).call(d); }
   function closePlayer() {
     clearInterval(P.tick);
-    const v = $("#p-video"); if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
+    const v = $("#p-video"); if (v) { v.pause(); v.removeAttribute("src"); v.load(); v.onended = null; v.onerror = null; }
+    $("#p-vwrap").hidden = true;
+    const ifr = $("#p-vwrap .p-fallback-iframe"); if (ifr) ifr.remove();
     exitFs();
     $("#player").hidden = true;
     $("#p-body").innerHTML = "";
@@ -1038,17 +1044,21 @@
     $("#p-next").textContent = P.i === n - 1 ? "Finish" : st.rest ? "Skip rest" : "Next";
     P.paused = false; $("#p-pause").textContent = "Pause";
     const upNext = next ? `<div class="p-next">Up next: <b>${esc(next.e.name)}</b> · ${esc(next.e.sets)}${next.label !== st.label && next.label === "Cool-down" ? " · cool-down starts" : ""}</div>` : `<div class="p-next">Last one. Finish strong.</div>`;
+    const vwrap = $("#p-vwrap"), v = $("#p-video");
+    const oldIfr = vwrap.querySelector(".p-fallback-iframe"); if (oldIfr) oldIfr.remove();
+    v.hidden = false;
     if (st.rest) {
+      vwrap.hidden = true; v.pause();
       P.left = P.total = st.rest;
       $("#p-body").innerHTML = `<div class="p-rest"><p class="p-block">${esc(st.label)}</p><div class="count" id="p-count">${P.left}</div><p>Breathe. Get set for the next move.</p>${upNext}</div>`;
       return;
     }
     const e = st.e;
     P.left = 0; P.total = Gen.stepSecs(e.sets);
+    vwrap.hidden = false;
+    v.muted = !P.opt.sound;
+    v.poster = `https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800`;
     $("#p-body").innerHTML = `
-      <div class="frame p-frame">
-        <video id="p-video" playsinline ${P.opt.sound ? "" : "muted"} autoplay preload="auto" poster="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800"></video>
-      </div>
       <div class="p-info">
         <p class="p-block">${esc(st.label)}</p>
         <h2 class="p-name">${esc(e.name)}</h2>
@@ -1059,10 +1069,6 @@
         ${st.label.startsWith("Round") || st.label === "Circuit" ? `<label class="p-load">Weight used <input id="p-weight" inputmode="decimal" placeholder="lb" value="${esc((P.log[e.id] || {}).weight || "")}"></label>` : ""}
         ${upNext}
       </div>`;
-    const v = $("#p-video");
-    // Fall back to Drive's own player if the direct stream is refused
-    v.addEventListener("error", () => { v.parentElement.innerHTML = `<iframe src="https://drive.google.com/file/d/${encodeURIComponent(e.id)}/preview" title="${esc(e.name)} demo" allow="autoplay; fullscreen" allowfullscreen></iframe>`; }, { once: true });
-    v.addEventListener("ended", () => { if (!P.paused && !P.done) advance(); });
     v.src = driveMp4(e.id);
     const pr = v.play(); if (pr) pr.catch(() => { v.muted = true; v.play().catch(() => {}); });
     const wt = $("#p-weight");
@@ -1084,6 +1090,7 @@
   async function finish() {
     clearInterval(P.tick);
     const pv = $("#p-video"); if (pv) pv.pause();
+    $("#p-vwrap").hidden = true;
     P.done = true;
     const secsUsed = Math.floor((Date.now() - P.start) / 1000), minutes = Math.min(300, Math.max(1, Math.round(secsUsed / 60)));
     $("#p-bar").style.width = "100%";
@@ -1386,7 +1393,7 @@
       const chosen = d.circuit.map((x) => ({ ...(byName[x.ex] || { id: "", name: x.ex }), sets: x.sets || "" })).filter((x) => x.name);
       if (chosen.length) w.circuit = chosen;
     }
-    return { ...w, title: `${p.title}: ${d.name}`, key: `prog-${p.id}-d${i}` };
+    return { ...w, title: `${p.title}: ${d.name}`, key: `prog-${p.id}-d${i}`, noRest: REHAB_CATS.has(p.category) };
   };
   const doneCount = (p, i) => allWorkouts.filter((w) => w.key === `prog-${p.id}-d${i}`).length;
   function renderProgramsView(sub) {
