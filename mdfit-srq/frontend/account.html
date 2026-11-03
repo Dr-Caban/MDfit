@@ -13,10 +13,12 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="assets/icon-64.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/app-icon-192.png">
+  <link rel="preconnect" href="https://drive.usercontent.google.com" crossorigin>
+  <link rel="preconnect" href="https://drive.google.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="app/app.css?v=549be128">
+  <link rel="stylesheet" href="app/app.css?v=f1833910">
   <link rel="stylesheet" href="guides.css?v=0d6cdb39">
 </head>
 <body class="mdapp">
@@ -543,7 +545,7 @@
 
   <dialog class="sheet" id="video-dialog">
     <div class="sheet-head"><b id="vd-title"></b><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg></button></div>
-    <div class="frame"><iframe id="vd-frame" title="Exercise video" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
+    <div class="frame" id="vd-box"><iframe id="vd-frame" title="Exercise video" allow="autoplay; fullscreen" allowfullscreen hidden></iframe></div>
     <p class="muted small" id="vd-meta"></p>
   </dialog>
 
@@ -598,7 +600,7 @@
   <script src="musclereports.js?v=cd9ced26"></script>
   <script src="guides.js?v=9a9e3d41"></script>
   <script src="stripe-checkout.js?v=0b68bde3"></script>
-  <script src="account.js?v=eb7e7407"></script>
+  <script src="account.js?v=238f0939"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

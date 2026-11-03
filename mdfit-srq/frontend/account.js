@@ -139,14 +139,54 @@
   const vd = $("#video-dialog");
   $$("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
   $$("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
-  vd.addEventListener("close", () => ($("#vd-frame").src = "about:blank"));
+  // Video preloading: direct MP4 in a native <video>, warmed before the tap. Visible cards fetch metadata
+  // (a few at a time); touching a card starts buffering the opening seconds. Drive's player is the fallback.
+  const mp4Url = (id) => `https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&authuser=jaredcaban0nopills@gmail.com`;
+  const saveData = !!(navigator.connection && (navigator.connection.saveData || /(^|-)2g$/.test(navigator.connection.effectiveType || "")));
+  const warm = new Map(); const WARM_MAX = 8; let warmQueue = [], warmActive = 0;
+  function warmVideo(id, level = "metadata") {
+    if (!id) return null;
+    let v = warm.get(id);
+    if (v) { warm.delete(id); warm.set(id, v); if (level === "auto" && v.preload !== "auto") { v.preload = "auto"; v.load(); } return v; }
+    v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.loop = true; v.preload = level; v.src = mp4Url(id);
+    v.setAttribute("playsinline", ""); v.className = "vd-video";
+    warm.set(id, v);
+    while (warm.size > WARM_MAX) { const [k, old] = warm.entries().next().value; if (old.isConnected) break; old.removeAttribute("src"); old.load(); warm.delete(k); }
+    return v;
+  }
+  function pumpWarm() {
+    while (warmActive < 3 && warmQueue.length) {
+      const id = warmQueue.shift(); if (warm.has(id)) continue;
+      const v = warmVideo(id, "metadata"); warmActive++;
+      let finished = false;
+      const done = () => { if (finished) return; finished = true; warmActive--; v.removeEventListener("loadedmetadata", done); v.removeEventListener("error", done); pumpWarm(); };
+      v.addEventListener("loadedmetadata", done); v.addEventListener("error", done); setTimeout(done, 8000);
+    }
+  }
+  const warmObs = "IntersectionObserver" in window && !saveData ? new IntersectionObserver((ents) => {
+    ents.forEach((en) => { if (en.isIntersecting) { const id = en.target.dataset.video; if (id && !warm.has(id) && !warmQueue.includes(id)) warmQueue.push(id); warmObs.unobserve(en.target); } });
+    pumpWarm();
+  }, { rootMargin: "200px 0px" }) : null;
+  function observeCards(root) { if (warmObs) $$("[data-video]", root).forEach((el) => warmObs.observe(el)); }
+  ["pointerdown", "mouseover", "touchstart"].forEach((t) => document.addEventListener(t, (e) => {
+    const c = e.target.closest && e.target.closest("[data-video]"); if (c) warmVideo(c.dataset.video, "auto");
+  }, { passive: true }));
+  vd.addEventListener("close", () => {
+    $("#vd-frame").src = "about:blank"; $("#vd-frame").hidden = true;
+    const v = $("#vd-box .vd-video"); if (v) { v.pause(); v.remove(); }
+  });
   const earn = (kind, ref = "") => apiAuth("POST", "/api/me/xp", { kind, ref: String(ref) }).then(() => loadRewards(true)).catch(() => {});
   function playVideo(id, title, meta = "") {
     earn("video", id);
     $("#vd-title").textContent = title;
     $("#vd-meta").textContent = meta;
-    $("#vd-frame").src = `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
+    const box = $("#vd-box"), v = warmVideo(id, "auto");
+    v.controls = true; v.muted = true; v.autoplay = true;
+    v.onerror = () => { v.remove(); const f = $("#vd-frame"); f.hidden = false; f.src = `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`; };
+    box.prepend(v);
     vd.showModal();
+    v.play().catch(() => {});
   }
   const exMeta = (e) => `${e.region} · ${e.cat} · Level ${e.level}${e.loc !== "any" ? " · " + e.loc[0].toUpperCase() + e.loc.slice(1) : ""}`;
   const byId = new Map(EX.map((e) => [e.id, e]));
@@ -527,6 +567,7 @@
       const xs = list.filter((e) => e[key] === g);
       return xs.length ? `<section class="vgroup"><h3>${esc(g)} <span>${xs.length}</span></h3><div class="vgrid-in">${xs.map(vcard).join("")}</div></section>` : "";
     }).join("");
+    observeCards($("#vgrid"));
     $("#vid-empty").hidden = list.length > 0;
     $("#vid-empty").textContent = vf.cat === "♥ Favorites" && !lib.favorites.length ? "Tap the heart on any video to save it here." : "No exercises match. Try another filter.";
   }
@@ -1787,6 +1828,7 @@
   async function loadBoard() {
     if (!$("#board")) return;
     let d; try { d = await apiAuth("GET", `/api/me/leaderboard?period=${boardPeriod}${boardLeague ? `&league=${boardLeague}` : ""}`); } catch { return; }
+    if (!d || !Array.isArray(d.top)) return;
     $$("#board [data-period]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.period === d.period)));
     const unit = d.period === "week" ? "XP this week" : "XP";
     boardLeague = d.league;
