@@ -1014,3 +1014,21 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 @keyframes notif-in { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .notif { animation: none; } }
 @media (min-width: 900px) { .notifs { bottom: 24px; left: auto; right: 24px; transform: none; width: 380px; } }
+
+/* Bell notification center */
+.bell { position: relative; }
+.bell-count { position: absolute; top: 2px; right: 0; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: #e5484d; color: #fff; font: 700 11px/19px var(--body, inherit); text-align: center; border: 2px solid var(--navy); }
+.bell-count[hidden] { display: none; }
+.notes-panel { padding: 6px 0; max-height: 60vh; overflow-y: auto; box-shadow: 0 12px 30px rgba(5,12,26,.12); }
+.notes-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px 6px; }
+.notes-head b { font-size: 15px; color: var(--navy); }
+.notes-clear { font-size: 13px; padding: 0; }
+.notes-empty { padding: 6px 14px 10px; margin: 0; }
+.note-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.note-row.new { background: rgba(59,130,246,.07); }
+.note-row .notif-ic { background: var(--card-2); }
+.note-txt { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.note-txt b { font-size: 14.5px; color: var(--navy); line-height: 1.3; }
+.note-txt span { font-size: 13px; color: var(--muted); }
+.note-txt em { font-style: normal; font-size: 12px; color: var(--muted); }
+.note-go { flex: none; border: 0; border-radius: 999px; background: var(--navy); color: #fff; font-weight: 700; font-size: 13px; padding: 7px 13px; cursor: pointer; }

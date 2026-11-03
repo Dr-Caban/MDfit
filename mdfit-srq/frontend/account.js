@@ -29,7 +29,10 @@
   // Bottom pop-up notifications (rewards, messages, upcoming visits). Each fires once, tracked per device.
   const seenStore = { get(k) { try { return JSON.parse(localStorage.getItem("mdfit-seen-" + k) || "null"); } catch { return null; } }, set(k, v) { try { localStorage.setItem("mdfit-seen-" + k, JSON.stringify(v)); } catch {} } };
   const NOTIF_ICONS = { reward: "🏆", level: "⭐", message: "💬", visit: "📅" };
+  const inbox = { items: seenStore.get("inbox") || [], unseen: seenStore.get("inbox-unseen") || 0 };
+  function saveInbox() { inbox.items = inbox.items.slice(0, 25); seenStore.set("inbox", inbox.items); seenStore.set("inbox-unseen", inbox.unseen); if (typeof renderNotes === "function" && $("#notes")) renderNotes(); }
   function notify({ kind, title, body, action, go }) {
+    inbox.items.unshift({ kind, title, body: body || "", action: action || "", go: go || "", at: Date.now() }); inbox.unseen++; saveInbox();
     const box = $("#notifs"); if (!box) return;
     while (box.children.length >= 3) box.firstElementChild.remove();
     const n = document.createElement("div");
@@ -224,17 +227,27 @@
       || `<li class="muted small">No workouts logged yet.</li>`;
   }
 
+  const agoMs = (ms) => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
   function renderNotes() {
-    const t = todayInTz(), notes = [];
-    const soon = appts.upcoming.find((a) => a.date <= addDays(t, 2));
-    if (soon) notes.push(`Visit ${soon.date === t ? "today" : soon.date === addDays(t, 1) ? "tomorrow" : fmtDate(soon.date, { weekday: "long" })} at ${fmtTime(soon.time)}: ${soon.typeName}.`);
+    const t = todayInTz(), live = [];
+    const soon = appts.upcoming.find((a) => a.status !== "cancelled" && a.date <= addDays(t, 2));
+    if (soon) live.push({ kind: "visit", title: `Visit ${soon.date === t ? "today" : soon.date === addDays(t, 1) ? "tomorrow" : fmtDate(soon.date, { weekday: "long" })} at ${fmtTime(soon.time)}`, body: soon.typeName, action: "Details", go: "#profile" });
     const p = client.plan;
-    if (p && p.updatedAt && p.updatedAt.slice(0, 10) >= addDays(t, -7)) notes.push("Dr. Jared updated your plan. See “From Dr. Jared” below.");
-    if (stats && stats.streak > 0 && !stats.week[stats.todayIndex]) notes.push(`Keep your ${stats.streak}-day streak going: do a workout today.`);
-    $("#bell .dot").hidden = !notes.length;
-    $("#notes").innerHTML = notes.length ? notes.map((n) => `<p>${esc(n)}</p>`).join("") : `<p class="muted">You're all caught up.</p>`;
+    if (p && p.updatedAt && p.updatedAt.slice(0, 10) >= addDays(t, -7)) live.push({ kind: "plan", title: "Dr. Jared updated your plan", body: "See \u201cFrom Dr. Jared\u201d on Home." });
+    if (stats && stats.streak > 0 && !stats.week[stats.todayIndex]) live.push({ kind: "streak", title: `Keep your ${stats.streak}-day streak going`, body: "Do a workout today.", action: "Start", go: "#generate" });
+    const icon = (k) => ({ reward: "🏆", level: "⭐", message: "💬", visit: "📅", plan: "📋", streak: "🔥" })[k] || "🔔";
+    const row = (n, i, src) => `<div class="note-row${src === "h" && i < inbox.unseen ? " new" : ""}"><span class="notif-ic">${icon(n.kind)}</span><div class="note-txt"><b>${esc(n.title)}</b>${n.body ? `<span>${esc(n.body)}</span>` : ""}${n.at ? `<em>${agoMs(n.at)}</em>` : ""}</div>${n.go ? `<button type="button" class="note-go" data-go="${esc(n.go)}">${esc(n.action || "Open")}</button>` : ""}</div>`;
+    const count = inbox.unseen + live.length;
+    $("#bell .dot").hidden = true;
+    const bc = $("#bell .bell-count"); bc.hidden = !count; bc.textContent = count > 9 ? "9+" : count;
+    $("#notes").innerHTML = `<div class="notes-head"><b>Notifications</b>${inbox.items.length ? `<button type="button" class="link notes-clear">Clear</button>` : ""}</div>` +
+      (live.length || inbox.items.length ? live.map((n, i) => row(n, i, "l")).join("") + inbox.items.map((n, i) => row(n, i, "h")).join("") : `<p class="muted notes-empty">You're all caught up.</p>`);
   }
-  $("#bell").addEventListener("click", () => { $("#notes").hidden = !$("#notes").hidden; $("#bell .dot").hidden = true; });
+  $("#bell").addEventListener("click", () => { const open = $("#notes").hidden; $("#notes").hidden = !open; if (open) { renderNotes(); inbox.unseen = 0; seenStore.set("inbox-unseen", 0); const bc = $("#bell .bell-count"); bc.hidden = true; } });
+  $("#notes").addEventListener("click", (e) => {
+    if (e.target.closest(".notes-clear")) { inbox.items = []; inbox.unseen = 0; saveInbox(); return; }
+    const g = e.target.closest("[data-go]"); if (g) { $("#notes").hidden = true; location.hash = g.dataset.go; }
+  });
 
   // ================= Generate: numbered steps, summary and add-ons (MD Fit generator design)
   const ICONS = {
@@ -1445,7 +1458,7 @@
   const growTA = (t) => { t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; };
   $("#chat-form textarea").addEventListener("input", (e) => growTA(e.target));
   function setBadge(n) { const b = $("#msg-badge"); b.hidden = !n; b.textContent = n > 9 ? "9+" : n; $("#more-btn").classList.toggle("has-badge", !!n); const ml = $('#more-list [data-goto="messages"]'); if (ml) ml.dataset.badge = n || ""; }
-  const pollUnread = () => apiAuth("GET", "/api/me/messages/unread-count").then((r) => { setBadge(r.unread); notifyMessages(r.unread); }).catch(() => {});
+  const pollUnread = () => apiAuth("GET", "/api/me/messages/unread-count").then((r) => { setBadge(r.unread); notifyMessages(r.unread); renderNotes(); }).catch(() => {});
   if (window.MDFitRT) MDFitRT.on("new_message", () => pollUnread());
   setInterval(() => { if (!document.hidden && $("#view-messages").hidden) pollUnread(); }, 60000);
   $("#chat-form").addEventListener("submit", async (e) => {
