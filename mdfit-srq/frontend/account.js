@@ -964,15 +964,7 @@
   if (standalone) {
     $("#install-card").hidden = true;
   } else if (isIOS) {
-    $("#install-text").innerHTML = isSafari
-      ? "Install MD Fit as an app on your home screen:"
-      : "Open <b>mymdfit.com</b> in <b>Safari</b>, then:";
-    if (stepsOl) {
-      stepsOl.innerHTML = `<li>Tap the <b>Share</b> button <svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:-2px;fill:var(--accent)"><path d="M16 5l-1.4 1.4-1.6-1.6V16h-2V4.8L9.4 6.4 8 5l4-4 4 4zM20 10v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h3v2H6v10h12V10h-3V8h3a2 2 0 0 1 2 2z"/></svg> at the bottom of Safari</li>
-        <li>Scroll down and tap <b>"Add to Home Screen"</b></li>
-        <li>Tap <b>"Add"</b> in the top right</li>`;
-      stepsEl.hidden = false;
-    }
+    $("#install-card").hidden = true;
   } else if (isAndroid) {
     $("#install-text").textContent = "Install MD Fit as an app on your phone:";
     if (stepsOl) {
