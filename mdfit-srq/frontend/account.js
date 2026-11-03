@@ -1384,9 +1384,10 @@
   let progCat = "All";
   const progDayWorkout = (p, i) => {
     const d = p.days[i];
+    const hasCircuit = Array.isArray(d.circuit) && d.circuit.length;
     const w = Gen.generate({ goal: d.goal, location: p.location, level: p.level, length: d.length, ...Gen.presetFor(d.length),
       ...(d.rounds ? { rounds: d.rounds } : {}), ...(d.restEx !== undefined ? { restEx: d.restEx } : {}), ...(d.restRound !== undefined ? { restRound: d.restRound } : {}),
-      addons: { warmup: true, cooldown: true }, seed: p.seed + (d.seedOffset || 0) + i * 101 });
+      addons: { warmup: !hasCircuit, cooldown: !hasCircuit }, seed: p.seed + (d.seedOffset || 0) + i * 101 });
     // Fixed circuit: use exactly the exercises Dr. Jared specified (looked up by name)
     if (Array.isArray(d.circuit) && d.circuit.length) {
       const byName = Object.fromEntries(EX.map((e) => [e.name, e]));
