@@ -203,10 +203,10 @@ test("rewards math: XP, streak bonus, levels and badge dates", () => {
     painLog: [{ date: "2026-03-02", area: "Knee", level: 7 }, { date: "2026-03-04", area: "Knee", level: 3 }],
     visits: [{ date: "2026-03-05" }]
   }, "2026-03-05");
-  // 35 + (50+4) + (30+6) workouts, 10 pain, 50 visit
-  assert.equal(r.xp, 185);
-  assert.equal(r.level, 2);
-  assert.equal(r.todayXp, 50);
+  // 35 + (50+4) + (30+6) workouts, 10 pain, 50 visit, plus 5 badges x 25 bonus
+  assert.equal(r.xp, 310);
+  assert.equal(r.level, 3);
+  assert.equal(r.todayXp, 75);
   const b = Object.fromEntries(r.badges.map((x) => [x.id, x]));
   assert.equal(b["first-workout"].earnedOn, "2026-03-02");
   assert.equal(b["streak-3"].earnedOn, "2026-03-04");
@@ -237,7 +237,7 @@ test("library: favorites and programs persist on the account", async (t) => {
   // rewards endpoint
   await s.call("POST", "/api/me/workouts", { title: "Core", goal: "Core & Spine", minutes: 20, exercises: 6 }, tok);
   const r = (await s.call("GET", "/api/me/rewards", undefined, tok)).body;
-  assert.equal(r.xp, 30);
+  assert.equal(r.xp, 55); // 30 workout + 25 first-badge bonus
   assert.equal(r.badges.find((b) => b.id === "first-workout").earned, true);
   assert.equal((await s.call("GET", "/api/me/workouts", undefined, tok)).body.length, 1);
 });

@@ -47,12 +47,50 @@
     box.appendChild(n);
     setTimeout(close, 8000);
   }
+  // Milestones: spinning coin + bonus XP, then (on level-ups and every 3rd badge) a Duolingo-style leaderboard pop-up
+  const msQueue = []; let msBusy = false, msShowBoard = false;
+  function milestone(m) { msQueue.push(m); if (!msBusy) nextMilestone(); }
+  function nextMilestone() {
+    const m = msQueue.shift();
+    if (!m) { msBusy = false; if (msShowBoard) { msShowBoard = false; showBoardPopup(); } return; }
+    msBusy = true;
+    $("#ms-face").innerHTML = m.icon;
+    $("#ms-kicker").textContent = m.kicker;
+    $("#ms-title").textContent = m.title;
+    $("#ms-desc").textContent = m.desc || "";
+    $("#ms-xp").innerHTML = m.xp ? `<span>+${m.xp}</span> XP` : "";
+    const ov = $("#ms"); ov.hidden = false; ov.classList.remove("play"); void ov.offsetWidth; ov.classList.add("play");
+    try { navigator.vibrate && navigator.vibrate([30, 40, 60]); } catch {}
+  }
+  $("#ms-go").addEventListener("click", () => { $("#ms").hidden = true; nextMilestone(); });
+  async function showBoardPopup() {
+    let d; try { d = await apiAuth("GET", "/api/me/leaderboard?period=week"); } catch { return; }
+    if (d.hidden || !d.me) return;
+    const lname = d.league === "olympic" ? "🏆 Olympic League" : "🏅 Pro League";
+    $("#ms-lb-league").textContent = lname;
+    $("#ms-lb-title").textContent = d.me.rank === 1 ? "You're #1 this week!" : `You're #${d.me.rank} this week`;
+    const rows = d.top.slice(0, 5);
+    if (!rows.some((r) => r.me)) rows.push({ rank: d.me.rank, name: client.name || "You", score: d.me.score, level: reward ? reward.level : 1, me: true });
+    $("#ms-lb-list").innerHTML = rows.map((r, i) => `<li class="${r.me ? "me" : ""}" style="animation-delay:${i * 70}ms"><span class="rk rk-${r.rank}">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</span><span class="nm">${esc(r.name)}${r.me ? " (you)" : ""}<small>Lv ${r.level}</small></span><b>${r.score.toLocaleString()}</b></li>`).join("");
+    $("#ms-lb").hidden = false;
+  }
+  $("#ms-lb-go").addEventListener("click", () => { $("#ms-lb").hidden = true; });
   function notifyRewards(r) {
     if (!r) return;
     const earned = r.badges.filter((b) => b.earned).map((b) => b.id), seen = seenStore.get("badges"), lvl = seenStore.get("level");
-    if (seen) r.badges.filter((b) => b.earned && !seen.includes(b.id)).forEach((b) => notify({ kind: "reward", title: `Badge unlocked: ${b.title}`, body: b.desc, action: "View", go: "#progress" }));
-    if (lvl !== null && r.level > lvl) notify({ kind: "level", title: `Level ${r.level}: ${r.title}`, body: "You leveled up. Keep it going!", action: "View", go: "#progress" });
-    seenStore.set("badges", earned); seenStore.set("level", r.level);
+    let badgeCount = seenStore.get("ms-count") || 0;
+    if (seen) r.badges.filter((b) => b.earned && !seen.includes(b.id)).forEach((b) => {
+      notify({ kind: "reward", title: `Badge unlocked: ${b.title}`, body: b.desc, action: "View", go: "#progress" });
+      milestone({ icon: `<svg viewBox="0 0 24 24">${BADGE_IC[b.icon] || BADGE_IC.star}</svg>`, kicker: "Milestone unlocked", title: b.title, desc: b.desc, xp: 25 });
+      badgeCount++; if (badgeCount % 3 === 0) msShowBoard = true;
+    });
+    if (lvl !== null && r.level > lvl) {
+      notify({ kind: "level", title: `Level ${r.level}: ${r.title}`, body: "You leveled up. Keep it going!", action: "View", go: "#progress" });
+      milestone({ icon: `<span class="ms-lv">${r.level}</span>`, kicker: "Level up!", title: r.title, desc: r.level === 5 ? "Welcome to the Olympic League." : `You reached level ${r.level}.`, xp: 0 });
+      msShowBoard = true;
+    }
+    if (msShowBoard && !msBusy && !msQueue.length) { msShowBoard = false; showBoardPopup(); }
+    seenStore.set("ms-count", badgeCount); seenStore.set("badges", earned); seenStore.set("level", r.level);
   }
   function notifyVisits() {
     const t = todayInTz(), seen = seenStore.get("visits") || {};
@@ -1803,7 +1841,7 @@
   async function loadRewards(celebrate = false) {
     try {
       const prev = reward, next = await apiAuth("GET", "/api/me/rewards");
-      reward = next; loadBoard(); renderRewards(); notifyRewards(next);
+      reward = next; loadBoard(); notifyRewards(next); renderRewards();
       if (!celebrate || !prev) return;
       const gained = next.xp - prev.xp, newBadges = next.badges.filter((b) => b.earned && !prev.badges.find((x) => x.id === b.id).earned);
       const msgs = [];

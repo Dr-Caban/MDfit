@@ -8,6 +8,7 @@ const XP = {
   streakBonus: (day) => Math.min(day, 10) * 2,                       // day 2 of a streak +4 ... capped at +20
   pain: 5,                                                            // first 3 pain logs a day
   visit: 50,                                                          // completed visit with Dr. Jared
+  badge: 25,                                                          // bonus for every milestone badge
   checkin: 5                                                          // per daily reading (weight, sleep, watch numbers), max 2 a day
 };
 const PAIN_XP_PER_DAY = 3;
@@ -99,7 +100,7 @@ function rewards({ workouts = [], painLog = [], visits = [], vitals = [], action
     else state.visits++;
     for (const b of BADGES) {
       const v = b.kind === "goals" ? state.goals.size : state[b.kind];
-      if (!earnedOn[b.id] && v >= b.target) earnedOn[b.id] = e.date;
+      if (!earnedOn[b.id] && v >= b.target) { earnedOn[b.id] = e.date; xp += XP.badge; byDay.set(e.date, (byDay.get(e.date) || 0) + XP.badge); }
     }
   }
   const progress = { ...state, goals: state.goals.size };
