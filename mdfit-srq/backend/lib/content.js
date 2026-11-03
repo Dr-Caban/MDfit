@@ -77,7 +77,7 @@ function defaultContent() {
       { id: "dream-lean-12", title: "12-Week Dream Lean", category: "Weight loss", level: "intermediate", location: "gym", weeks: 12, seed: 1002, access: "member",
         summary: "STRONG · FUNCTIONAL · CONFIDENT. The complete system for a lean, toned and powerful you. 7-day training split with strength training 4-6 days per week, daily movement reset, health shots, ice bath protocol and acupressure mat recovery.",
         notes: "Daily Movement Reset (10-15 min): 90/90 Breathing, Couch Stretch, Thoracic Open Books, Glute Bridge Hold, Dead Bugs, Split Squat Hold, Wall Posture, Deep Squat Hold, Child's Pose with Reach. Take the MD Fit Health Shot daily on an empty stomach. Ice bath 2-4x/week (50-58°F, 2-5 min). Acupressure mat 10-20 min nightly. Nutrition: protein first (30-40g per meal), eat whole real foods, prioritize quality carbs around workouts, stay hydrated. Supplements: Magnesium Glycinate, Omega-3 Fish Oil, Vitamin D3 + K2, Creatine Monohydrate, Curcumin + Black Pepper Extract, Ashwagandha, Probiotic, Glycine. Sleep 7-9 hours. Focus on good form, progressive overload.",
-        image: "assets/programs/dream-lean.webp",
+        image: "assets/programs/dream-lean-new.png",
         days: [
           day("Lower Body — Glutes & Hamstrings", "lower", 45, { rounds: 4, restEx: 30, restRound: 90, circuit: [
             { ex: "Hip Thrusts", sets: "4 x 8-12" },
@@ -124,7 +124,7 @@ function defaultContent() {
       { id: "shoulder-6", title: "6-Week Shoulder & Rotator Cuff Protocol", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1003, access: "member",
         summary: "Progressive release and eccentric shoulder/rotator cuff system. The #1 Rule: Shoulders live in your pockets. Phase 1 (Weeks 1-2): Decompression, exploratory range and cuff control. Phase 2 (Weeks 3-4): End-range control and cervical rotation. Phase 3 (Weeks 5-6): Full cervical control and global integration.",
         notes: "Phase 1 (Weeks 1-2): Scalene Release (30-60 sec, 1-2 rounds), Eccentric Dumbbell Shrug Drop (10-20 reps, up to 2x daily, 15-25 lb), Rotator Cuff Internal/External Rotation at side (15-20 reps, 1-2 sets, very light band), Repeated Shoulder Drop Stretch (throughout the day), Farmer Carries (15-20 lb, 20-30 ft per lap, 10-20 laps). Phase 2 (Weeks 3-4): All prior movements + progressions with chin rotation, increased band tension, 3-5 sec holds, 12-15 reps x 2 sets. Phase 3 (Weeks 5-6): Three-Part Scalene Sequence (tilt, rotation, tuck), Rotator Cuff in Abduction (10-15 reps x 2 sets), Kneeling Straight-Arm Cable Pulldown (3x12-20), Bear Crawls (20-30 ft, 4-6 sets).",
-        image: "assets/programs/shoulder.webp",
+        image: "assets/programs/shoulder-new.png",
         days: [day("Shoulder Protocol — Daily Routine", "upper", 20, { rounds: 2, restEx: 20, restRound: 60, circuit: [
           { ex: "Scalene Release", sets: "30-60 sec x 1-2 rounds each side" },
           { ex: "Eccentric Dumbbell Shrug Drop", sets: "10-20 reps x 1-2 sets (15-25 lb)" },
@@ -137,7 +137,7 @@ function defaultContent() {
       { id: "hip-6", title: "6-Week Hip Protocol", category: "Rehabilitation", level: "beginner", location: "home", weeks: 6, seed: 1004, access: "member",
         summary: "Build tolerance, improve control, reduce irritation. Build strong, stable, pain-free hips through controlled movement, glute engagement and core stability. Daily exercises for all 6 weeks with weekly progressions.",
         notes: "Key principles: No Pain Rule (stay within pain-free range), Slow & Controlled (quality over quantity), Consistency (daily work builds lasting results), Glute Engagement (glutes on, shoulders down, engage core). Daily Basics — do every day all 6 weeks: Posture (shoulders down, chest tall, core lightly braced), Glute Engagement (keep glutes lightly engaged at all times), Core Bracing (brace before every rep), Breathing (exhale during effort, inhale through nose). Weekly progression: Wk 1 learn movement/control, Wk 2 improve control/stability, Wk 3 increase reps/hold time, Wk 4 increase range/endurance, Wk 5 build strength/stability, Wk 6 max control/full range/confidence. Pain is a signal, not a goal. Stop if symptoms travel farther down the leg.",
-        image: "assets/programs/hip.webp",
+        image: "assets/programs/hip-new.png",
         days: [day("Hip Protocol — Daily Routine", "lower", 20, { rounds: 2, restEx: 20, circuit: [
           { ex: "Hip Dip (Eccentric Control)", sets: "2-3 x 6-10 each side" },
           { ex: "Side Plank (Modified)", sets: "1-2 x 3-5 each side, hold 3-5 sec" },
@@ -146,7 +146,7 @@ function defaultContent() {
       { id: "low-back-6", title: "Back Stability Protocol", category: "Rehabilitation", level: "beginner", location: "home", weeks: 12, seed: 1005, access: "member",
         summary: "Foundation & Activation — the starting point for your hip and lower back protocol. Baseline phase with wall-supported hip/glute activation and pelvic floor work, progressing through 12 weeks of dynamic stability. Activate, Connect, Stabilize, Progress.",
         notes: "Baseline Phase: Wall-Supported Hip/Glute Activation (5-10 reps daily, hold 1-2 sec) and Pelvic Floor Activation (bladder & anal Kegel exercises after every urination). Week 1 — Dynamic Stability (Control the Basics): Posterior Pelvic Tilts, Heel Slides, Bent Knee Fall-Outs, Supine Marches, Bridge Holds, Standing Hip Hinge, Wall Squats (quarter depth), Farmer Carry. Continue daily: SI/pillow belt as needed, shoulders down, 10-20% glute engagement, 10-20% abdominal brace, neutral pelvis, walk 15-20 min. Mobility: Cat-Camel (10 gentle reps). Progress only when you can complete all prescribed movements with good control and without increased symptoms for at least 3 consecutive sessions. Muscle soreness is acceptable; joint pain, sharp pain, numbness, tingling or increasing radiating pain are not.",
-        image: "assets/programs/low-back.webp",
+        image: "assets/programs/low-back-new.png",
         days: [day("Back Stability — Daily Routine", "core", 20, { rounds: 2, restEx: 20, circuit: [
           { ex: "Posterior Pelvic Tilts", sets: "2 x 15" },
           { ex: "Heel Slides", sets: "2 x 10 each leg" },
@@ -164,7 +164,7 @@ function defaultContent() {
       { id: "mobility-ladder", title: "Mobility Ladder", category: "Mobility", level: "intermediate", location: "home", weeks: 5, seed: 1006, access: "member",
         summary: "Dr. Jared's mobility ladder. Same six movements each round. Get as many rounds as you can in under 30 minutes. When you can fit another round in under 30 minutes, add another round. When you can take levels of assistance away, take them away. Increase your depth, not your reps.",
         notes: "Do NOT add reps to any movement — keep the rep count the same every time. The progression is depth and removing assistance: go deeper on the Cossack, less wall help on the pistol, fuller range on the squat. When you can fit another round in under 30 minutes, add a round. Form before everything.",
-        image: "assets/programs/mobility-ladder.webp",
+        image: "assets/programs/mobility-ladder-new.png",
         days: [day("Mobility Ladder", "full", 30, {
           rounds: 5, restEx: 15, restRound: 60,
           circuit: [
@@ -179,18 +179,60 @@ function defaultContent() {
       { id: "anti-inflammatory", title: "Anti-Inflammatory Reset", category: "Anti-inflammatory", level: "beginner", location: "home", weeks: 4, seed: 1007, access: "member",
         summary: "Gentle full-body strength, mobility and daily walking to calm things down without flaring them up. 3 sessions a week for 4 weeks.",
         notes: "Walk 20-30 min a day at a pace you can still talk at. Keep every session at an effort of 5/10 or less. Omega-3s, protein, 7-9 hours of sleep.",
-        image: "assets/programs/anti-inflammatory.webp",
+        image: "assets/programs/anti-inflammatory-new.png",
         days: [day("Strength & breath", "full", 30, { rounds: 2, restEx: 20, restRound: 60 }), day("Mobility flow", "mobility", 20), day("Core & spine", "core", 20, { rounds: 2 })] },
-      { id: "golf", title: "Golf Performance", category: "Sport Performance", level: "intermediate", location: "home", weeks: 4, seed: 1008, access: "member",
-        summary: "Rotational power, hip mobility and anti-rotation core for a longer, more consistent swing. 2 sessions a week for 4 weeks.",
-        notes: "Do this twice a week on non-golf days. Warm up before every round with the day's mobility flow.",
-        image: "assets/programs/golf.webp",
-        days: [day("Rotational power & core", "core", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Hip & T-spine mobility", "mobility", 20)] },
-      { id: "tennis", title: "Tennis Performance", category: "Sport Performance", level: "intermediate", location: "home", weeks: 4, seed: 1009, access: "member",
-        summary: "Lateral agility, shoulder stability and single-leg strength for the court. 2 sessions a week for 4 weeks.",
-        notes: "Do this twice a week on non-match days. Warm up before every match with the mobility flow.",
-        image: "assets/programs/tennis.webp",
-        days: [day("Lateral agility & cuff", "upper", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Single-leg & core", "lower", 25, { rounds: 3, restEx: 20, restRound: 60 })] },
+      { id: "golf", title: "Golf Performance", category: "Sport Performance", level: "beginner", location: "home", weeks: 6, seed: 1008, access: "member",
+        summary: "Improve mobility, build better movement and develop a stronger swing. 3 sessions a week for 6 weeks — mobility first, form always.",
+        notes: "Do this three times a week on non-golf days. Each workout is 20–30 minutes. Focus on quality over speed — increase depth before adding reps.",
+        image: "assets/programs/golf-new.png",
+        days: [
+          day("Hip Mobility Foundations", "lower", 30, { rounds: 2, restEx: 15, restRound: 45, circuit: [
+            { ex: "90/90 Hip Switch", sets: "2x10 each side" },
+            { ex: "Couch Stretch w/ Glute Engage", sets: "2x30 sec each side" },
+            { ex: "Standing Hip Dip", sets: "2x10 each side" },
+            { ex: "TRX Squat", sets: "2x12" },
+            { ex: "Golf Address Posture Hold", sets: "3x20 sec" },
+            { ex: "Glute RDL", sets: "2x10" }] }),
+          day("Thoracic Spine & Shoulders", "upper", 30, { rounds: 2, restEx: 15, restRound: 45, circuit: [
+            { ex: "Seated Thoracic Rotation", sets: "2x10 each side" },
+            { ex: "Walkout", sets: "2x6" },
+            { ex: "Open Book Rotation", sets: "2x10 each side" },
+            { ex: "Front Crab Walk", sets: "2x20 ft" },
+            { ex: "Golf Club Across-Chest Rot", sets: "2x10 each side" },
+            { ex: "Scapular Retraction", sets: "2x12" }] }),
+          day("Lower-Body Control", "lower", 30, { rounds: 2, restEx: 15, restRound: 45, circuit: [
+            { ex: "Single-Leg Glute Bridge", sets: "2x10 each side" },
+            { ex: "Assisted Cossack Squat", sets: "2x8 each side" },
+            { ex: "Ankle Rocking Mobility", sets: "2x10 each side" },
+            { ex: "Side Crab Walk", sets: "2x20 ft" },
+            { ex: "Golf Stance Weight Shift", sets: "2x10 each side" },
+            { ex: "Supported Single-Leg RDL", sets: "2x8 each side" }] })] },
+      { id: "pickleball", title: "Pickleball Performance", category: "Sport Performance", level: "beginner", location: "home", weeks: 6, seed: 1009, access: "member",
+        summary: "Move better, play longer and lower your injury risk. Mobility, stability, strength, power, endurance and court confidence — 3 sessions a week for 6 weeks.",
+        notes: "Do this three times a week. Warm up 5–8 minutes before every workout. Glutes engaged at all times, shoulders down, control the movement. Quality over quantity.",
+        image: "assets/programs/pickleball.png",
+        days: [
+          day("Foundation & Lower Body", "lower", 30, { rounds: 2, restEx: 15, restRound: 45, circuit: [
+            { ex: "Ankle Circles", sets: "2x20 each direction" },
+            { ex: "Knee Circles", sets: "2x15 each direction" },
+            { ex: "Glute Bridge", sets: "3x15" },
+            { ex: "Split Squat", sets: "3x10 each side" },
+            { ex: "Lateral Step Down", sets: "3x8 each side" },
+            { ex: "Farmer Carry", sets: "3x40 ft each side" }] }),
+          day("Upper Body, Core & Posture", "upper", 30, { rounds: 2, restEx: 15, restRound: 45, circuit: [
+            { ex: "Shoulder Set", sets: "2x20 retractions" },
+            { ex: "Banded Row", sets: "3x15" },
+            { ex: "Incline Push-Up", sets: "3x12" },
+            { ex: "Dead Bug", sets: "3x10 each side" },
+            { ex: "Side Plank", sets: "3x20 s each side" },
+            { ex: "Pallof Press", sets: "3x12 each side" }] }),
+          day("Movement & Court Readiness", "full", 30, { rounds: 2, restEx: 15, restRound: 45, circuit: [
+            { ex: "Ankle Circles (Dynamic)", sets: "2x20 each direction" },
+            { ex: "Knee Circles (Dynamic)", sets: "2x15 each direction" },
+            { ex: "Lateral Lunge", sets: "3x10 each side" },
+            { ex: "Forward/Backward Lunge", sets: "3x8 each side" },
+            { ex: "Lateral Shuffle", sets: "4x20 ft each dir" },
+            { ex: "Split Step + Shadow Volley", sets: "3x30 s" }] })] },
       { id: "running", title: "Running Performance", category: "Sport Performance", level: "intermediate", location: "home", weeks: 6, seed: 1010, access: "member",
         summary: "Hip strength, calf and foot work, and single-leg stability to run faster with fewer injuries. 3 sessions a week to pair with your runs.",
         notes: "These are the strength and mobility days: do them on your easy-run days or on rest days. Your long run is your long run.",
@@ -199,7 +241,7 @@ function defaultContent() {
       { id: "marathon", title: "Marathon Prep", category: "Sport Performance", level: "advanced", location: "home", weeks: 12, seed: 1011, access: "member",
         summary: "A 12-week strength-and-mobility block to carry you through marathon training without breaking down. 4 sessions a week built around your run calendar.",
         notes: "Pair with your running plan. Deload every 4 weeks: cut rounds in half the week before a long effort.",
-        image: "assets/programs/marathon.webp",
+        image: "assets/programs/marathon-new.png",
         days: [day("Hip & glute strength", "lower", 30, { rounds: 3, restEx: 20, restRound: 60 }), day("Core & spine", "core", 25, { rounds: 3 }), day("Calf, foot & ankle", "lower", 20, { rounds: 2 }), day("Mobility & recovery", "mobility", 25)] }
     ],
 
@@ -326,7 +368,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
   const content = () => {
     const saved = store.read("content", {});
     const d = defaultContent();
-    if (!saved.contentVersion || saved.contentVersion < 3) {
+    if (!saved.contentVersion || saved.contentVersion < 4) {
       saved.programs = d.programs;
     }
     return { ...d, ...saved };
@@ -409,7 +451,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     if (b.live !== undefined) next.live = liveIn(b.live || {}, c.live);
     if (b.tracks !== undefined) next.tracks = list(b.tracks, "Pain tracks", 80, trackIn);
     if (b.events !== undefined) next.events = list(b.events, "Events", 50, eventIn);
-    store.write("content", { ...next, contentVersion: 3 });
+    store.write("content", { ...next, contentVersion: 4 });
     res.json(content());
   });
   admin.get("/members", (req, res) => {
