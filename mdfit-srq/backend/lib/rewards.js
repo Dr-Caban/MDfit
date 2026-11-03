@@ -1,5 +1,5 @@
 // Rewards (Duolingo-style): XP, levels and badges, always recomputed from the client's real history
-// (workouts, pain log, visits), so progress can't be lost, reset or gamed by editing a counter.
+// (workouts, pain log, visits, daily check-ins), so progress can't be lost, reset or gamed by editing a counter.
 const addDay = (date, n) => new Date(Date.parse(date + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 const mondayOf = (d) => addDay(d, -((new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7));
 
@@ -7,7 +7,8 @@ const XP = {
   workout: (w) => 20 + Math.round(Math.min(w.minutes || 0, 60) / 2), // 20 to 50 per workout
   streakBonus: (day) => Math.min(day, 10) * 2,                       // day 2 of a streak +4 ... capped at +20
   pain: 5,                                                            // first 3 pain logs a day
-  visit: 50                                                           // completed visit with Dr. Jared
+  visit: 50,                                                          // completed visit with Dr. Jared
+  checkin: 5                                                          // per daily reading (weight, sleep, watch numbers), max 2 a day
 };
 const PAIN_XP_PER_DAY = 3;
 const DAILY_GOAL = 30;
@@ -27,13 +28,14 @@ const BADGES = [
   { id: "week-3", title: "Three-a-Week", desc: "3 workouts in one week (Mon to Sun)", icon: "calendar", kind: "week", target: 3 },
   { id: "hours-10", title: "Ten Hours In", desc: "Train for 10 hours total", icon: "clock", kind: "minutes", target: 600 },
   { id: "explorer", title: "Explorer", desc: "Try all 5 workout goals", icon: "compass", kind: "goals", target: 5 },
+  { id: "checkin-7", title: "Check-in Habit", desc: "Log your daily check-in on 7 days", icon: "calendar", kind: "checkins", target: 7 },
   { id: "pain-5", title: "Listening to Your Body", desc: "Log your pain 5 times", icon: "pulse", kind: "pain", target: 5 },
   { id: "pain-down", title: "Feeling Better", desc: "Drop pain 3+ points in one area", icon: "heart", kind: "painDrop", target: 3 },
   { id: "first-visit", title: "Team MD Fit", desc: "Complete a visit with Dr. Jared", icon: "star", kind: "visits", target: 1 }
 ];
 
 // events: [{ date, type, xp, ... }] in date order; returns totals plus per-badge progress with the day it was earned
-function rewards({ workouts = [], painLog = [], visits = [] }, today) {
+function rewards({ workouts = [], painLog = [], visits = [], vitals = [] }, today) {
   const events = [];
   const workoutDays = [...new Set(workouts.map((w) => w.date))].sort();
   const streakOn = new Map(); // date -> streak length ending that day
@@ -51,10 +53,14 @@ function rewards({ workouts = [], painLog = [], visits = [] }, today) {
     events.push({ date: p.date, type: "pain", xp: n <= PAIN_XP_PER_DAY ? XP.pain : 0, p });
   }
   for (const v of visits) events.push({ date: v.date, type: "visit", xp: XP.visit });
+  for (const v of vitals) {
+    const n = ["weight", "sleep", "restingHr", "hrv", "vo2max"].filter((k) => v[k] !== undefined && v[k] !== null).length;
+    if (n) events.push({ date: v.date, type: "checkin", xp: Math.min(n, 2) * XP.checkin });
+  }
   events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   // Walk history once, recording the day each badge was first earned
-  const state = { workouts: 0, streak: 0, week: 0, minutes: 0, goals: new Set(), pain: 0, painDrop: 0, visits: 0 };
+  const state = { workouts: 0, streak: 0, week: 0, minutes: 0, goals: new Set(), pain: 0, painDrop: 0, visits: 0, checkins: 0 };
   const firstPain = new Map(), weekCount = new Map();
   const earnedOn = {};
   let xp = 0;
@@ -72,7 +78,8 @@ function rewards({ workouts = [], painLog = [], visits = [] }, today) {
       state.pain++;
       if (!firstPain.has(e.p.area)) firstPain.set(e.p.area, e.p.level);
       state.painDrop = Math.max(state.painDrop, firstPain.get(e.p.area) - e.p.level);
-    } else state.visits++;
+    } else if (e.type === "checkin") state.checkins++;
+    else state.visits++;
     for (const b of BADGES) {
       const v = b.kind === "goals" ? state.goals.size : state[b.kind];
       if (!earnedOn[b.id] && v >= b.target) earnedOn[b.id] = e.date;

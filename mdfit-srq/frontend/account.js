@@ -1297,7 +1297,7 @@
       if (ci.sleep !== null) body.sleep = ci.sleep;
       if (!Object.keys(body).length) { msg.textContent = "Add a weigh-in or tap how you slept."; return; }
       const btn = $(".ci-save", f); btn.disabled = true; msg.textContent = "";
-      try { vitals = await apiAuth("POST", "/api/me/vitals", body); ci.editing = false; ci.sleep = null; f.weight.value = ""; renderPerf(); toast("Logged 👍"); }
+      try { vitals = await apiAuth("POST", "/api/me/vitals", body); ci.editing = false; ci.sleep = null; f.weight.value = ""; renderPerf(); toast("Logged 👍"); loadRewards(true); }
       catch (err) { msg.textContent = err.message; }
       finally { btn.disabled = false; }
     });
@@ -1308,7 +1308,7 @@
     e.preventDefault();
     const f = e.target, body = {};
     ["restingHr", "hrv", "vo2max"].forEach((k) => { const v = f[k].value.trim(); if (v) body[k] = Number(v); });
-    try { vitals = await apiAuth("POST", "/api/me/vitals", body); f.reset(); $(".nums-msg", f).textContent = "Saved."; renderPerf(); }
+    try { vitals = await apiAuth("POST", "/api/me/vitals", body); f.reset(); $(".nums-msg", f).textContent = "Saved."; renderPerf(); loadRewards(true); }
     catch (err) { $(".nums-msg", f).textContent = err.message; }
   });
 

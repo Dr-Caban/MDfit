@@ -544,7 +544,7 @@ function mountClients(ctx) {
   const visitsOf = (c) => appointments().filter((a) => a.email === c.email && a.status === "completed");
   me.get("/rewards", (req, res) => {
     const c = req.client;
-    res.json(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c) }, today()));
+    res.json(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [] }, today()));
   });
 
   // ---- Library (Spotify-style): favorite videos and saved programs, kept on the server so they follow the client
@@ -629,7 +629,7 @@ function mountClients(ctx) {
     if (!c) return res.status(404).json({ error: "Client not found." });
     res.json({ ...pub(c), lastLoginAt: c.lastLoginAt, painLog: c.painLog || [],
       workouts: (c.workouts || []).slice(-50).reverse(), stats: workoutStats(c.workouts || [], today()),
-      rewards: (({ xp, level, title, badges }) => ({ xp, level, title, badges: badges.filter((b) => b.earned).map((b) => b.title) }))(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c) }, today())),
+      rewards: (({ xp, level, title, badges }) => ({ xp, level, title, badges: badges.filter((b) => b.earned).map((b) => b.title) }))(rewards({ workouts: c.workouts || [], painLog: c.painLog || [], visits: visitsOf(c), vitals: c.vitals || [] }, today())),
       appointments: appointments().filter((a) => a.email === c.email).map(({ cancelToken, ...a }) => a).sort((a, b) => (a.date + a.time < b.date + b.time ? 1 : -1)) });
   });
 
