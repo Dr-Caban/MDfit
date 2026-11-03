@@ -26,6 +26,46 @@
     clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3200);
   }
 
+  // Bottom pop-up notifications (rewards, messages, upcoming visits). Each fires once, tracked per device.
+  const seenStore = { get(k) { try { return JSON.parse(localStorage.getItem("mdfit-seen-" + k) || "null"); } catch { return null; } }, set(k, v) { try { localStorage.setItem("mdfit-seen-" + k, JSON.stringify(v)); } catch {} } };
+  const NOTIF_ICONS = { reward: "🏆", level: "⭐", message: "💬", visit: "📅" };
+  function notify({ kind, title, body, action, go }) {
+    const box = $("#notifs"); if (!box) return;
+    while (box.children.length >= 3) box.firstElementChild.remove();
+    const n = document.createElement("div");
+    n.className = `notif notif-${kind}`; n.setAttribute("role", "status");
+    n.innerHTML = `<span class="notif-ic" aria-hidden="true">${NOTIF_ICONS[kind] || "🔔"}</span><div class="notif-txt"><b>${esc(title)}</b>${body ? `<span>${esc(body)}</span>` : ""}</div>${action ? `<button type="button" class="notif-go">${esc(action)}</button>` : ""}<button type="button" class="notif-x" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+    const close = () => { n.classList.add("out"); setTimeout(() => n.remove(), 220); };
+    n.querySelector(".notif-x").addEventListener("click", close);
+    const g = n.querySelector(".notif-go"); if (g) g.addEventListener("click", () => { close(); if (go) location.hash = go; });
+    let sx = null;
+    n.addEventListener("touchstart", (e) => { sx = e.touches[0].clientX; }, { passive: true });
+    n.addEventListener("touchend", (e) => { if (sx !== null && Math.abs(e.changedTouches[0].clientX - sx) > 60) close(); sx = null; });
+    box.appendChild(n);
+    setTimeout(close, 8000);
+  }
+  function notifyRewards(r) {
+    if (!r) return;
+    const earned = r.badges.filter((b) => b.earned).map((b) => b.id), seen = seenStore.get("badges"), lvl = seenStore.get("level");
+    if (seen) r.badges.filter((b) => b.earned && !seen.includes(b.id)).forEach((b) => notify({ kind: "reward", title: `Badge unlocked: ${b.title}`, body: b.desc, action: "View", go: "#progress" }));
+    if (lvl !== null && r.level > lvl) notify({ kind: "level", title: `Level ${r.level}: ${r.title}`, body: "You leveled up. Keep it going!", action: "View", go: "#progress" });
+    seenStore.set("badges", earned); seenStore.set("level", r.level);
+  }
+  function notifyVisits() {
+    const t = todayInTz(), seen = seenStore.get("visits") || {};
+    appts.upcoming.filter((a) => a.status !== "cancelled" && a.date <= addDays(t, 1)).forEach((a) => {
+      const key = `${a.id || a.date + a.time}:${t}`; if (seen[key]) return;
+      notify({ kind: "visit", title: `Visit ${a.date === t ? "today" : "tomorrow"} at ${fmtTime(a.time)}`, body: a.typeName, action: "Details", go: "#profile" });
+      seen[key] = 1;
+    });
+    seenStore.set("visits", Object.fromEntries(Object.entries(seen).filter(([k]) => k.endsWith(":" + t))));
+  }
+  let lastUnreadNotified = -1;
+  function notifyMessages(n) {
+    if (n > 0 && n !== lastUnreadNotified && $("#view-messages").hidden) notify({ kind: "message", title: n === 1 ? "New message from Dr. Jared" : `${n} new messages from Dr. Jared`, action: "Read", go: "#messages" });
+    lastUnreadNotified = n;
+  }
+
   // ================= Tabs (hash routing so the back button and refresh work)
   const TABS = ["home", "generate", "programs", "videos", "pain", "learn", "progress", "premium", "messages", "tips", "profile"];
   // Hash is "#tab" or "#pain/muscle/<id>" (deep link to a muscle report)
@@ -1405,7 +1445,8 @@
   const growTA = (t) => { t.style.height = "auto"; t.style.height = Math.min(140, t.scrollHeight) + "px"; };
   $("#chat-form textarea").addEventListener("input", (e) => growTA(e.target));
   function setBadge(n) { const b = $("#msg-badge"); b.hidden = !n; b.textContent = n > 9 ? "9+" : n; $("#more-btn").classList.toggle("has-badge", !!n); const ml = $('#more-list [data-goto="messages"]'); if (ml) ml.dataset.badge = n || ""; }
-  const pollUnread = () => apiAuth("GET", "/api/me/messages/unread-count").then((r) => setBadge(r.unread)).catch(() => {});
+  const pollUnread = () => apiAuth("GET", "/api/me/messages/unread-count").then((r) => { setBadge(r.unread); notifyMessages(r.unread); }).catch(() => {});
+  if (window.MDFitRT) MDFitRT.on("new_message", () => pollUnread());
   setInterval(() => { if (!document.hidden && $("#view-messages").hidden) pollUnread(); }, 60000);
   $("#chat-form").addEventListener("submit", async (e) => {
     e.preventDefault(); const f = e.target, body = f.body.value.trim(); if (!body) return;
@@ -1712,7 +1753,7 @@
   async function loadRewards(celebrate = false) {
     try {
       const prev = reward, next = await apiAuth("GET", "/api/me/rewards");
-      reward = next; renderRewards();
+      reward = next; renderRewards(); notifyRewards(next);
       if (!celebrate || !prev) return;
       const gained = next.xp - prev.xp, newBadges = next.badges.filter((b) => b.earned && !prev.badges.find((x) => x.id === b.id).earned);
       const msgs = [];
@@ -1784,6 +1825,7 @@
     loadContent().then(() => { const t = location.hash.slice(1).split("/"); if (["programs", "learn", "premium", "tips"].includes(t[0])) renderContent(t[0], t[1]); });
     if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }
     renderStats(); renderEvents(); renderActivity(); renderNotes(); renderCalendar();
+    setTimeout(notifyVisits, 1200);
     loadRewards();
     loadSite().catch(() => {});
   })();
