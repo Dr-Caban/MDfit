@@ -950,52 +950,42 @@
     loadMine();
   }
 
-  // Install as an app: Android/desktop Chrome get a native prompt; iOS/iPadOS get step-by-step; desktop fallback gets browser instructions
+  // Install as an app: native prompt where supported; otherwise per-platform steps. Button always visible.
   let installEvt = null;
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   const ua = navigator.userAgent;
-  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const isAndroid = /android/i.test(ua);
-  const isSafari = /safari/i.test(ua) && !/chrome|crios|fxios/i.test(ua);
-  const isChrome = /chrome/i.test(ua) && !/edg/i.test(ua);
   const isEdge = /edg/i.test(ua);
-  const stepsEl = $("#install-steps");
-  const stepsOl = stepsEl && stepsEl.querySelector("ol");
-  if (standalone) {
-    $("#install-card").hidden = true;
-  } else if (isIOS) {
-    $("#install-card").hidden = true;
-  } else if (isAndroid) {
-    $("#install-text").textContent = "Install MD Fit as an app on your phone:";
-    if (stepsOl) {
-      stepsOl.innerHTML = `<li>Tap the <b>⋮ menu</b> in Chrome (top right)</li>
-        <li>Tap <b>"Add to Home screen"</b> or <b>"Install app"</b></li>
-        <li>Tap <b>"Install"</b></li>`;
-      stepsEl.hidden = false;
-    }
-  } else {
-    $("#install-text").textContent = "Install MD Fit as a desktop app:";
-    if (stepsOl) {
-      stepsOl.innerHTML = isEdge
-        ? `<li>Click the <b>⋯ menu</b> (top right)</li><li>Click <b>"Apps" → "Install this site as an app"</b></li>`
-        : `<li>Click the <b>install icon</b> in the address bar (or ⋮ menu)</li><li>Click <b>"Install"</b></li>`;
-      stepsEl.hidden = false;
-    }
-  }
+  const cards = [...document.querySelectorAll(".install-card")];
+  const each = (sel, fn) => cards.forEach((c) => { const el = c.querySelector(sel); if (el) fn(el); });
+  const hideCards = () => cards.forEach((c) => { c.hidden = true; });
+  const [text, steps] = isIOS
+    ? ["Add MD Fit to your Home Screen:", `<li>Tap the <b>Share</b> button (square with arrow) in Safari</li><li>Scroll and tap <b>"Add to Home Screen"</b></li><li>Tap <b>"Add"</b></li>`]
+    : isAndroid
+    ? ["Install MD Fit as an app on your phone:", `<li>Tap the <b>⋮ menu</b> in Chrome (top right)</li><li>Tap <b>"Add to Home screen"</b> or <b>"Install app"</b></li><li>Tap <b>"Install"</b></li>`]
+    : ["Install MD Fit as a desktop app:", isEdge
+      ? `<li>Click the <b>⋯ menu</b> (top right)</li><li>Click <b>"Apps" → "Install this site as an app"</b></li>`
+      : `<li>Click the <b>install icon</b> in the address bar (or ⋮ menu)</li><li>Click <b>"Install"</b></li>`];
+  if (standalone) hideCards();
+  each(".install-text", (el) => { el.textContent = text; });
+  each(".install-steps", (el) => { el.innerHTML = steps; });
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); installEvt = e;
-    $("#install-btn").hidden = false;
-    if (stepsEl) stepsEl.hidden = true;
-    $("#install-text").textContent = "Get one-tap access to MD Fit:";
+    each(".install-steps-wrap", (el) => { el.hidden = true; });
+    each(".install-text", (el) => { el.textContent = "Get one-tap access to MD Fit:"; });
   });
-  $("#install-btn").addEventListener("click", async () => {
-    if (!installEvt) return;
+  each(".install-btn", (btn) => btn.addEventListener("click", async () => {
+    if (!installEvt) {
+      each(".install-steps-wrap", (el) => { el.hidden = false; });
+      return;
+    }
     installEvt.prompt();
     const { outcome } = await installEvt.userChoice.catch(() => ({ outcome: "dismissed" }));
-    if (outcome === "accepted") $("#install-card").hidden = true;
-    installEvt = null; $("#install-btn").hidden = true;
-  });
-  window.addEventListener("appinstalled", () => { $("#install-card").hidden = true; });
+    if (outcome === "accepted") hideCards();
+    installEvt = null;
+  }));
+  window.addEventListener("appinstalled", hideCards);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
   // ================= Workout player: warm-up (once) → circuit rounds (optional rests) → cool-down, auto-advancing
