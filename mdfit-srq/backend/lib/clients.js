@@ -248,18 +248,14 @@ function mountClients(ctx) {
   });
 
   // Always answers the same way so it can't be used to find out who has an account.
-  // One-time codes for first-time password setup, forgotten passwords and changes, always sent by email (Resend).
-  // Members can look their account up by email or phone; the code goes to the email on file.
+  // One-time codes for first-time password setup, forgotten passwords and changes, sent by email (Resend).
   const resetCodes = new Map(); // clientId -> { code, exp, tries }
   const RESET_CODE_TTL = 10 * 60e3; // 10 minutes
   const RESET_CODE_MAX_TRIES = 5;
   const digits = (p) => String(p || "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
   const findByIdentifier = (list, ident) => {
     const v = String(ident || "").trim().toLowerCase();
-    if (!v) return null;
-    if (v.includes("@")) return list.find((x) => x.email === v) || null;
-    const d = digits(v);
-    return d.length >= 10 ? list.find((x) => digits(x.phone) === d) || null : null;
+    return v.includes("@") ? list.find((x) => x.email === v) || null : null;
   };
   const maskEmail = (e) => e.replace(/^(.)(.*)(@.*)$/, (m, a, b, c) => a + "•".repeat(Math.min(b.length, 6)) + c);
   async function sendCode(c) {
@@ -281,13 +277,10 @@ function mountClients(ctx) {
 
   app.post("/api/clients/forgot", signupLimit.mw, async (req, res) => {
     const b = req.body || {}, ident = b.identifier || b.email || b.phone || "";
-    const isPhone = !String(ident).includes("@");
     const c = findByIdentifier(clients(), ident);
     if (c) await sendCode(c).catch(() => null);
     res.json({ ok: true, emailed: notify.enabled, via: "email",
-      message: !notify.enabled ? "Call or text us and we'll help you reset your password."
-        : isPhone ? "If that number is on an account, we emailed a 6-digit code to the email on file."
-        : "If that email has an account, a 6-digit code is on its way." });
+      message: notify.enabled ? "If that email has an account, a 6-digit code is on its way." : "Call or text us and we'll help you reset your password." });
   });
 
   app.post("/api/clients/verify-code", (req, res) => {

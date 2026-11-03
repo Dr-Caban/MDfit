@@ -504,7 +504,7 @@ test("referral endpoint returns the member's code", async (t) => {
   assert.equal(r.body.referrals, 0);
 });
 
-test("password codes: forgot by phone, Google user sets first password, change with code", async (t) => {
+test("password codes: forgot by email, Google user sets first password, change with code", async (t) => {
   const http = require("node:http");
   const sent = [];
   const fake = http.createServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { sent.push(JSON.parse(b)); res.end("{}"); }); }).listen(0);
@@ -514,14 +514,15 @@ test("password codes: forgot by phone, Google user sets first password, change w
   const codeMails = () => sent.filter((m) => /is your MD Fit code/.test(m.subject));
   const lastCode = async (n) => { for (let i = 0; i < 50 && codeMails().length < n; i++) await new Promise((r) => setTimeout(r, 20)); const m = codeMails().pop(); return m.text.match(/\b(\d{6})\b/)[1]; };
 
-  // forgot by phone number (no SMS configured -> code goes to the email on file)
+  // forgot by email; phone numbers are not accepted
   const tok = (await signup(s)).body.token;
-  const f = (await s.call("POST", "/api/clients/forgot", { identifier: "(941) 555-0100" })).body;
-  assert.match(f.message, /emailed a 6-digit code/);
+  await s.call("POST", "/api/clients/forgot", { identifier: "941-555-0100" });
+  const f = (await s.call("POST", "/api/clients/forgot", { identifier: "Pat@Example.com" })).body;
+  assert.match(f.message, /6-digit code is on its way/);
   const code = await lastCode(1);
   assert.equal(codeMails()[0].to[0], "pat@example.com");
-  assert.equal((await s.call("POST", "/api/clients/verify-code", { identifier: "941.555.0100", code: "000000" })).status, 400);
-  const v = await s.call("POST", "/api/clients/verify-code", { identifier: "941.555.0100", code });
+  assert.equal((await s.call("POST", "/api/clients/verify-code", { identifier: "pat@example.com", code: "000000" })).status, 400);
+  const v = await s.call("POST", "/api/clients/verify-code", { identifier: "pat@example.com", code });
   assert.ok(v.body.resetToken);
   assert.equal((await s.call("POST", "/api/clients/reset", { token: v.body.resetToken, password: "phone-reset-1" })).status, 200);
   assert.equal((await s.call("POST", "/api/clients/login", { email: "pat@example.com", password: "phone-reset-1" })).status, 200);
