@@ -161,19 +161,19 @@ function defaultContent() {
           { ex: "Wall-Supported Hip/Glute Activation", sets: "5-10 reps (hold 1-2 sec)" },
           { ex: "Pelvic Floor Activation", sets: "5-10 reps each type" }
         ] })] },
-      { id: "mobility-ladder", title: "5-Round Mobility Ladder", category: "Mobility", level: "intermediate", location: "home", weeks: 5, seed: 1006, access: "member",
-        summary: "Dr. Jared's 5-round progression. Same six movements each round; rounds grow from 1 to 25 reps as you take the assistance away.",
-        notes: "Each week, add 5 reps per movement and drop one layer of assistance (e.g., deeper on the Cossack, less wall help on the burpee). Stop any round that gets ugly; form before reps.",
+      { id: "mobility-ladder", title: "Mobility Ladder", category: "Mobility", level: "intermediate", location: "home", weeks: 5, seed: 1006, access: "member",
+        summary: "Dr. Jared's mobility ladder. Same six movements each round. Get as many rounds as you can in under 30 minutes. When you can fit another round in under 30 minutes, add another round. When you can take levels of assistance away, take them away. Increase your depth, not your reps.",
+        notes: "Do NOT add reps to any movement — keep the rep count the same every time. The progression is depth and removing assistance: go deeper on the Cossack, less wall help on the pistol, fuller range on the squat. When you can fit another round in under 30 minutes, add a round. Form before everything.",
         image: "assets/programs/mobility-ladder.webp",
         days: [day("Mobility Ladder", "full", 30, {
           rounds: 5, restEx: 15, restRound: 60,
           circuit: [
-            { ex: "TRX Squat", sets: "5 reps · deeper each week" },
+            { ex: "TRX Squat", sets: "10 reps" },
+            { ex: "Pole Squat", sets: "10 reps (door frame / broom handle)" },
             { ex: "Cossack Squat", sets: "5 reps / side" },
-            { ex: "Burpee", sets: "5 reps" },
+            { ex: "Burpee", sets: "10 reps" },
             { ex: "Pistol Squat", sets: "5 reps / side (assisted)" },
-            { ex: "Bear Crawl", sets: "20 ft / 6 m" },
-            { ex: "Wall Burpee", sets: "5 reps (wall climb substitute)" }
+            { ex: "Bear Crawl", sets: "4 reps x 20 ft" }
           ]
         })] },
       { id: "anti-inflammatory", title: "Anti-Inflammatory Reset", category: "Anti-inflammatory", level: "beginner", location: "home", weeks: 4, seed: 1007, access: "member",
@@ -326,8 +326,8 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
   const content = () => {
     const saved = store.read("content", {});
     const d = defaultContent();
-    if (!saved.contentVersion || saved.contentVersion < 2) {
-      if (!saved.programs || !saved.programs.length) saved.programs = d.programs;
+    if (!saved.contentVersion || saved.contentVersion < 3) {
+      saved.programs = d.programs;
     }
     return { ...d, ...saved };
   };
@@ -409,7 +409,7 @@ function mountContent({ app, admin, store, me, clients, save, today, notify, act
     if (b.live !== undefined) next.live = liveIn(b.live || {}, c.live);
     if (b.tracks !== undefined) next.tracks = list(b.tracks, "Pain tracks", 80, trackIn);
     if (b.events !== undefined) next.events = list(b.events, "Events", 50, eventIn);
-    store.write("content", { ...next, contentVersion: 2 });
+    store.write("content", { ...next, contentVersion: 3 });
     res.json(content());
   });
   admin.get("/members", (req, res) => {
