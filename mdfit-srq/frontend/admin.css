@@ -180,3 +180,10 @@ code { background: var(--paper-2); padding: 1px 6px; border-radius: 4px; font-si
 .rt-toast.fade-out { animation: rt-slide-out .3s ease-in forwards; }
 @keyframes rt-slide-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes rt-slide-out { from { opacity: 1; } to { opacity: 0; transform: translateY(10px); } }
+
+.mb .reacts { display: inline-flex; gap: 2px; margin-top: 4px; font-size: 15px; }
+.mb .reacts b { font-weight: 400; }
+.mb .react-row { display: flex; gap: 2px; margin-top: 4px; opacity: .45; }
+.mb:hover .react-row { opacity: 1; }
+.mb .react-row button { background: none; border: 0; font-size: 16px; padding: 2px 4px; border-radius: 6px; cursor: pointer; }
+.mb .react-row button.on { background: rgba(0,0,0,.1); opacity: 1; }

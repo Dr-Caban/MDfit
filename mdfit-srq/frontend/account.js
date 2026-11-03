@@ -1317,6 +1317,18 @@
     $("#convos").innerHTML = rows.join("");
     setBadge(d.unread);
   }
+  const REACTS = ["👍", "❤️", "😂", "🙏", "💪", "😮"];
+  $("#chat-list").addEventListener("click", async (e) => {
+    const b = e.target.closest(".bubble"); if (!b) return;
+    if (e.target.closest(".react-add")) {
+      $$("#chat-list .react-pick").forEach((p) => { if (p !== b.querySelector(".react-pick")) p.hidden = true; });
+      const p = b.querySelector(".react-pick"); p.hidden = !p.hidden; return;
+    }
+    const pick = e.target.closest("[data-emoji]"); if (!pick) return;
+    try { await apiAuth("POST", `/api/me/messages/${encodeURIComponent(b.dataset.mid)}/react`, { emoji: pick.dataset.emoji }); loadMessages(false); }
+    catch { toast("Couldn't add that reaction."); }
+  });
+  if (window.MDFitRT) MDFitRT.on("message_reaction", () => { if (inThread) loadMessages(false); });
   async function loadMessages(scroll) {
     let d; try { d = await apiAuth("GET", "/api/me/messages"); } catch { return; }
     msgData = d;
@@ -1328,7 +1340,8 @@
     list.innerHTML = d.messages.length ? d.messages.map((m) => {
       const day = new Date(m.at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
       const sep = day !== lastDay ? `<p class="day-sep">${day}</p>` : ""; lastDay = day;
-      return `${sep}<div class="bubble ${m.from === "client" ? "me" : "dr"}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span>${new Date(m.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}${m.from === "client" && m.read ? " · Seen" : ""}</span></div>`;
+      const r = m.reactions || {}, shown = [r.client, r.doctor].filter(Boolean);
+      return `${sep}<div class="bubble ${m.from === "client" ? "me" : "dr"}" data-mid="${esc(m.id)}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><span>${new Date(m.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}${m.from === "client" && m.read ? " · Seen" : ""}</span>${shown.length ? `<div class="reacts">${shown.map((e) => `<b>${e}</b>`).join("")}</div>` : ""}<button type="button" class="react-add" aria-label="React">☺+</button><div class="react-pick" hidden>${REACTS.map((e) => `<button type="button" data-emoji="${e}" class="${r.client === e ? "on" : ""}">${e}</button>`).join("")}</div></div>`;
     }).join("")
       : `<p class="muted small chat-empty">Start the conversation. Tell Dr. Jared what's going on, where it hurts, or what you'd like help with.</p>`;
     if (scroll || d.messages.length !== msgCount) list.scrollTop = list.scrollHeight;

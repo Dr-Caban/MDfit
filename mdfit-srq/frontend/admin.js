@@ -91,6 +91,7 @@
         if (current === "messages") run(loadThreads)();
         else pollBadges();
       });
+      MDFitRT.on("message_reaction", (ev) => { if (openThread && ev.clientId === openThread) showThread(openThread); });
       MDFitRT.on("toast", (ev) => { rtToast(ev.text, TOAST_ICONS[ev.type]); });
       MDFitRT.on("online_count", (ev) => {
         const bar = $("#online-bar"); if (!bar) return;
@@ -496,9 +497,13 @@
     openThread = cid;
     const d = await api("GET", `/api/admin/messages/${cid}`);
     $("#msg-thread").innerHTML = `<div class="item-head"><b>${esc(d.client.name)}</b> <span class="muted">${esc(d.client.email)} ${esc(d.client.phone || "")}</span> ${d.client.member ? `<span class="pill approved">${esc(d.client.tier)}</span>` : `<span class="pill hidden">not a member</span>`}</div>
-      <div class="msg-log">${d.messages.map((m) => `<div class="mb ${m.from}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><small>${m.from === "doctor" ? "You" : esc(d.client.name.split(" ")[0])} · ${when(m.at)}</small></div>`).join("")}</div>
+      <div class="msg-log">${d.messages.map((m) => `<div class="mb ${m.from}" data-mid="${esc(m.id)}"><p>${esc(m.body).replace(/\n/g, "<br>")}</p><small>${m.from === "doctor" ? "You" : esc(d.client.name.split(" ")[0])} · ${when(m.at)}</small>${[m.reactions?.client, m.reactions?.doctor].filter(Boolean).length ? `<div class="reacts">${[m.reactions.client, m.reactions.doctor].filter(Boolean).map((x) => `<b>${x}</b>`).join("")}</div>` : ""}<div class="react-row">${["👍", "❤️", "😂", "🙏", "💪", "😮"].map((x) => `<button type="button" data-emoji="${x}" class="${m.reactions?.doctor === x ? "on" : ""}">${x}</button>`).join("")}</div></div>`).join("")}</div>
       <form class="msg-reply" id="msg-reply"><textarea name="body" rows="3" maxlength="2000" placeholder="Reply to ${esc(d.client.name.split(" ")[0])}…"></textarea><button class="btn btn-sm" type="submit">Send reply</button></form>`;
     const log = $(".msg-log"); log.scrollTop = log.scrollHeight;
+    log.addEventListener("click", run(async (e) => {
+      const btn = e.target.closest("[data-emoji]"), mb = e.target.closest("[data-mid]"); if (!btn || !mb) return;
+      await api("POST", `/api/admin/messages/${cid}/${encodeURIComponent(mb.dataset.mid)}/react`, { emoji: btn.dataset.emoji }); showThread(cid);
+    }));
     $$("#msg-threads .msg-row").forEach((r) => r.classList.toggle("on", r.dataset.cid === cid));
     $("#msg-reply").addEventListener("submit", run(async (e) => {
       e.preventDefault(); const body = e.target.body.value.trim(); if (!body) return;

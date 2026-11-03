@@ -34,6 +34,7 @@ function cipher(secrets) {
 }
 
 const MAX_LEN = 2000, KEEP = 5000;
+const REACTIONS = ["👍", "❤️", "😂", "🙏", "💪", "😮"];
 const fail = (msg) => { throw new ValidationError(msg); };
 const bodyOf = (b) => {
   const s = typeof (b && b.body) === "string" ? b.body.trim() : "";
@@ -48,7 +49,19 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
   const write = (list) => store.write("messages", list.slice(-KEEP));
   const id = () => crypto.randomBytes(6).toString("hex");
   const active = () => true;
-  const view = (m) => ({ id: m.id, from: m.from, body: C.dec(m.body), at: m.at, read: !!m.readAt });
+  const view = (m) => ({ id: m.id, from: m.from, body: C.dec(m.body), at: m.at, read: !!m.readAt, reactions: m.reactions || {} });
+  const react = (clientId, msgId, side, emoji) => {
+    if (emoji !== null && !REACTIONS.includes(emoji)) fail("Unsupported reaction.");
+    const list = all(), m = list.find((x) => x.id === msgId && x.clientId === clientId);
+    if (!m) return null;
+    const r = { ...(m.reactions || {}) };
+    if (emoji === null || r[side] === emoji) delete r[side]; else r[side] = emoji;
+    m.reactions = r; write(list);
+    const rt = app.get("rt");
+    if (rt) { rt.emitToAdmin("message_reaction", { clientId, id: m.id }); rt.emitToClient(clientId, "message_reaction", { id: m.id }); }
+    return view(m);
+  };
+  const emojiOf = (b) => (b && typeof b.emoji === "string" ? b.emoji : null);
   const sendLimit = limiter(40, 60 * 60 * 1000);
 
   // ---- Member side
@@ -64,6 +77,11 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
     list.forEach((m) => { if (m.clientId === req.client.id && m.from === "doctor" && !m.readAt) { m.readAt = new Date().toISOString(); n++; } });
     if (n) write(list);
     res.json({ ok: true, marked: n });
+  });
+  me.post("/messages/:id/react", (req, res) => {
+    const v = react(req.client.id, req.params.id, "client", emojiOf(req.body));
+    if (!v) return res.status(404).json({ error: "Message not found." });
+    res.json(v);
   });
   me.post("/messages", sendLimit.mw, (req, res) => {
     const c = req.client;
@@ -98,6 +116,11 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
     res.json({ client: { id: c.id, name: c.name, email: c.email, phone: c.phone, member: !!active(c), tier: c.membership ? c.membership.tier : null },
       messages: list.filter((m) => m.clientId === c.id).map(view) });
   });
+  admin.post("/messages/:clientId/:id/react", (req, res) => {
+    const v = react(req.params.clientId, req.params.id, "doctor", emojiOf(req.body));
+    if (!v) return res.status(404).json({ error: "Message not found." });
+    res.json(v);
+  });
   admin.post("/messages/:clientId", (req, res) => {
     const c = clients().find((x) => x.id === req.params.clientId);
     if (!c) return res.status(404).json({ error: "Client not found." });
@@ -110,4 +133,4 @@ function mountMessages({ app, admin, store, me, clients, today, notify, cfg, lim
   });
 }
 
-module.exports = { mountMessages, cipher };
+module.exports = { mountMessages, cipher, REACTIONS };
