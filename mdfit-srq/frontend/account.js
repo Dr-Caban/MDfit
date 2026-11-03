@@ -1234,20 +1234,23 @@
     }
     const e = st.e;
     P.left = 0; P.total = Gen.stepSecs(e.sets);
-    vwrap.hidden = false;
+    const noVid = !e.id;
+    vwrap.hidden = noVid;
     v.muted = !P.opt.sound;
-    v.poster = `https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800`;
+    if (noVid) { v.pause(); v.removeAttribute("src"); v.load(); }
+    else v.poster = `https://drive.google.com/thumbnail?id=${encodeURIComponent(e.id)}&sz=w800`;
     $("#p-body").innerHTML = `
       <div class="p-info">
         <p class="p-block">${esc(st.label)}</p>
         <h2 class="p-name">${esc(e.name)}</h2>
         <div class="p-setrow">
           <div class="p-ring" id="p-ring" style="--pct:0%"><span id="p-count">0:00</span></div>
-          <div><p class="p-sets">${esc(e.sets)}</p><p class="p-meta">${esc(exMeta(e))}</p></div>
+          <div><p class="p-sets">${esc(e.sets)}</p><p class="p-meta">${noVid ? "Follow along: no video for this one. Use the timer and go at your own pace." : esc(exMeta(e))}</p></div>
         </div>
         ${st.label.startsWith("Round") || st.label === "Circuit" ? `<label class="p-load">Weight used <input id="p-weight" inputmode="decimal" placeholder="lb" value="${esc((P.log[e.id] || {}).weight || "")}"></label>` : ""}
         ${upNext}
       </div>`;
+    if (noVid) return;
     v.src = driveMp4(e.id);
     const pr = v.play(); if (pr) pr.catch(() => { v.muted = true; v.play().catch(() => {}); });
     const wt = $("#p-weight");
@@ -1616,6 +1619,25 @@
 
   // ---- Programs: each day is a generator session with a fixed seed, so the same session repeats each week and can be compared
   let progCat = "All";
+  // Program exercises named differently from the library -> the library video that shows the same move
+  const VIDEO_ALIAS = {
+    "Overhead Press (DB)": "Strict Press", "Dumbbell Bench Press": "Bench Press", "Lat Pull-Down": "Lat Pulldown", "Lat Pulldowns": "Lat Pulldown",
+    "GHD or BOSU Sit-Ups": "GHD Sit Up", "TRX Body Squat": "TRX Squat", "Hip Thrusts": "Hip Thrust", "RDLs": "Romanian Deadlift",
+    "Bulgarian Split Squats": "Bulgarian Split Squat", "Split Squat": "Bulgarian Split Squat", "Walking Lunges": "Lunges", "Forward/Backward Lunge": "Lunges",
+    "Dumbbell Rows": "Dumbbell Row", "Incline DB Press": "Incline Bench Press", "Face Pulls": "Face Pull", "Mobility Flow": "Seated Mobility Flow Beginner",
+    "Stretch & Mobility": "Seated Mobility Flow Beginner", "Breath Work": "Box Breathing", "Sumo Deadlifts": "Sumo Deadlift", "Step-Ups": "Step Up",
+    "Cable Pull-Throughs": "Cable Pull Through", "Glute Kickbacks": "Quadruped Glute Kick", "Landmine Press": "Landmine Press Twist",
+    "Seated Cable Row": "Row", "Banded Row": "Row", "Lateral Raises": "Lateral Raise", "Plank Variation": "Dynamic Plank", "Sled Push": "Sled Push Pull",
+    "Kettlebell Swings": "Kettlebell Swing", "Farmer Carries": "Farmer Carry", "Med Ball Slams": "Med Ball Slam", "Scalene Release": "Standing Scalene Stretch",
+    "Rotator Cuff Int/Ext Rotation": "Rotator Cuff External Rotation", "Repeated Shoulder Drop Stretch": "Shoulder Drop Hold",
+    "Shoulder Packing Drill": "Floor Slide Scapular Retract", "Scapular Retraction": "Floor Slide Scapular Retract",
+    "Hip Dip (Eccentric Control)": "Table Eccentric Hip Drop", "Standing Hip Dip": "Table Eccentric Hip Drop", "Bridge Holds": "Single Leg Glute Bridge",
+    "Glute Bridge": "Single Leg Glute Bridge", "Single-Leg Glute Bridge": "Single Leg Glute Bridge", "Standing Hip Hinge": "Dowel Hip Hinge",
+    "Cat-Camel": "Cat Cow Desk Variation", "Wall-Supported Hip/Glute Activation": "Constant Glute Engagement", "Couch Stretch w/ Glute Engage": "Couch Stretch",
+    "Golf Address Posture Hold": "Standing Posture Reset", "Seated Thoracic Rotation": "Thoracic Rotation Seated", "Golf Club Across-Chest Rot": "Thoracic Rotation Seated",
+    "Walkout": "Walk Out", "Open Book Rotation": "Thoracic Open Book", "Assisted Cossack Squat": "Cossack Squat", "Lateral Lunge": "Cossack Squat",
+    "Incline Push-Up": "Wall Push Up", "Knee Circles (Dynamic)": "Knee Circles", "Supported Single-Leg RDL": "Glute RDL"
+  };
   const progDayWorkout = (p, i) => {
     const d = p.days[i];
     const hasCircuit = Array.isArray(d.circuit) && d.circuit.length;
@@ -1625,7 +1647,7 @@
     // Fixed circuit: use exactly the exercises Dr. Jared specified (looked up by name)
     if (Array.isArray(d.circuit) && d.circuit.length) {
       const byName = Object.fromEntries(EX.map((e) => [e.name, e]));
-      const chosen = d.circuit.map((x) => ({ ...(byName[x.ex] || { id: "", name: x.ex }), sets: x.sets || "" })).filter((x) => x.name);
+      const chosen = d.circuit.map((x) => { const m = byName[x.ex] || byName[VIDEO_ALIAS[x.ex]]; return m ? { ...m, name: x.ex, sets: x.sets || "" } : { id: "", name: x.ex, sets: x.sets || "" }; }).filter((x) => x.name);
       if (chosen.length) w.circuit = chosen;
     }
     return { ...w, title: `${p.title}: ${d.name}`, key: `prog-${p.id}-d${i}`, noRest: REHAB_CATS.has(p.category) };
