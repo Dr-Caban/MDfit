@@ -9,7 +9,7 @@ const { verifyPassword, isValidHash, signToken, verifyToken } = require("./lib/a
 const { createNotifier } = require("./lib/notify");
 const { createCal, verifySignature, normaliseBooking } = require("./lib/cal");
 const { createPlaces } = require("./lib/google");
-const { mountClients } = require("./lib/clients");
+const { mountClients, importClients } = require("./lib/clients");
 const { mountContent } = require("./lib/content");
 const { mountMessages } = require("./lib/messages");
 const { mountIntake, MASSAGE_TYPES } = require("./lib/intake");
@@ -35,6 +35,7 @@ function loadConfig() {
     adminPasswordHash: env("ADMIN_PASSWORD_HASH"),
     sessionSecret: env("SESSION_SECRET"),
     dataDir: env("DATA_DIR", path.join(__dirname, "data")),
+    clientImport: env("CLIENT_IMPORT"),
     origins: env("ALLOWED_ORIGINS", "*").split(",").map((s) => s.trim()).filter(Boolean),
     siteUrl: env("SITE_URL").replace(/\/+$/, ""),
     edgeSecret: env("EDGE_SECRET"),
@@ -116,6 +117,9 @@ function toCsv(rows, cols) {
 
 function createApp(cfg = loadConfig()) {
   const store = createStore(cfg.dataDir, { key: cfg.dataKey });
+  if (cfg.clientImport) {
+    try { importClients(store, cfg.clientImport, logger); } catch (err) { logger.error("clients_import_failed", { error: err.message }); }
+  }
   const notify = createNotifier({ apiKey: cfg.resendKey, from: cfg.notifyFrom, ownerEmail: cfg.notifyEmail || cfg.adminEmail, apiUrl: cfg.resendUrl });
   const cal = createCal({ apiKey: cfg.calKey, apiUrl: cfg.calUrl });
   const places = createPlaces({ apiKey: cfg.googleKey, baseUrl: cfg.googleUrl, legacyUrl: cfg.googleLegacyUrl });

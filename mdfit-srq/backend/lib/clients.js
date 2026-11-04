@@ -2,6 +2,7 @@
 // Client sessions are signed tokens with role "client"; they can never pass the admin check (which needs sub = ADMIN_EMAIL).
 const express = require("express");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const { hashPassword, verifyPassword, signToken, verifyToken } = require("./auth");
 const { ValidationError, EMAIL_RE, AREAS } = require("./validate");
 const { rewards, ACTIONS, levelStart, repairsFrom } = require("./rewards");
@@ -63,6 +64,38 @@ const passwordOf = (v, field = "Password") => {
 };
 const emptyPlan = () => ({ guides: [], exercises: [], notes: "", updatedAt: null });
 const id = () => crypto.randomBytes(6).toString("hex");
+
+// One-time import of client accounts exported from another MD Fit server. The payload is a gzipped, base64 JSON array of
+// { id, name, email, phone, createdAt, lastLoginAt }. Imported accounts have no password: clients sign in with Google or
+// set one with "Forgot password". Each payload is applied once (so later deletions stick), and existing emails are skipped.
+function importClients(store, payload, logger) {
+  const digest = crypto.createHash("sha256").update(payload).digest("hex");
+  const done = store.read("imports", []);
+  if (done.includes(digest)) return { added: 0, skipped: 0, already: true };
+  const incoming = JSON.parse(zlib.gunzipSync(Buffer.from(payload, "base64")).toString("utf8"));
+  const list = store.read("clients", []);
+  const emails = new Set(list.map((c) => c.email)), ids = new Set(list.map((c) => c.id));
+  const now = new Date().toISOString();
+  let added = 0, skipped = 0;
+  for (const x of incoming) {
+    let email, phone = "";
+    try { email = emailOf(String(x.email || "")); } catch { skipped++; continue; }
+    if (emails.has(email)) { skipped++; continue; }
+    try { phone = phoneOf(String(x.phone || "")); } catch { phone = ""; }
+    const cid = /^[0-9a-f]{12}$/.test(x.id) && !ids.has(x.id) ? x.id : id();
+    list.push({
+      id: cid, email, name: String(x.name || "").trim().slice(0, 100) || email.split("@")[0], phone,
+      passwordHash: null, pwv: 0, plan: emptyPlan(), painLog: [],
+      referralCode: "MDFIT-" + crypto.randomBytes(3).toString("hex").toUpperCase(),
+      createdAt: x.createdAt || now, lastLoginAt: x.lastLoginAt || x.createdAt || now
+    });
+    emails.add(email); ids.add(cid); added++;
+  }
+  store.write("clients", list);
+  store.write("imports", [...done, digest]);
+  logger && logger.info("clients_imported", { added, skipped, total: list.length });
+  return { added, skipped };
+}
 
 function mountClients(ctx) {
   const { app, admin, store, cfg, notify, cal, nowParts, activity, limiter, logger, mask, prettyDate, prettyTime, settings, onCancel } = ctx;
@@ -746,4 +779,4 @@ function mountClients(ctx) {
   return { me, clients, save, today };
 }
 
-module.exports = { mountClients, GUIDE_IDS, workoutStats };
+module.exports = { mountClients, importClients, GUIDE_IDS, workoutStats };
