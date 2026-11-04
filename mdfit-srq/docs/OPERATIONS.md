@@ -12,7 +12,6 @@ Last verified in GitHub, Vercel and Railway: 2026-11-04.
 | Frontend | Vercel | Team **MD Fit** (`md-fit`) → project `mdfit-frontend` |
 | Backend API | Railway | Workspace **Jared Caban's Projects** → project `serene-reprieve` → service `-` |
 | Backend URL | Railway | `https://amiable-peace-production-e382.up.railway.app` |
-| Database | Railway | `serene-reprieve` → service `MongoDB` (private network only) |
 | Media uploads | Cloudinary | Env vars on Railway |
 | Payments | Stripe | See `docs/stripe.md` |
 | Domain | Vercel | `mymdfit.com` (see Open items) |
@@ -60,18 +59,13 @@ The Railway URL appears in two places: the `API` constant in `middleware.js` and
 - **Project:** `serene-reprieve`, environment `production`
 - **Services:**
   - `-` — the MD Fit API (unnamed in Railway)
-  - `MongoDB` — stores all API data (`mongo:8.0`, its own volume at `/data/db`, reachable only on Railway's private network at `mongodb.railway.internal:27017`)
+  - `MongoDB` — not used by the code
 - **API service source:** `Dr-Caban/MDfit`, branch `claude/lone-soulja-podcast-site-2ii8fj`, root directory `/mdfit-srq/backend`
 - **Public URL:** `https://amiable-peace-production-e382.up.railway.app` (port 8080)
 - **Health check path:** `/api/health` (set in `railway.json`)
+- **Volume:** must be mounted at `/data` (matches `DATA_DIR`). Without it, every redeploy — so every push — wipes all data: clients, bookings, pain logs, intake forms, messages.
 
-### Data storage
-
-With `MONGODB_URI` set, the API keeps every record (clients, bookings, pain logs, intake forms, messages…) in MongoDB, database `mdfit`, collection `store`. Records are encrypted with `DATA_ENC_KEY` before they reach the database. The API loads all records into memory at startup, answers reads from memory and saves writes in the background; on redeploy it finishes pending saves before shutting down. Large records are split across several documents.
-
-Without `MONGODB_URI` (local development, tests), records are files under `DATA_DIR`, which on Railway would need a volume at `/data`.
-
-`JWT_SECRET` is not used.
+Data is stored as encrypted JSON files under `DATA_DIR`. There is no database server: `MONGODB_URI` and the `MongoDB` service are not used, and neither is `JWT_SECRET`.
 
 ### Previous setup (Josh Lerner's accounts)
 
@@ -84,8 +78,7 @@ Without `MONGODB_URI` (local development, tests), records are files under `DATA_
 - `EDGE_SECRET` — must match Vercel's value
 - `SESSION_SECRET` — signs login sessions for client accounts and admin
 - `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH` — admin login (`npm run hash-password -- 'your password'`). Admin two-factor is on by default; `ADMIN_MFA=off` is an emergency switch (e.g. if email is down).
-- `MONGODB_URI` — `${{MongoDB.MONGO_URL}}` (a Railway reference to the MongoDB service's internal address; never paste the password itself)
-- `DATA_DIR` — `/data` (only used when `MONGODB_URI` is not set)
+- `DATA_DIR` — `/data`
 - `ALLOWED_ORIGINS` — site addresses allowed to call the API, comma-separated (e.g. `https://mymdfit.com`)
 - `SITE_URL` — main site address, used for cancel links in emails
 - `NODE_ENV` — `production`
@@ -147,7 +140,7 @@ Full setup instructions: `docs/stripe.md`
 
 ## Open items (2026-11-04)
 
-- **Data migration:** copy the existing records from `digitalapple-backend` → `mdfit-api` into MongoDB (they need the same `DATA_ENC_KEY`).
+- **Railway volume:** the API service has no volume. Attach one mounted at `/data`, then migrate data from `digitalapple-backend` → `mdfit-api`.
 - **Domain:** `mymdfit.com` is not attached to `mdfit-frontend`; it's held by a different Vercel account.
 - **Staged Railway change:** a pending, unapplied change would switch the API service's branch to `claude/modest-goldberg-ujh0kt`. That branch has diverged from production (45 commits not in production, 51 production commits missing). Applying it would stop pushes to the production branch from updating the backend.
 
