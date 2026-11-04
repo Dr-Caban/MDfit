@@ -716,6 +716,25 @@ function mountClients(ctx) {
     res.json({ ok: true, message: `Code emailed to ${sent.to}.` });
   });
 
+  admin.post("/clients/import", (req, res) => {
+    const incoming = req.body;
+    if (!Array.isArray(incoming)) return res.status(400).json({ error: "Expected an array." });
+    const list = clients();
+    let added = 0, skipped = 0;
+    for (const r of incoming) {
+      const email = String(r.email || "").trim().toLowerCase();
+      if (!email || list.some((x) => x.email === email)) { skipped++; continue; }
+      list.push({
+        id: id(), email, name: String(r.name || email.split("@")[0]), phone: String(r.phone || ""),
+        passwordHash: "", pwv: 0, plan: emptyPlan(), painLog: [],
+        createdAt: r.createdAt || new Date().toISOString(), lastLoginAt: r.lastLoginAt || new Date().toISOString()
+      });
+      added++;
+    }
+    save(list);
+    res.json({ ok: true, added, skipped, total: list.length });
+  });
+
   admin.delete("/clients/:id", (req, res) => {
     const list = clients();
     const next = list.filter((x) => x.id !== req.params.id);
