@@ -45,13 +45,14 @@ No manual deploy step. There is **no `main` branch**; the branch above is the re
 - **Vercel URL:** `mdfit-frontend.vercel.app` — behind Vercel login (deployment protection covers everything except custom domains), so the public only reaches the site through `mymdfit.com`.
 - **Environment variables:**
   - `EDGE_SECRET` — shared secret the middleware sends to Railway so the API rejects direct access
+  - `API_ORIGIN` (optional) — which Railway API this project's middleware talks to. Defaults to `https://amiable-peace-production-e382.up.railway.app`. Set it to point a project at another backend without a code change.
 
 The frontend is a static site with edge middleware (`middleware.js`) that:
 1. Blocks non-US traffic
 2. Blocks bots/scrapers, including `curl`
 3. Proxies `/api/*` requests to Railway with the `EDGE_SECRET` header
 
-The Railway URL appears in two places: the `API` constant in `middleware.js` and `connect-src` in the `Content-Security-Policy` header in `vercel.json`. Update both if the backend moves.
+The default Railway URL is `DEFAULT_API` in `middleware.js`; `connect-src` in the `Content-Security-Policy` header in `vercel.json` lists it too. Every response carries `x-mdfit-build: <commit>` so you can see which build a domain serves.
 
 ## Railway (Backend API)
 
@@ -130,6 +131,14 @@ Full setup instructions: `docs/stripe.md`
 - Attach in Vercel → MD Fit → `mdfit-frontend` → Settings → Domains
 - If the domain is on another Vercel project or account, remove it there first
 - SSL is automatic on Vercel
+
+## Guards
+
+- **Mobile layout check** (`.github/workflows/mdfit-frontend-layout.yml`, runs `mdfit-srq/scripts/layout-check.js`): on every push that touches the frontend or backend, loads the public pages and all 11 account screens at 320, 390 and 768px and fails if anything is wider than the screen, a program image is wider than its card or taller than 60% of the screen, a page throws, or an HTML file links a missing CSS/JS file. Account screens are checked again with `account.css` blocked. Run it locally with `node scripts/layout-check.js` (needs `npm ci` in `backend/` and Playwright).
+- **Live site is current** (`.github/workflows/mdfit-live-build.yml`, runs `mdfit-srq/scripts/check-live-build.js`): after a frontend push, waits up to 6 minutes for `https://mymdfit.com` to serve that commit (`x-mdfit-build`) and fails if it doesn't — the sign that the domain is on a Vercel project that isn't deploying this branch.
+- **CSS safety net** (`app/app.css`): images and video never exceed their column and pages can't scroll sideways, even if a page's own stylesheet fails to load.
+
+To ship frontend fixes to a domain without moving it to another backend, set `API_ORIGIN` on that Vercel project to the backend it already uses, then redeploy from the production branch.
 
 ## Health checks
 

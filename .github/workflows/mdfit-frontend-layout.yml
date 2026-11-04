@@ -1,0 +1,29 @@
+# Fails a push if any MD Fit page or account screen is wider than a 320/390/768px screen, if a program image
+# outgrows its card, if a page throws, or if HTML links a missing CSS/JS file. See mdfit-srq/scripts/layout-check.js.
+name: MDFIT SRQ mobile layout
+
+on:
+  push:
+    paths: ["mdfit-srq/frontend/**", "mdfit-srq/backend/**", "mdfit-srq/scripts/layout-check.js", ".github/workflows/mdfit-frontend-layout.yml"]
+  pull_request:
+    paths: ["mdfit-srq/frontend/**", "mdfit-srq/backend/**", "mdfit-srq/scripts/layout-check.js", ".github/workflows/mdfit-frontend-layout.yml"]
+
+jobs:
+  layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mdfit-srq/backend/package-lock.json
+      - run: npm ci
+        working-directory: mdfit-srq/backend
+      - run: npm install --no-save --no-package-lock playwright@1.63.0 && npx playwright install --with-deps chromium
+        working-directory: mdfit-srq/scripts
+      - run: node layout-check.js
+        working-directory: mdfit-srq/scripts
