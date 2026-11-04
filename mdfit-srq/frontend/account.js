@@ -1833,12 +1833,15 @@
     ({ programs: renderProgramsView, learn: renderLearn, premium: renderPremium, tips: renderTips })[tab](sub);
   }
 
-  // ---- Featured programs on home dashboard: visible to free + paid, drives conversion to full program view
+  // ---- Featured programs: visible to every member (free + paid) on three surfaces so patients who don't know
+  // where to start always see Dr. Jared's guided plans. Primary audience is people in pain / unsure what to do,
+  // so these pre-made programs are the main conversion lever.
   function renderFeaturedPrograms() {
-    const box = $("#featured-progs"); if (!box) return;
-    if (!C || !C.programs || !C.programs.length) { box.hidden = true; return; }
-    box.hidden = false;
-    // Pick a spread across categories (rehab, sport, mobility, strength) so free members see the full breadth
+    if (!C || !C.programs || !C.programs.length) {
+      ["#featured-progs", "#hero-progs", "#profile-progs"].forEach((s) => { const el = $(s); if (el) el.hidden = true; });
+      return;
+    }
+    // Pick a spread across categories (rehab, sport, mobility, strength) so patients see the full breadth
     const pick = (cat, n) => C.programs.filter((p) => p.category === cat).slice(0, n);
     const featured = [
       ...pick("Rehab Protocols", 2),
@@ -1846,12 +1849,29 @@
       ...pick("Mobility", 1),
       ...pick("Strength", 1)
     ].filter(Boolean).slice(0, 5);
-    const list = featured.length ? featured : C.programs.slice(0, 5);
-    $("#featured-prog-list").innerHTML = list.map((p) => `
-      <li><button type="button" class="fp-item" data-fp="${esc(p.id)}">
-        ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="fp-ic ${esc((p.category || "").toLowerCase().split(" ")[0])}"></span>`}
-        <span class="fp-body"><b>${esc(p.title)}</b><span class="muted small">${p.weeks} wks · ${esc(p.level || "all levels")}${p.category ? " · " + esc(p.category) : ""}</span></span>
-      </button></li>`).join("");
+    const sidebar = featured.length ? featured : C.programs.slice(0, 5);
+    // Hero + profile grids show up to 6 big cards with images; sidebar stays compact at 5 rows.
+    const heroList = featured.length ? [...featured, ...C.programs.filter((p) => !featured.includes(p))].slice(0, 6) : C.programs.slice(0, 6);
+
+    const sb = $("#featured-progs"), hero = $("#hero-progs"), prof = $("#profile-progs");
+    if (sb) {
+      sb.hidden = false;
+      $("#featured-prog-list").innerHTML = sidebar.map((p) => `
+        <li><button type="button" class="fp-item" data-fp="${esc(p.id)}">
+          ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="fp-ic ${esc((p.category || "").toLowerCase().split(" ")[0])}"></span>`}
+          <span class="fp-body"><b>${esc(p.title)}</b><span class="muted small">${p.weeks} wks · ${esc(p.level || "all levels")}${p.category ? " · " + esc(p.category) : ""}</span></span>
+        </button></li>`).join("");
+    }
+    const bigCard = (p) => `<button type="button" class="hp-card" data-fp="${esc(p.id)}">
+      ${p.image ? `<img class="hp-img" src="${esc(p.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="hp-ic ${esc((p.category || "").toLowerCase().split(" ")[0])}"></span>`}
+      <span class="hp-cat">${esc(p.category || "Program")}</span>
+      <b>${esc(p.title)}</b>
+      <span class="muted small hp-meta">${p.weeks} weeks · ${esc(p.level || "all levels")}${p.days && p.days.length ? ` · ${p.days.length} days/wk` : ""}</span>
+      ${p.summary ? `<span class="hp-sum small">${esc(p.summary.slice(0, 100))}${p.summary.length > 100 ? "…" : ""}</span>` : ""}
+      <span class="hp-go">Start this program →</span>
+    </button>`;
+    if (hero) { hero.hidden = false; $("#hero-prog-grid").innerHTML = heroList.map(bigCard).join(""); }
+    if (prof) { prof.hidden = false; $("#profile-prog-grid").innerHTML = heroList.map(bigCard).join(""); }
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-fp]"); if (!b) return;

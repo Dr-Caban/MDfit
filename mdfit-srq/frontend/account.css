@@ -166,3 +166,26 @@
 .featured-progs .fp-item b { font-size: 14px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .featured-progs .fp-cta { margin-top: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
 .featured-progs .fp-cta svg { width: 14px; height: 14px; fill: currentColor; }
+
+/* Hero/Profile programs showcase — full-width card with image-forward grid of 6 programs.
+   Shown on home dashboard above Quick Actions and on Profile page so patients who don't
+   know where to start always land on Dr. Jared's guided plans. */
+.hero-progs { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.hero-progs-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.hero-progs-head .hp-title { margin: 6px 0 4px; font-size: 20px; line-height: 1.2; }
+.hero-progs-head .hp-sub { margin: 0; max-width: 560px; }
+.hero-progs-head .btn-blue { flex: 0 0 auto; }
+.hp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.hp-card { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.02); color: inherit; text-align: left; cursor: pointer; transition: transform .15s, border-color .15s, background .15s; overflow: hidden; }
+.hp-card:hover { transform: translateY(-2px); border-color: rgba(255,231,168,.4); background: rgba(255,255,255,.04); }
+.hp-card .hp-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; margin-bottom: 6px; }
+.hp-card .hp-ic { width: 100%; aspect-ratio: 16/9; border-radius: 8px; margin-bottom: 6px; background: linear-gradient(135deg, rgba(60,120,200,.3), rgba(30,60,120,.4)); }
+.hp-card .hp-ic.sport { background: linear-gradient(135deg, rgba(90,180,120,.3), rgba(30,100,60,.4)); }
+.hp-card .hp-ic.mobility { background: linear-gradient(135deg, rgba(180,120,60,.3), rgba(100,60,30,.4)); }
+.hp-card .hp-ic.strength { background: linear-gradient(135deg, rgba(220,80,80,.3), rgba(120,30,30,.4)); }
+.hp-card .hp-cat { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,231,168,.85); font-weight: 600; }
+.hp-card b { font-size: 15px; line-height: 1.25; }
+.hp-card .hp-meta { opacity: .75; }
+.hp-card .hp-sum { display: block; margin-top: 4px; opacity: .72; line-height: 1.35; }
+.hp-card .hp-go { margin-top: auto; padding-top: 6px; font-size: 12px; font-weight: 600; color: rgba(180,215,255,.95); }
+@media (max-width: 640px) { .hp-grid { grid-template-columns: 1fr; } .hero-progs-head { flex-direction: column; } .hero-progs-head .btn-blue { align-self: stretch; } }
