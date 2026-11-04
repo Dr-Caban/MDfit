@@ -36,7 +36,7 @@ Webhooks grant and remove access; the success page never does. Each event's sign
    Read access is enough for everything else.
 
 4. **Add the webhook endpoint.** Go to Developers → Webhooks → Add endpoint.
-   - URL: `https://mdfit-api-production.up.railway.app/api/stripe/webhook`
+   - URL: `https://amiable-peace-production-e382.up.railway.app/api/stripe/webhook`
    - Events:
      - `checkout.session.completed`
      - `checkout.session.async_payment_succeeded`

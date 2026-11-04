@@ -5,7 +5,7 @@
 //    so the API can't be reached directly, from abroad, or by a scraper going around the site.
 export const config = { matcher: "/((?!_vercel).*)" };
 
-const API = "https://mdfit-api-production.up.railway.app";
+const API = "https://amiable-peace-production-e382.up.railway.app";
 const ALLOWED = new Set(["US", "PR", "GU", "VI", "AS", "MP", "UM"]);
 const BAD_UA = /(curl|wget|python-requests|python-urllib|aiohttp|httpx|go-http-client|java\/|okhttp|libwww|scrapy|httpclient|node-fetch|axios|postman|insomnia|headless|phantomjs|selenium|puppeteer|playwright|crawler|spider|scraper|gptbot|chatgpt-user|oai-searchbot|ccbot|claudebot|claude-web|anthropic-ai|bytespider|petalbot|semrushbot|ahrefsbot|mj12bot|dotbot|dataforseo|amazonbot|perplexitybot|youbot|diffbot|imagesiftbot|omgili|zgrab|masscan|nmap|nikto|sqlmap|wpscan)/i;
 const SEARCH = /(googlebot|bingbot|duckduckbot|applebot)/i;
