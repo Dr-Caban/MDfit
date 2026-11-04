@@ -140,8 +140,22 @@
   window.addEventListener("hashchange", () => show(location.hash.slice(1)));
   $$(".tabbar [data-tab]").forEach((b) => b.addEventListener("click", () => go(b.dataset.tab)));
   document.addEventListener("click", (e) => { const g = e.target.closest("[data-goto]"); if (g) go(g.dataset.goto); });
+  // Shortcut actions from the More sheet (e.g., Book an appointment)
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-action]"); if (!b) return;
+    const ms = $("#more-sheet"); if (ms && ms.open) ms.close();
+    if (b.dataset.action === "book") { go("profile"); setTimeout(() => $("#p-book-open") && $("#p-book-open").click(), 50); }
+  });
   // Phones show five tabs plus "More"; the rest live in a sheet
-  $("#more-list").innerHTML = $$(".tabbar .ov").map((b) => `<button type="button" data-goto="${b.dataset.tab}">${b.querySelector("svg").outerHTML}<span>${b.querySelector(".long").innerHTML}</span></button>`).join("");
+  // Prepend high-value destinations (Pain Tool, Video Library, Book) above the overflow tabs
+  const topLinks = [
+    { tab: "pain", label: "Pain Tool", icon: `<svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-3 20v-7H7.5V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v6H15v7z"/></svg>` },
+    { tab: "videos", label: "Video Library", icon: `<svg viewBox="0 0 24 24"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm6 3.5v7l6-3.5z"/></svg>` },
+    { action: "book", label: "Book an appointment", icon: `<svg viewBox="0 0 24 24"><path d="M19 4h-2V2h-2v2H9V2H7v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14zM7 12h5v5H7z"/></svg>` }
+  ];
+  const topHtml = topLinks.map((x) => `<button type="button" class="more-top" ${x.tab ? `data-goto="${x.tab}"` : `data-action="${x.action}"`}>${x.icon}<span>${x.label}</span></button>`).join("");
+  const restHtml = $$(".tabbar .ov").map((b) => `<button type="button" data-goto="${b.dataset.tab}">${b.querySelector("svg").outerHTML}<span>${b.querySelector(".long").innerHTML}</span></button>`).join("");
+  $("#more-list").innerHTML = topHtml + `<div class="more-sep"></div>` + restHtml;
   $("#more-btn").addEventListener("click", () => $("#more-sheet").showModal());
 
   // ================= Dialogs: exercise videos, guides, intros

@@ -1167,3 +1167,7 @@ dialog.sheet::backdrop { background: rgba(10, 26, 46, .7); }
 .book-time { background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 6px; cursor: pointer; font-size: 14px; color: var(--navy); font-variant-numeric: tabular-nums; }
 .book-time.on, .book-time:hover { background: var(--accent); border-color: var(--accent); color: var(--navy); }
 #book-confirm { width: 100%; height: 48px; margin-top: 6px; }
+/* More sheet: highlight the top shortcuts */
+.more-sep { height: 1px; background: var(--line); margin: 8px 0; }
+.more-top { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-weight: 700; }
+.more-top svg { color: var(--accent); }
