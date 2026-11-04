@@ -4,7 +4,7 @@ const express = require("express");
 const crypto = require("crypto");
 const path = require("path");
 const { logger, mask, requestLogger } = require("./lib/logger");
-const { createStore } = require("./lib/store");
+const { createStore, createMongoStore } = require("./lib/store");
 const { verifyPassword, isValidHash, signToken, verifyToken } = require("./lib/auth");
 const { createNotifier } = require("./lib/notify");
 const { createCal, verifySignature, normaliseBooking } = require("./lib/cal");
@@ -35,6 +35,7 @@ function loadConfig() {
     adminPasswordHash: env("ADMIN_PASSWORD_HASH"),
     sessionSecret: env("SESSION_SECRET"),
     dataDir: env("DATA_DIR", path.join(__dirname, "data")),
+    mongoUri: env("MONGODB_URI"),
     origins: env("ALLOWED_ORIGINS", "*").split(",").map((s) => s.trim()).filter(Boolean),
     siteUrl: env("SITE_URL").replace(/\/+$/, ""),
     edgeSecret: env("EDGE_SECRET"),
@@ -114,8 +115,7 @@ function toCsv(rows, cols) {
   return [cols.join(","), ...rows.map((r) => cols.map((c) => cell(r[c])).join(","))].join("\r\n") + "\r\n";
 }
 
-function createApp(cfg = loadConfig()) {
-  const store = createStore(cfg.dataDir, { key: cfg.dataKey });
+function createApp(cfg = loadConfig(), { store = createStore(cfg.dataDir, { key: cfg.dataKey }) } = {}) {
   const notify = createNotifier({ apiKey: cfg.resendKey, from: cfg.notifyFrom, ownerEmail: cfg.notifyEmail || cfg.adminEmail, apiUrl: cfg.resendUrl });
   const cal = createCal({ apiKey: cfg.calKey, apiUrl: cfg.calUrl });
   const places = createPlaces({ apiKey: cfg.googleKey, baseUrl: cfg.googleUrl, legacyUrl: cfg.googleLegacyUrl });
@@ -1036,14 +1036,25 @@ function createApp(cfg = loadConfig()) {
 }
 
 if (require.main === module) {
-  const http = require("http");
-  const cfg = loadConfig();
-  const port = Number(process.env.PORT) || 3000;
-  const app = createApp(cfg);
-  const server = http.createServer(app);
-  const rt = createRealtime(server, cfg);
-  app.set("rt", rt);
-  server.listen(port, () => logger.info("listening", { port, dataDir: cfg.dataDir, tz: cfg.tz, origins: cfg.origins, email: Boolean(cfg.resendKey && cfg.notifyFrom) }));
+  (async () => {
+    const http = require("http");
+    const cfg = loadConfig();
+    const port = Number(process.env.PORT) || 3000;
+    const store = cfg.mongoUri ? await createMongoStore({ uri: cfg.mongoUri, key: cfg.dataKey, logger }) : undefined;
+    const app = createApp(cfg, { store });
+    const server = http.createServer(app);
+    const rt = createRealtime(server, cfg);
+    app.set("rt", rt);
+    server.listen(port, () => logger.info("listening", { port, store: store ? "mongodb" : cfg.dataDir, tz: cfg.tz, origins: cfg.origins, email: Boolean(cfg.resendKey && cfg.notifyFrom) }));
+    // Railway sends SIGTERM on redeploy: save any records still queued for MongoDB before exiting
+    if (store) process.once("SIGTERM", async () => {
+      await Promise.race([store.close(), new Promise((r) => setTimeout(r, 8000))]);
+      process.exit(0);
+    });
+  })().catch((err) => {
+    logger.error("startup_failed", { error: err.message });
+    process.exit(1);
+  });
 }
 
 module.exports = { createApp, loadConfig, nowParts, addDays, weekday, toCsv };
