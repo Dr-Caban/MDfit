@@ -24,6 +24,45 @@ const DAILY_GOAL = 30;
 const levelStart = (n) => 50 * n * (n - 1);
 const TITLES = ["Starter", "Mover", "Builder", "Strong", "Athlete", "Performer", "Elite", "Champion", "Legend"];
 
+// Gemstone rank system — 8 lifetime achievement ranks ordered by Mohs hardness then rarity.
+// Permanent once earned; not affected by inactivity. XP thresholds are initial values and will
+// be admin-configurable later. Rank badges display on dashboard, profile, leaderboards, etc.
+const GEMS = [
+  { id: "peridot", name: "Peridot", xp: 0, mohs: 6.5, color: "#9ac85a" },
+  { id: "garnet", name: "Garnet", xp: 500, mohs: 7.0, color: "#c13a5c" },
+  { id: "onyx", name: "Onyx", xp: 1500, mohs: 7.0, color: "#1a1a1a" },
+  { id: "emerald", name: "Emerald", xp: 4000, mohs: 7.75, color: "#2fa06a" },
+  { id: "ruby", name: "Ruby", xp: 8000, mohs: 9.0, color: "#d8213c" },
+  { id: "sapphire", name: "Sapphire", xp: 15000, mohs: 9.0, color: "#1d49a8" },
+  { id: "diamond", name: "Diamond", xp: 30000, mohs: 10.0, color: "#c6edff" },
+  { id: "platinum", name: "Platinum", xp: 60000, mohs: null, color: "#e5e5e5" }
+];
+function gemstoneOf(xp) {
+  let cur = GEMS[0], next = null;
+  for (let i = 0; i < GEMS.length; i++) {
+    if (xp >= GEMS[i].xp) { cur = GEMS[i]; next = GEMS[i + 1] || null; }
+  }
+  const span = next ? next.xp - cur.xp : 0;
+  const into = xp - cur.xp;
+  return { current: cur, next, progress: next ? Math.max(0, Math.min(1, into / span)) : 1, xpIntoRank: into, xpToNext: next ? Math.max(0, next.xp - xp) : 0 };
+}
+
+// Streak repairs: every 3 consecutive qualifying days a user is awarded one "repair" token.
+// Applying a repair bridges a missed day in the visual streak calculation without altering real
+// activity history. `usedRepairs` is a list of ISO dates stored on the client object.
+function repairsFrom(workouts = [], usedRepairs = []) {
+  const days = [...new Set(workouts.map((w) => w.date))].sort();
+  // Count completed 3-day streak blocks. A block = any date d where d-1 and d-2 are also workout days.
+  let earned = 0;
+  for (let i = 2; i < days.length; i++) {
+    if (days[i - 1] === addDay(days[i], -1) && days[i - 2] === addDay(days[i], -2)) {
+      // Award at most 1 per 3-day window to avoid stacking from a long streak
+      if ((i - 2) % 3 === 0) earned++;
+    }
+  }
+  return { earned, used: usedRepairs.length, available: Math.max(0, earned - usedRepairs.length), usedDates: usedRepairs };
+}
+
 const BADGES = [
   { id: "first-workout", title: "First Rep", desc: "Finish your first workout", icon: "bolt", kind: "workouts", target: 1 },
   { id: "workouts-10", title: "Ten Strong", desc: "Finish 10 workouts", icon: "dumbbell", kind: "workouts", target: 10 },
@@ -107,12 +146,14 @@ function rewards({ workouts = [], painLog = [], visits = [], vitals = [], action
   let level = 1;
   while (xp >= levelStart(level + 1)) level++;
   const week = Array.from({ length: 7 }, (_, i) => { const d = addDay(mondayOf(today), i); return { date: d, xp: byDay.get(d) || 0 }; });
+  const rank = gemstoneOf(xp);
   return {
     xp, level, title: TITLES[Math.min(level, TITLES.length) - 1],
     levelStart: levelStart(level), nextLevel: levelStart(level + 1),
+    rank, gems: GEMS,
     todayXp: byDay.get(today) || 0, dailyGoal: DAILY_GOAL, week,
     badges: BADGES.map((b) => ({ ...b, progress: Math.min(b.target, b.kind === "goals" ? progress.goals : progress[b.kind]), earned: Boolean(earnedOn[b.id]), earnedOn: earnedOn[b.id] || null }))
   };
 }
 
-module.exports = { rewards, BADGES, XP, ACTIONS, levelStart };
+module.exports = { rewards, BADGES, XP, ACTIONS, levelStart, GEMS, gemstoneOf, repairsFrom };

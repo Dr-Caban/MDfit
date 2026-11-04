@@ -189,3 +189,33 @@
 .hp-card .hp-sum { display: block; margin-top: 4px; opacity: .72; line-height: 1.35; }
 .hp-card .hp-go { margin-top: auto; padding-top: 6px; font-size: 12px; font-weight: 600; color: rgba(180,215,255,.95); }
 @media (max-width: 640px) { .hp-grid { grid-template-columns: 1fr; } .hero-progs-head { flex-direction: column; } .hero-progs-head .btn-blue { align-self: stretch; } }
+
+/* Gemstone rank chip in header */
+.rank-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid rgba(255,231,168,.3); border-radius: 999px; background: rgba(0,0,0,.25); color: inherit; cursor: pointer; font-size: 13px; margin-right: 6px; transition: border-color .15s, background .15s; }
+.rank-chip:hover { border-color: rgba(255,231,168,.7); background: rgba(0,0,0,.4); }
+.rank-chip .rc-gem { display: inline-flex; align-items: center; }
+.rank-chip b { font-weight: 600; }
+
+/* Gemstone rank card in Progress view */
+.rank-card { display: flex; flex-direction: column; gap: 12px; }
+.rank-card .rank-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.rank-card .rank-current { display: flex; align-items: center; gap: 14px; }
+.rank-card .rank-current .rk-gem svg { filter: drop-shadow(0 0 6px rgba(255,255,255,.3)); }
+.rank-card .rank-current b { font-size: 22px; line-height: 1.1; display: block; }
+.rank-card .rank-next { text-align: right; display: flex; flex-direction: column; gap: 4px; min-width: 120px; }
+.rank-card .rank-next .rk-next-row { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; font-size: 15px; }
+.rank-card .rank-next .rk-max { color: #ffe7a8; font-size: 15px; }
+.rank-card .xpbar.rk-bar { height: 8px; }
+.rank-card .rank-ladder { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.rank-card .rl { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(255,255,255,.02); opacity: .55; text-align: center; }
+.rank-card .rl.done { opacity: .9; }
+.rank-card .rl.cur { opacity: 1; border-color: rgba(255,231,168,.6); background: rgba(255,231,168,.08); box-shadow: 0 0 8px rgba(255,231,168,.2); }
+.rank-card .rl b { font-size: 13px; }
+.rank-card .rk-foot { display: block; margin-top: 4px; }
+
+/* Streak repair chip + note on home dashboard streak card */
+.streak .streak-top { display: flex; align-items: center; gap: 10px; }
+.streak .repair-chip { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid rgba(255,231,168,.35); border-radius: 999px; background: rgba(0,0,0,.25); color: #ffe7a8; cursor: pointer; font-size: 12px; }
+.streak .repair-chip svg { width: 14px; height: 14px; fill: currentColor; }
+.streak .repair-chip:hover { background: rgba(255,231,168,.15); }
+.streak .repair-note { margin-top: 8px; padding: 8px 10px; border: 1px dashed rgba(255,231,168,.3); border-radius: 8px; color: rgba(255,231,168,.95); }

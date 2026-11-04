@@ -4,7 +4,7 @@ const express = require("express");
 const crypto = require("crypto");
 const { hashPassword, verifyPassword, signToken, verifyToken } = require("./auth");
 const { ValidationError, EMAIL_RE, AREAS } = require("./validate");
-const { rewards, ACTIONS, levelStart } = require("./rewards");
+const { rewards, ACTIONS, levelStart, repairsFrom } = require("./rewards");
 
 const SESSION_DAYS = 30;
 const RESET_HOURS = 24;
@@ -574,7 +574,26 @@ function mountClients(ctx) {
   });
   me.get("/rewards", (req, res) => {
     const c = req.client;
-    res.json(rewardsOf(c));
+    const r = rewardsOf(c);
+    const rep = repairsFrom(c.workouts || [], c.repairsUsed || []);
+    res.json({ ...r, repairs: rep });
+  });
+
+  // Streak repairs: 1 token earned per 3 consecutive qualifying days. Applying one to a missed
+  // date keeps the visual streak intact without altering real activity history (actual workout
+  // dates are preserved; the repair list is stored separately so the streak renderer can bridge gaps).
+  me.post("/repair-streak", (req, res) => {
+    const date = String((req.body && req.body.date) || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail("Which day would you like to repair?");
+    if (date > today()) fail("You can only repair past days.");
+    const list = clients(); const c = list.find((x) => x.id === req.client.id);
+    const used = c.repairsUsed || [];
+    if (used.includes(date)) fail("That day is already repaired.");
+    const rep = repairsFrom(c.workouts || [], used);
+    if (rep.available < 1) fail("You don't have any repair tokens available yet. Finish 3 days in a row to earn one.");
+    c.repairsUsed = [...used, date].sort();
+    save(list);
+    res.json({ ok: true, repairs: repairsFrom(c.workouts || [], c.repairsUsed) });
   });
 
   // ---- Library (Spotify-style): favorite videos and saved programs, kept on the server so they follow the client

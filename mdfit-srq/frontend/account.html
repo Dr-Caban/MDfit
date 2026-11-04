@@ -35,7 +35,10 @@
         </button>
       </header>
       <div class="notes-panel" id="notes" hidden></div>
-      <div class="hello-row"><p class="hello">Welcome back</p><button type="button" class="xp-chip" data-goto="progress" id="xp-chip"><b id="chip-lv">Lv 1</b><span id="chip-xp">0 XP</span></button></div>
+      <div class="hello-row"><p class="hello">Welcome back</p>
+        <button type="button" class="rank-chip" data-goto="progress" id="rank-chip" title="Your gemstone rank"><span class="rc-gem" id="rc-gem"></span><b id="rc-name">Peridot</b></button>
+        <button type="button" class="xp-chip" data-goto="progress" id="xp-chip"><b id="chip-lv">Lv 1</b><span id="chip-xp">0 XP</span></button>
+      </div>
       <h1 class="name" id="hello-name">&nbsp;</h1>
 
       <div class="qsearch">
@@ -50,8 +53,10 @@
         <div class="streak-top">
           <svg class="flame" viewBox="0 0 24 24"><path d="M13.5 1.5s.8 2.7.8 4.6c0 1.9-1.2 3.4-3.1 3.4-1.9 0-3.3-1.5-3.3-3.4l.03-.33C5.9 8 4.7 11.1 4.7 14.4 4.7 18.6 8 22 12 22s7.3-3.4 7.3-7.6c0-5.1-2.4-9.6-5.8-12.9zM11.7 19c-1.6 0-2.9-1.3-2.9-2.9 0-1.5 1-2.6 2.6-2.9 1.6-.3 3.3-1.1 4.2-2.4.4 1.2.6 2.5.6 3.8 0 2.4-2 4.4-4.5 4.4z"/></svg>
           <div><b id="streak-n">0</b><span>day streak</span></div>
+          <button type="button" class="repair-chip" id="repair-chip" hidden title="Streak repairs"><svg viewBox="0 0 24 24"><path d="M7 2 5.6 3.4l5.3 5.3-.7.7-5.3-5.3L3.4 5.6l5.3 5.3-.7.7-3.5-3.5-1.4 1.4 3.5 3.5-.7.7-1.4-1.4L3 13.6l6.3 6.3a3.5 3.5 0 0 0 5-5l10-10L22.9 3.4l-9.2 9.2-.7-.7 9.2-9.2L20.8 1.3 11.6 10.5l-.7-.7L20.1.6 18.7-.8z"/></svg><b id="repair-n">0</b></button>
         </div>
         <ol class="week" id="week"></ol>
+        <div class="repair-note" id="repair-note" hidden></div>
       </div>
 
       <div class="tiles">
@@ -314,6 +319,16 @@
               <div class="goal-ring" id="goal-ring" aria-label="Today's goal"></div>
             </div>
             <div class="xp-week" id="xp-week"></div>
+          </div>
+          <div class="card rank-card" id="rank-card">
+            <div class="card-head"><span class="label accent">Gemstone Rank</span><small class="muted" id="rank-sub">Lifetime achievement — permanent, never resets</small></div>
+            <div class="rank-top">
+              <div class="rank-current"><span class="rk-gem" id="rk-gem"></span><div><b id="rk-name">Peridot</b><small class="muted" id="rk-xp"></small></div></div>
+              <div class="rank-next" id="rank-next"></div>
+            </div>
+            <div class="xpbar rk-bar" role="progressbar" aria-label="Progress to next rank" id="rk-bar-wrap"><i id="rk-bar"></i></div>
+            <ol class="rank-ladder" id="rank-ladder"></ol>
+            <small class="muted rk-foot" id="rk-foot"></small>
           </div>
           <div class="card">
             <div class="card-head"><span class="label accent">Calendar</span>

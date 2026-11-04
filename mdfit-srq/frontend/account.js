@@ -2163,11 +2163,41 @@
     });
     $("#board-hide").addEventListener("change", async (e) => { try { await apiAuth("PUT", "/api/me/leaderboard/visibility", { hidden: e.target.checked }); } catch {} loadBoard(); });
   }
+  const GEM_ICON = (color, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><path d="M12 2 4 9l8 13 8-13z" fill="${color}" stroke="#000" stroke-width=".5"/><path d="M12 2 8 9h8z" fill="rgba(255,255,255,.35)"/><path d="M4 9h16" stroke="rgba(0,0,0,.3)" stroke-width=".8" fill="none"/></svg>`;
   function renderRewards() {
     const r = reward;
     if (!r) return;
     $("#chip-lv").textContent = `Lv ${r.level}`;
     $("#chip-xp").textContent = `${r.xp.toLocaleString()} XP`;
+    // Gemstone rank: header chip + big rank card in Progress view + streak-repair UI on home
+    if (r.rank) {
+      const cur = r.rank.current, next = r.rank.next;
+      $("#rc-gem").innerHTML = GEM_ICON(cur.color, 16);
+      $("#rc-name").textContent = cur.name;
+      $("#rc-name").style.color = cur.color === "#1a1a1a" ? "#eee" : cur.color;
+      if ($("#rk-gem")) {
+        $("#rk-gem").innerHTML = GEM_ICON(cur.color, 48);
+        $("#rk-name").textContent = cur.name;
+        $("#rk-xp").textContent = `${r.xp.toLocaleString()} XP lifetime`;
+        $("#rank-next").innerHTML = next ? `<small class="muted">Next</small><div class="rk-next-row">${GEM_ICON(next.color, 24)}<b>${next.name}</b></div><small class="muted">${r.rank.xpToNext.toLocaleString()} XP to go</small>` : `<b class="rk-max">Max rank reached — 🙌</b>`;
+        $("#rk-bar").style.width = Math.round(r.rank.progress * 100) + "%";
+        $("#rank-ladder").innerHTML = r.gems.map((g) => `<li class="rl ${g.id === cur.id ? "cur" : r.xp >= g.xp ? "done" : ""}"><span class="rl-gem">${GEM_ICON(g.color, 20)}</span><b>${esc(g.name)}</b><small class="muted">${g.xp.toLocaleString()} XP</small></li>`).join("");
+        $("#rk-foot").textContent = "Lifetime achievement — ranks are permanent once earned and are not affected by inactivity.";
+      }
+    }
+    // Streak repairs: show chip with count, offer bridging a broken streak
+    if (r.repairs) {
+      const chip = $("#repair-chip"); if (chip) {
+        chip.hidden = r.repairs.available < 1 && r.repairs.earned < 1;
+        $("#repair-n").textContent = r.repairs.available;
+      }
+      const note = $("#repair-note"); if (note) {
+        if (r.repairs.available >= 1) {
+          note.hidden = false;
+          note.innerHTML = `<small>You have <b>${r.repairs.available}</b> streak repair${r.repairs.available === 1 ? "" : "s"}. Tap any missed day on the calendar to bridge it.</small>`;
+        } else note.hidden = true;
+      }
+    }
     $("#lv-n").textContent = r.level;
     $("#lv-title").textContent = r.title;
     $("#lv-xp").textContent = `${r.xp.toLocaleString()} XP total`;
@@ -2241,10 +2271,21 @@
   }
   function renderCalDay() {
     const d = calPick || todayInTz(), items = dayItems(d);
-    $("#cal-day").innerHTML = `<p class="label">${d === todayInTz() ? "Today" : fmtDate(d, { weekday: "long", month: "short", day: "numeric" })}</p>` + (items.length
+    const t = todayInTz();
+    const repairs = reward && reward.repairs;
+    const alreadyRepaired = repairs && repairs.usedDates && repairs.usedDates.includes(d);
+    const canRepair = d < t && !items.length && repairs && repairs.available >= 1 && !alreadyRepaired;
+    $("#cal-day").innerHTML = `<p class="label">${d === t ? "Today" : fmtDate(d, { weekday: "long", month: "short", day: "numeric" })}</p>` + (items.length
       ? `<ul class="activity">${items.map((x) => `<li class="act"><span class="check k-bg-${x.k}"></span><div><b>${esc(x.t)}</b><span>${esc(x.s)}</span></div></li>`).join("")}</ul>`
-      : `<p class="muted small">Nothing logged. ${d === todayInTz() ? "A quick workout keeps your streak alive." : ""}</p>`);
+      : `<p class="muted small">Nothing logged. ${d === t ? "A quick workout keeps your streak alive." : ""}</p>`)
+      + (alreadyRepaired ? `<p class="muted small"><b>Streak repair applied</b> — this missed day is bridged for your streak.</p>` : "")
+      + (canRepair ? `<button type="button" class="btn-gold sm" data-repair="${d}">Use 1 repair to bridge this day</button>` : "");
   }
+  document.addEventListener("click", async (e) => {
+    const r = e.target.closest("[data-repair]"); if (!r) return;
+    try { await apiAuth("POST", "/api/me/repair-streak", { date: r.dataset.repair }); toast("Streak repaired."); await loadRewards(); renderCalDay(); renderCalendar(); }
+    catch (err) { toast(err.message); }
+  });
   $("#cal").addEventListener("click", (e) => { const b = e.target.closest("[data-day]"); if (b) { calPick = b.dataset.day; renderCalendar(); } });
   $("#cal-prev").addEventListener("click", () => { calMonth = monthAdd(calMonth, -1); renderCalendar(); });
   $("#cal-next").addEventListener("click", () => { calMonth = monthAdd(calMonth, 1); renderCalendar(); });
