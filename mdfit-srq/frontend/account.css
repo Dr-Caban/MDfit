@@ -188,7 +188,21 @@
 .hp-card .hp-meta { opacity: .75; }
 .hp-card .hp-sum { display: block; margin-top: 4px; opacity: .72; line-height: 1.35; }
 .hp-card .hp-go { margin-top: auto; padding-top: 6px; font-size: 12px; font-weight: 600; color: rgba(180,215,255,.95); }
-@media (max-width: 640px) { .hp-grid { grid-template-columns: 1fr; } .hero-progs-head { flex-direction: column; } .hero-progs-head .btn-blue { align-self: stretch; } }
+@media (max-width: 640px) {
+  .hero-progs-head { flex-direction: column; }
+  .hero-progs-head .btn-blue { align-self: stretch; }
+  /* Switch to horizontal list rows on mobile: small 64px thumbnail on left, text on right.
+     The 16/9 full-width image was taking up most of the screen and pushed everything below the fold. */
+  .hp-grid { grid-template-columns: 1fr; gap: 8px; }
+  .hp-card { flex-direction: row; align-items: center; gap: 10px; padding: 8px; }
+  .hp-card .hp-img, .hp-card .hp-ic { width: 64px; height: 64px; aspect-ratio: 1/1; border-radius: 8px; margin: 0; flex: 0 0 auto; }
+  .hp-card .hp-cat { font-size: 9px; }
+  .hp-card b { font-size: 14px; }
+  .hp-card .hp-sum { display: none; }
+  .hp-card .hp-go { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); margin: 0; font-size: 0; }
+  .hp-card .hp-go::after { content: "›"; font-size: 22px; font-weight: 400; color: rgba(180,215,255,.7); }
+  .hp-card > :not(.hp-img):not(.hp-ic):not(.hp-go) { min-width: 0; padding-right: 20px; }
+}
 
 /* Gemstone rank chip in header */
 .rank-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid rgba(255,231,168,.3); border-radius: 999px; background: rgba(0,0,0,.25); color: inherit; cursor: pointer; font-size: 13px; margin-right: 6px; transition: border-color .15s, background .15s; }
