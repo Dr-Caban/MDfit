@@ -59,13 +59,13 @@ The Railway URL appears in two places: the `API` constant in `middleware.js` and
 - **Project:** `serene-reprieve`, environment `production`
 - **Services:**
   - `-` — the MD Fit API (unnamed in Railway)
-  - `MongoDB` — not used by the code
+  - `MongoDB` — not used yet: MongoDB 8 refuses writes with less than 500 MB of free disk, and its volume is 500 MB in total (trial plan)
 - **API service source:** `Dr-Caban/MDfit`, branch `claude/lone-soulja-podcast-site-2ii8fj`, root directory `/mdfit-srq/backend`
 - **Public URL:** `https://amiable-peace-production-e382.up.railway.app` (port 8080)
-- **Health check path:** `/api/health` (set in `railway.json`)
-- **Volume:** must be mounted at `/data` (matches `DATA_DIR`). Without it, every redeploy — so every push — wipes all data: clients, bookings, pain logs, intake forms, messages.
+- **Health check path:** `/api/health`, set in the service's Settings → Deploy. Railway ignores `railway.json` for new services (config-as-code is deprecated), so don't rely on it.
+- **Volume:** `mdfit-api-data` (500 MB) mounted at `/data` (matches `DATA_DIR`). Without it, every redeploy — so every push — would wipe all data: clients, bookings, pain logs, intake forms, messages. With a volume, each deploy has about a minute of downtime while Railway swaps the volume to the new instance.
 
-Data is stored as encrypted JSON files under `DATA_DIR`. There is no database server: `MONGODB_URI` and the `MongoDB` service are not used, and neither is `JWT_SECRET`.
+Data is stored as encrypted JSON files under `DATA_DIR`. `MONGODB_URI` and `JWT_SECRET` are not used by the code.
 
 ### Previous setup (Josh Lerner's accounts)
 
@@ -140,8 +140,8 @@ Full setup instructions: `docs/stripe.md`
 
 ## Open items (2026-11-04)
 
-- **Railway volume:** the API service has no volume. Attach one mounted at `/data`, then migrate data from `digitalapple-backend` → `mdfit-api`.
+- **Data migration:** live sign-ups still go to the old backend (`digitalapple-backend` → `mdfit-api`). Copy its data into `mdfit-api-data` (same `DATA_ENC_KEY` needed) before moving `mymdfit.com` to `mdfit-frontend`.
+- **MongoDB:** to store data in MongoDB instead, grow the MongoDB volume to at least 1 GB (paid plan), then restore commit `8d87b6c`.
 - **Domain:** `mymdfit.com` is not attached to `mdfit-frontend`; it's held by a different Vercel account.
-- **Staged Railway change:** a pending, unapplied change would switch the API service's branch to `claude/modest-goldberg-ujh0kt`. That branch has diverged from production (45 commits not in production, 51 production commits missing). Applying it would stop pushes to the production branch from updating the backend.
 
 All secrets live in Railway and Vercel env vars — never in code.
