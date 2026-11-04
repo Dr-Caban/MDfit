@@ -1821,6 +1821,31 @@
     ({ programs: renderProgramsView, learn: renderLearn, premium: renderPremium, tips: renderTips })[tab](sub);
   }
 
+  // ---- Featured programs on home dashboard: visible to free + paid, drives conversion to full program view
+  function renderFeaturedPrograms() {
+    const box = $("#featured-progs"); if (!box) return;
+    if (!C || !C.programs || !C.programs.length) { box.hidden = true; return; }
+    box.hidden = false;
+    // Pick a spread across categories (rehab, sport, mobility, strength) so free members see the full breadth
+    const pick = (cat, n) => C.programs.filter((p) => p.category === cat).slice(0, n);
+    const featured = [
+      ...pick("Rehab Protocols", 2),
+      ...pick("Sport Performance", 1),
+      ...pick("Mobility", 1),
+      ...pick("Strength", 1)
+    ].filter(Boolean).slice(0, 5);
+    const list = featured.length ? featured : C.programs.slice(0, 5);
+    $("#featured-prog-list").innerHTML = list.map((p) => `
+      <li><button type="button" class="fp-item" data-fp="${esc(p.id)}">
+        ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<span class="fp-ic ${esc((p.category || "").toLowerCase().split(" ")[0])}"></span>`}
+        <span class="fp-body"><b>${esc(p.title)}</b><span class="muted small">${p.weeks} wks · ${esc(p.level || "all levels")}${p.category ? " · " + esc(p.category) : ""}</span></span>
+      </button></li>`).join("");
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-fp]"); if (!b) return;
+    go("programs/" + b.dataset.fp);
+  });
+
   // ---- Programs: each day is a generator session with a fixed seed, so the same session repeats each week and can be compared
   let progCat = "All";
   // Program exercises named differently from the library -> the library video that shows the same move
@@ -2209,7 +2234,7 @@
     apiAuth("GET", "/api/me/vitals").then((v) => { vitals = v; renderPerf(); }).catch(() => renderPerf());
     pollUnread();
     apiAuth("GET", "/api/me/access").then((a) => { access = a; renderToday(); renderAccessBadge(); }).catch(() => {});
-    loadContent().then(() => { const t = location.hash.slice(1).split("/"); if (["programs", "learn", "premium", "tips"].includes(t[0])) renderContent(t[0], t[1]); });
+    loadContent().then(() => { renderFeaturedPrograms(); const t = location.hash.slice(1).split("/"); if (["programs", "learn", "premium", "tips"].includes(t[0])) renderContent(t[0], t[1]); });
     if (lb.status === "fulfilled") { lib = lb.value; renderPrograms(); if (!$("#view-videos").hidden) renderVideos(); }
     renderStats(); renderEvents(); renderActivity(); renderNotes(); renderCalendar();
     setTimeout(notifyVisits, 1200);
