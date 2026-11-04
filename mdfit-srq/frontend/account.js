@@ -1621,7 +1621,19 @@
       <p class="rpe-cap small muted">Effort: 1 = easy, 10 = all-out</p>
       <button class="btn-gold sm" type="submit">Save</button><span class="nums-msg small"></span></form>`;
     const form = $("form", host); let rpe = w.rpe;
-    form.addEventListener("click", (e) => { const b = e.target.closest("[data-rpe]"); if (!b) return; rpe = Number(b.dataset.rpe); $$("[data-rpe]", form).forEach((x) => x.classList.toggle("on", x === b)); });
+    form.addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-rpe]"); if (!b) return;
+      rpe = Number(b.dataset.rpe);
+      $$("[data-rpe]", form).forEach((x) => x.classList.toggle("on", x === b));
+      // Auto-save the effort rating as soon as it's tapped so it doesn't get lost if the
+      // player drawer closes before "Save" is tapped. HR/calorie fields still need the Save button.
+      const m = $(".nums-msg", form); if (m) m.textContent = "Saving effort…";
+      try {
+        const up = await apiAuth("PATCH", `/api/me/workouts/${w.id}`, { rpe });
+        Object.assign(w, up); const i = allWorkouts.findIndex((x) => x.id === w.id); if (i >= 0) allWorkouts[i] = up;
+        if (m) m.textContent = `Effort ${rpe}/10 saved ✓`;
+      } catch (err) { if (m) m.textContent = err.message; }
+    });
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const body = {}; ["hrAvg", "hrMax", "hrv", "vo2max", "calories"].forEach((k) => { const v = form[k] && form[k].value.trim(); if (v) body[k] = Number(v); });
